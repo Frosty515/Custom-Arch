@@ -1,0 +1,282 @@
+[bits 64]
+
+global x86_64_add
+global x86_64_mul
+global x86_64_sub
+global x86_64_div
+global x86_64_or
+global x86_64_xor
+global x86_64_nor
+global x86_64_and
+global x86_64_nand
+global x86_64_not
+global x86_64_cmp
+global x86_64_inc
+global x86_64_dec
+global x86_64_shl
+global x86_64_shr
+
+x86_64_convert_flags: ; dil = CPU flags --> rax = flags
+    xor rax, rax
+    mov sil, dil
+    and sil, 1
+    or al, sil
+    mov sil, dil
+    and sil, 1<<6 | 1<<7
+    shr sil, 5
+    or al, sil
+    ret
+
+x86_64_add:
+    push rbp
+    mov rbp, rsp
+
+    add rsi, rdi
+    
+    push rsi
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_mul:
+    push rbp
+    mov rbp, rsp
+
+    imul rsi, rdi
+
+    push rsi
+    pushf
+    pop rdi
+    and rdi, ~1
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_sub:
+    push rbp
+    mov rbp, rsp
+
+    sub rsi, rdi
+    
+    push rsi
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_div:
+    push rbp
+    mov rbp, rsp
+
+    mov QWORD [rdx], 0
+
+    xor rdx, rdx
+    mov rax, rdi
+    idiv rsi
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_or:
+    push rbp
+    mov rbp, rsp
+
+    or rsi, rdi
+    
+    push rsi
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_xor:
+    push rbp
+    mov rbp, rsp
+
+    xor rsi, rdi
+    
+    push rsi
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_nor:
+    push rbp
+    mov rbp, rsp
+
+    push rdx
+    call x86_64_or
+    mov rdi, rax
+    pop rsi
+    call x86_64_not
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_and:
+    push rbp
+    mov rbp, rsp
+
+    and rsi, rdi
+    
+    push rsi
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_nand:
+    push rbp
+    mov rbp, rsp
+
+    push rdx
+    call x86_64_and
+    mov rdi, rax
+    pop rsi
+    call x86_64_not
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_not:
+    push rbp
+    mov rbp, rsp
+
+    not rdi
+    mov QWORD [rsi], 0
+    mov rax, rdi
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_cmp:
+    push rbp
+    mov rbp, rsp
+
+    cmp rsi, rdi
+    
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_inc:
+    push rbp
+    mov rbp, rsp
+
+    inc rdi
+    push rdi
+
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rsi], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_dec:
+    push rbp
+    mov rbp, rsp
+
+    dec rdi
+    push rdi
+
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rsi], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_shl:
+    push rbp
+    mov rbp, rsp
+
+    mov cl, sil
+
+    shl rdi, cl
+    push rdi
+
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+x86_64_shr:
+    push rbp
+    mov rbp, rsp
+
+    mov cl, sil
+
+    shr rdi, cl
+    push rdi
+
+    pushf
+    pop rdi
+    call x86_64_convert_flags
+    mov QWORD [rdx], rax
+
+    pop rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
