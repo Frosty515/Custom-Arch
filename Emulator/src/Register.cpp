@@ -16,16 +16,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Register.hpp"
+#include "Emulator.hpp"
+#include "Exceptions.hpp"
 
 Register::Register() : m_index(0), m_ID(0xFF), m_value(0), m_type(RegisterType::Unknown), m_dirty(false) {
 
 }
 
-Register::Register(uint8_t ID, uint64_t value) : m_index(0), m_ID(ID), m_value(value), m_type(RegisterType::Unknown), m_dirty(false) {
+Register::Register(uint8_t ID, bool writable, uint64_t value) : m_index(0), m_ID(ID), m_value(value), m_type(RegisterType::Unknown), m_dirty(false), m_writable(writable) {
     DecodeID(ID);
 }
 
-Register::Register(RegisterType type, uint8_t index, uint64_t value) : m_index(index), m_ID(0xFF), m_value(value), m_type(type), m_dirty(false) {
+Register::Register(RegisterType type, uint8_t index, bool writable, uint64_t value) : m_index(index), m_ID(0xFF), m_value(value), m_type(type), m_dirty(false), m_writable(writable) {
     switch (type) {
     case RegisterType::GeneralPurpose:
         m_ID = index;
@@ -65,12 +67,23 @@ uint8_t Register::GetID() const {
 }
 
 uint64_t Register::GetValue() const {
+    if (m_type == RegisterType::Control) {
+        if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+            g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    }
     return m_value;
 }
 
-void Register::SetValue(uint64_t value) {
+bool Register::SetValue(uint64_t value, bool force) {
+    if (!force && !m_writable)
+        return false;
+    if (m_type == RegisterType::Control) {
+        if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+            g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    }
     m_value = value;
     m_dirty = true;
+    return true;
 }
 
 Register& Register::operator=(const uint64_t value) {
@@ -149,6 +162,14 @@ const char* Register::GetName() const {
             return "CR2";
         case 3:
             return "CR3";
+        case 4:
+            return "CR4";
+        case 5:
+            return "CR5";
+        case 6:
+            return "CR6";
+        case 7:
+            return "CR7";
         default:
             return "Unknown";
         }
@@ -190,15 +211,15 @@ void Register::DecodeID(uint8_t ID) {
         m_index = index;
         break;
     case 2:
-        if (index < 4) {
+        if (index < 8) {
             m_type = RegisterType::Control;
             m_index = index;
         }
-        else if (index == 4) {
+        else if (index == 8) {
             m_type = RegisterType::Flags;
             m_index = 0;
         }
-        else if (index == 5 || index == 6) {
+        else if (index == 9 || index == 10) {
             m_type = RegisterType::Instruction;
             m_index = index;
         }

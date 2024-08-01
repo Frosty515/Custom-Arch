@@ -55,6 +55,14 @@ namespace Emulator {
 
     void Crash(const char* message);
     void HandleHalt();
+
+    bool isInProtectedMode();
+    bool isUserIOAllowed();
+    bool isInUserMode();
+
+    void EnterUserMode();
+    void EnterUserMode(uint64_t address);
+    void ExitUserMode();
 }
 
 #endif /* _EMULATOR_HPP */

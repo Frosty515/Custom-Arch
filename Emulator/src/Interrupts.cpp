@@ -43,6 +43,8 @@ void InterruptHandler::RaiseInterrupt(uint8_t interrupt, uint64_t IP) {
         m_IDT[interrupt] = ReadDescriptor(interrupt);
     if ((m_IDT[interrupt].flags & 1) == 0)
         HandleFailure(interrupt);
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        Emulator::ExitUserMode();
     if (g_stack->WillOverflowOnPush())
         HandleFailure(interrupt);
     g_stack->push(IP);

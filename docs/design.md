@@ -4,9 +4,53 @@
 
 - 16 64-bit general purpose registers (GPRs) named r0-r15
 - 3 64-bit stack related registers. See [Stack](#stack-info)
-- 1 64-bit flags register that is read-only. named FLAGS
-- 4 64-bit control registers named CR0-CR3, currently all reserved
+- 1 64-bit flags register that is read-only. named FLAGS. See [Flags Layout](#flags-layout) for more info
+- 4 64-bit control registers named CR0-CR8, see [Control Registers Layout](#control-registers-layout) for more info
 - 2 64-bit instruction registers, I0 for current address and I1 for previous frames address (return address). I0 and I1 are read-only.
+
+### Control Registers Layout
+
+#### CR0
+
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0   | PE   | Protected mode enabled |
+| 1   | IO   | IO instructions enabled in user mode |
+| 2-63| RESERVED | Reserved |
+
+#### CR1
+
+- Note: CR1 is reserved in 64-bit real mode
+
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0-63| SFLAGS | Supervisor flags on supervisor mode entry |
+
+#### CR2
+
+- Note: CR2 is reserved in 64-bit real mode
+
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0-63| SENTRY | Supervisor `I0` on supervisor mode entry |
+
+#### CR3-CR8
+
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0-63| RESERVED | Reserved |
+
+### Flags Layout
+
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0   | CF   | Carry flag |
+| 1   | ZF   | Zero flag |
+| 2   | SF   | Sign flag |
+| 3   | IF   | Interrupt flag |
+| 4   | IOF  | Is writing to the IO bus |
+| 5   | IIF  | Is reading from the IO bus |
+| 6-63| RESERVED | Reserved |
 
 ## Stack Info
 
@@ -56,13 +100,30 @@
 
 ## Operation modes
 
-- 1 mode: 64-bit real mode
+- Default mode: 64-bit real mode
+- Extra mode: 64-bit protected mode
 
 ### 64-bit real mode
 
 - All memory is accessible by everything
-- All registers are accessible by everything (I0 is always read-only, I1 is always intended to be read-only, FLAGS is read-only)
+- All registers are accessible by everything (I0, I1, and FLAGS are read-only)
 - All valid instructions always work
+
+### 64-bit protected mode
+
+- 2 levels of access: user, supervisor
+- bit 0 of CR0 is set to 1 to enable protected mode
+- defaults to supervisor mode
+- Interrupts behave differently. See [Protected mode interrupts](#protected-mode-interrupts) for more info
+- bit 1 of CR0 controls where [IO instructions](#io) are available in user mode.
+
+#### Switching privilege levels
+
+On supervisor mode entry, the contents of `FLAGS` is swapped with the contents of `CR1`, and `I0` will be set to `CR2`. `I1` will be set to the address of the instruction after the `syscall` instruction. The old value of I1 is not saved. `r15` will be set to the user mode stack. Supervisor mode is responsible for saving `sbp`, `stp`, and `r0`-`r14` if they are of importance. Supervisor mode is also responsible for getting its own stack. After all this, the values of `I1` and `r15` would have been overridden. If they are of importance, they should be saved prior to the `syscall` instruction.
+
+On supervisor mode exit, the contents of `CR1` is swapped with the contents of `FLAGS`, and `I0` will be set to `I1`. `scp` will be set to `r15`. The old value of `I0` is not saved. Supervisor mode is responsible for restoring `sbp`, `stp`, and `r0`-`r14` if they were saved.
+
+On user mode entry (different from supervisor mode exit), `I1` and `FLAGS` are cleared. `I0` will be set to the first argument of the instruction. All other registers are untouched.
 
 ## Instructions
 
@@ -115,26 +176,21 @@
 - `nop` does nothing for that instruction cycle
 - `hlt` freeze CPU in its current state
 
+### Protected mode Instructions
+
+- `syscall` to enter supervisor mode
+- `sysret` to return to supervisor mode
+- `enteruser (address, register or immediate)` to enter user mode
+
 ## Interrupts info
 
-- has a register called IDTR which contains the address of a table called an IDT.
-- IDT might look like this below in C:
+Has a register called IDTR which contains the address of a table called the Interrupt Descriptor Table (IDT) which contains the addresses of interrupt handlers. It is 256 entries long. The format of an entry is as follows:
 
-```c
-struct IDT {
-    struct IDTEntry Entries[256]; // array of IDTEntries
-};
-```
-
-- An IDT Entry might look like this in C:
-
-```c
-struct IDTEntry {
-    unsigned char Present : 1;
-    unsigned char Flags : 7; // currently reserved
-    unsigned long int Address;
-};
-```
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0   | Present | Is this entry present |
+| 1-7 | Flags | Reserved |
+| 8-71 | Address | Address of interrupt handler |
 
 ### Interrupt calling
 
@@ -147,18 +203,7 @@ struct IDTEntry {
 1. remove arguments from stack
 2. call `ret` instruction
 
-## Flags info
+### Protected mode interrupts
 
-- Has a 64-bit internal register for storing flags
-
-### Flags Layout
-
-- Bit 0: Carry flag. ALU instruction resulted in Carry
-- Bit 1: Zero flag. ALU instruction resulted in Zero
-- Bit 2: Sign flag. ALU instruction resulted in a negative number
-- Bit 3: Interrupt mode
-- Bit 4: Is writing to the IO bus
-- Bit 5: Is reading from the IO bus
-- Bits 6-63: reserved
-
-Bits 3-5 are not yet implemented.
+- Bit 1 of the IDT entry is set to 1 if the interrupt is available in user mode.
+- Interrupts are **always** handled in kernel mode.

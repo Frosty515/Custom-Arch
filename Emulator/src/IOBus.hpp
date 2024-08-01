@@ -34,6 +34,9 @@ public:
     void WriteWord(uint64_t address, uint16_t data);
     void WriteDWord(uint64_t address, uint32_t data);
     void WriteQWord(uint64_t address, uint64_t data);
+
+private:
+    void Validate() const;
 };
 
 extern IOBus* g_IOBus;

@@ -30,7 +30,7 @@ First 2 bytes are for the instruction stuff, and data follows it
 
 - General purpose registers: it is simply the GPR number
 - Stack: scp is 0, sbp is 1, stp is 2, rest are reserved
-- Control, Flags & IPs: CR0-CR3 are numbers 0-3, FLAGS is 4, I0 is 5, I1 is 6, rest are reserved
+- Control, Flags & IPs: CR0-CR7 are numbers 0-7, FLAGS is 8, I0 is 9, I1 is 0xA, rest are reserved
 
 ### Instruction ID
 
@@ -168,9 +168,9 @@ First 2 bytes are for the instruction stuff, and data follows it
 | jnc  | 4 |
 | jz   | 5 |
 | jnz  | 6 |
-| (invalid) | 7 |
-| (invalid) | 8 |
-| (invalid) | 9 |
+| syscall | 7 |
+| sysret | 8 |
+| enteruser | 9 |
 | (invalid) | a |
 | (invalid) | b |
 | (invalid) | c |

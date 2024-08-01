@@ -68,7 +68,7 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
     for (uint64_t i = 0; i < tokens.getCount(); i++) {
         Token* token = tokens.get(i);
 #ifdef ASSEMBLER_DEBUG
-        printf("Token: \"%.*s\", index = %lu\n", (int)token->data_size, (char*)(token->data), i);
+        printf("Token: \"%.*s\", index = %lu, type = %lu\n", (int)token->data_size, (char*)(token->data), i, (unsigned long int)token->type);
 #endif
 
         if (in_directive) {
@@ -262,7 +262,7 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
             current_block->data_blocks.insert(data);
             current_data = data;
             uint64_t name_size = token->data_size;
-            if (EQUALS((const char*)(token->data), "ret") || EQUALS((const char*)(token->data), "nop") || EQUALS((const char*)(token->data), "hlt") || EQUALS((const char*)(token->data), "pusha") || EQUALS((const char*)(token->data), "popa") || EQUALS((const char*)(token->data), "iret")) {
+            if (EQUALS((const char*)(token->data), "ret") || EQUALS((const char*)(token->data), "nop") || EQUALS((const char*)(token->data), "hlt") || EQUALS((const char*)(token->data), "pusha") || EQUALS((const char*)(token->data), "popa") || EQUALS((const char*)(token->data), "iret") || EQUALS((const char*)(token->data), "syscall") || EQUALS((const char*)(token->data), "sysret")) {
                 in_instruction = false;
                 in_operand = false;
             }
@@ -597,6 +597,12 @@ Opcode Parser::GetOpcode(const char* name, size_t name_size) const {
         return Opcode::JZ;
     else if (EQUALS(name, "jnz"))
         return Opcode::JNZ;
+    else if (EQUALS(name, "syscall"))
+        return Opcode::SYSCALL;
+    else if (EQUALS(name, "sysret"))
+        return Opcode::SYSRET;
+    else if (EQUALS(name, "enteruser"))
+        return Opcode::ENTERUSER;
     else if (EQUALS(name, "inb"))
         return Opcode::INB;
     else if (EQUALS(name, "outb"))
@@ -654,6 +660,10 @@ Register Parser::GetRegister(const char* name, size_t name_size) const {
     REG_EQUAL(cr1);
     REG_EQUAL(cr2);
     REG_EQUAL(cr3);
+    REG_EQUAL(cr4);
+    REG_EQUAL(cr5);
+    REG_EQUAL(cr6);
+    REG_EQUAL(cr7);
     REG_EQUAL(flags);
     REG_EQUAL(i0);
     REG_EQUAL(i1);
@@ -697,6 +707,9 @@ const char* Parser::GetInstructionName(Opcode opcode) const {
     NAME_CASE(JNC)
     NAME_CASE(JZ)
     NAME_CASE(JNZ)
+    NAME_CASE(SYSCALL)
+    NAME_CASE(SYSRET)
+    NAME_CASE(ENTERUSER)
     NAME_CASE(INB)
     NAME_CASE(OUTB)
     NAME_CASE(INW)
@@ -743,6 +756,10 @@ const char* Parser::GetRegisterName(Register i_reg) const {
     NAME_CASE(cr1)
     NAME_CASE(cr2)
     NAME_CASE(cr3)
+    NAME_CASE(cr4)
+    NAME_CASE(cr5)
+    NAME_CASE(cr6)
+    NAME_CASE(cr7)
     NAME_CASE(flags)
     NAME_CASE(i0)
     NAME_CASE(i1)

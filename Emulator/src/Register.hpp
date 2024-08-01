@@ -53,6 +53,10 @@ enum RegisterID {
     RegisterID_CR1,
     RegisterID_CR2,
     RegisterID_CR3,
+    RegisterID_CR4,
+    RegisterID_CR5,
+    RegisterID_CR6,
+    RegisterID_CR7,
     RegisterID_FLAGS,
     RegisterID_I0,
     RegisterID_I1,
@@ -62,8 +66,8 @@ enum RegisterID {
 class Register {
 public:
     Register();
-    Register(uint8_t ID, uint64_t value = 0);
-    Register(RegisterType type, uint8_t index, uint64_t value = 0);
+    Register(uint8_t ID, bool writable, uint64_t value = 0);
+    Register(RegisterType type, uint8_t index, bool writable, uint64_t value = 0);
     ~Register();
 
     RegisterType GetType() const;
@@ -71,7 +75,7 @@ public:
     uint8_t GetID() const;
 
     uint64_t GetValue() const;
-    void SetValue(uint64_t value);
+    bool SetValue(uint64_t value, bool force = false);
 
     Register& operator=(const uint64_t value);
     Register* operator=(const uint64_t* value);
@@ -92,6 +96,7 @@ private:
     uint64_t m_value;
     RegisterType m_type;
     bool m_dirty;
+    bool m_writable;
 };
 
 #endif /* _REGISTER_HPP */

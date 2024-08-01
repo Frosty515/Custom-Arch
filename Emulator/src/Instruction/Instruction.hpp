@@ -130,4 +130,8 @@ void ins_int(Operand& number);
 void ins_lidt(Operand& src);
 void ins_iret();
 
+void ins_syscall();
+void ins_sysret();
+void ins_enteruser(Operand& dst);
+
 #endif /* _INSTRUCTION_HPP */

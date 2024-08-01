@@ -28,6 +28,8 @@ enum class Exception {
     UNHANDLED_INTERRUPT = 2,
     INVALID_INSTRUCTION = 3,
     STACK_VIOLATION = 4,
+    USER_MODE_VIOLATION = 5,
+    SUPERVISOR_MODE_VIOLATION = 6,
     TWICE_UNHANDLED_INTERRUPT = -1 // not valid number
 };
 

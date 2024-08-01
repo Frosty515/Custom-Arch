@@ -264,8 +264,8 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
 | jnc  | 4 |
 | jz   | 5 |
 | jnz  | 6 |
-| (invalid) | 7 |
-| (invalid) | 8 |
+| syscall | 7 |
+| sysret | 8 |
 | (invalid) | 9 |
 | (invalid) | a |
 | (invalid) | b |
@@ -416,6 +416,18 @@ void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count) {
             if (argument_count != nullptr)
                 *argument_count = 1;
             return (void*)ins_jnz;
+        case 7: // syscall
+            if (argument_count != nullptr)
+                *argument_count = 0;
+            return (void*)ins_syscall;
+        case 8: // sysret
+            if (argument_count != nullptr)
+                *argument_count = 0;
+            return (void*)ins_sysret;
+        case 9: // enteruser
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return (void*)ins_enteruser;
         default:
             return nullptr;
         }
@@ -833,15 +845,42 @@ void ins_popa() {
 
 void ins_int(Operand& number) {
     PRINT_INS_INFO1(number);
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
     g_InterruptHandler->RaiseInterrupt(number.GetValue(), Emulator::GetNextIP());
 }
 
 void ins_lidt(Operand& src) {
     PRINT_INS_INFO1(src);
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
     g_InterruptHandler->SetIDTR(src.GetValue());
 }
 
 void ins_iret() {
     PRINT_INS_INFO0();
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
     g_InterruptHandler->ReturnFromInterrupt();
+}
+
+void ins_syscall() {
+    PRINT_INS_INFO0();
+    if (Emulator::isInProtectedMode() && !Emulator::isInUserMode())
+        g_ExceptionHandler->RaiseException(Exception::SUPERVISOR_MODE_VIOLATION);
+    Emulator::ExitUserMode();
+}
+
+void ins_sysret() {
+    PRINT_INS_INFO0();
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    Emulator::EnterUserMode();
+}
+
+void ins_enteruser(Operand &dst) {
+    PRINT_INS_INFO1(dst);
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    Emulator::EnterUserMode(dst.GetValue());
 }

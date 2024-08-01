@@ -42,7 +42,7 @@ namespace Emulator {
     Register* g_STP; // stack top
     Register* g_GPR[16]; // general purpose registers
     Register* g_flags;  // flags register
-    Register* g_Control[4]; // control registers
+    Register* g_Control[8]; // control registers
 
     uint64_t g_NextIP;
 
@@ -60,6 +60,10 @@ namespace Emulator {
     bool g_EmulatorRunning = false;
 
     char const* last_error = nullptr;
+
+    bool g_isInProtectedMode = false;
+    bool g_AllowUserIO = false;
+    bool g_isInUserMode = false;
 
     void HandleMemoryOperation(uint64_t address, void* data, uint64_t size, uint64_t count, bool write) {
         if (write) {
@@ -132,7 +136,7 @@ namespace Emulator {
         // Load program into RAM
         g_MMU.WriteBuffer(0, program, size < RAMSize ? size : RAMSize); // temp copy size for debugging
 
-        g_I[0] = new Register(RegisterType::Instruction, 0, 0); // explicitly initialise instruction pointer to 0
+        g_I[0] = new Register(RegisterType::Instruction, 0, false, 0); // explicitly initialise instruction pointer to 0
         g_NextIP = 0;
 
         g_EmulatorRunning = true;
@@ -167,6 +171,7 @@ namespace Emulator {
         fprintf(fp, "SCP=%016lx SBP=%016lx STP=%016lx\n", g_SCP->GetValue(), g_SBP->GetValue(), g_STP->GetValue());
         fprintf(fp, "I0 =%016lx I1 =%016lx\n", g_I[0]->GetValue(), g_I[1]->GetValue());
         fprintf(fp, "CR0=%016lx CR1=%016lx CR2=%016lx CR3=%016lx\n", g_Control[0]->GetValue(), g_Control[1]->GetValue(), g_Control[2]->GetValue(), g_Control[3]->GetValue());
+        fprintf(fp, "CR4=%016lx CR5=%016lx CR6=%016lx CR7=%016lx\n", g_Control[4]->GetValue(), g_Control[5]->GetValue(), g_Control[6]->GetValue(), g_Control[7]->GetValue());
         fprintf(fp, "Flags = %016lx\n", g_flags->GetValue());
     }
 
@@ -206,10 +211,10 @@ namespace Emulator {
                 }
                 break;
             case 2:
-                if (index < 4)
+                if (index < 8)
                     returnVal = g_Control[index];
                 else {
-                    index -= 4;
+                    index -= 8;
                     switch (index) {
                         case 0: // flags
                             returnVal = g_flags;
@@ -238,9 +243,8 @@ namespace Emulator {
 
     bool WriteRegister(uint8_t ID, uint64_t value) {
         Register* pointer = GetRegisterPointer(ID);
-        if (ID == 0x24 || ID == 0x25 || ID == 0x26) {
+        if (ID == 0x28 || ID == 0x29 || ID == 0x2A)
             return false;
-        }
         pointer->SetValue(value);
         return true;
     }
@@ -248,21 +252,20 @@ namespace Emulator {
     void EmulatorMain() {
         // Initialise all the registers
         for (int i = 0; i < 16; i++)
-            g_GPR[i] = new Register(RegisterType::GeneralPurpose, i);
+            g_GPR[i] = new Register(RegisterType::GeneralPurpose, i, true);
 
 
-        g_SCP = new Register(RegisterType::Stack, 0);
-        g_SBP = new Register(RegisterType::Stack, 1);
-        g_STP = new Register(RegisterType::Stack, 2);
+        g_SCP = new Register(RegisterType::Stack, 0, true);
+        g_SBP = new Register(RegisterType::Stack, 1, true);
+        g_STP = new Register(RegisterType::Stack, 2, true);
 
-        g_I[1] = new Register(RegisterType::Instruction, 1);
+        g_I[1] = new Register(RegisterType::Instruction, 1, false);
 
-        g_Control[0] = new Register(RegisterType::Control, 0);
-        g_Control[1] = new Register(RegisterType::Control, 1);
-        g_Control[2] = new Register(RegisterType::Control, 2);
-        g_Control[3] = new Register(RegisterType::Control, 3);
+        for (int i = 0; i < 8; i++)
+            g_Control[i] = new Register(RegisterType::Control, i, true);
 
-        g_flags = new Register(RegisterType::Flags, 0);
+
+        g_flags = new Register(RegisterType::Flags, 0, false);
 
 
         // run some checks
@@ -296,18 +299,18 @@ namespace Emulator {
         delete g_I[0];
         delete g_I[1];
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 8; i++)
             delete g_Control[i];
 
         delete g_flags;
     }
 
     void SetCPUFlags(uint64_t mask) {
-        g_flags->SetValue(g_flags->GetValue() | mask);
+        g_flags->SetValue(g_flags->GetValue() | mask, true);
     }
 
     void ClearCPUFlags(uint64_t mask) {
-        g_flags->SetValue(g_flags->GetValue() & ~mask);
+        g_flags->SetValue(g_flags->GetValue() & ~mask, true);
     }
 
     uint64_t GetCPUFlags() {
@@ -323,7 +326,7 @@ namespace Emulator {
     }
 
     void SetCPU_IP(uint64_t value) {
-        g_I[0]->SetValue(value);
+        g_I[0]->SetValue(value, true);
     }
 
     uint64_t GetCPU_IP() {
@@ -360,11 +363,17 @@ namespace Emulator {
             g_SCP->SetValue(g_stack->getStackPointer());
             g_SCP->SetDirty(false);
         }
+        if (g_Control[0]->IsDirty()) {
+            g_isInProtectedMode = g_Control[0]->GetValue() & 1;
+            g_AllowUserIO = g_Control[0]->GetValue() & 2;
+            g_Control[0]->SetDirty(false);
+        }
     }
 
     void Crash(const char* message) {
         g_EmulatorRunning = false;
         printf("Crash: %s\n", message);
+        DumpRegisters(stdout);
         exit(0);
     }
 
@@ -372,4 +381,43 @@ namespace Emulator {
         g_EmulatorRunning = false;
         exit(0);
     }
+
+    bool isInProtectedMode() {
+        return g_isInProtectedMode;
+    }
+
+    bool isUserIOAllowed() {
+        return g_AllowUserIO;
+    }
+
+    bool isInUserMode() {
+        return g_isInUserMode;
+    }
+
+    void EnterUserMode() {
+        uint64_t flags = g_flags->GetValue();
+        g_flags->SetValue(g_Control[1]->GetValue(), true);
+        g_Control[1]->SetValue(flags, true);
+        g_NextIP = g_I[1]->GetValue();
+        g_SCP->SetValue(g_GPR[15]->GetValue());
+        g_isInUserMode = true;
+    }
+
+    void EnterUserMode(uint64_t address) {
+        g_flags->SetValue(0, true);
+        g_I[1]->SetValue(0, true);
+        g_NextIP = address;
+        g_isInUserMode = true;
+    }
+
+    void ExitUserMode() {
+        g_isInUserMode = false;
+        uint64_t flags = g_flags->GetValue();
+        g_flags->SetValue(g_Control[1]->GetValue(), true);
+        g_Control[1]->SetValue(flags, true);
+        g_I[1]->SetValue(GetNextIP());
+        g_NextIP = g_Control[2]->GetValue();
+        g_GPR[15]->SetValue(g_SCP->GetValue());
+    }
+
 }

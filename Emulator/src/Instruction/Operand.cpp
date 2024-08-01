@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Operand.hpp"
+#include "Exceptions.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -95,7 +96,7 @@ void Operand::PrintInfo() const {
             size = "Unknown";
             break;
         }
-        printf("Immediate: value = %#lx, size = %s", m_offset, size);
+        printf("Immediate: value = 0x%lx, size = %s", m_offset, size);
         break;
     }
     case OperandType::Memory:
@@ -131,9 +132,8 @@ uint64_t Operand::GetValue() const {
 void Operand::SetValue(uint64_t value) {
     switch (m_type) {
     case OperandType::Register:
-        if (m_register->GetType() == RegisterType::Flags || m_register->GetType() == RegisterType::Instruction) // writes are not allowed on these registers
-            return;
-        m_register->SetValue(value);
+        if (!m_register->SetValue(value))
+            g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
         break;
     case OperandType::Immediate:
         m_offset = value;

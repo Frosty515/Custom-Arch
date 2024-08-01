@@ -78,7 +78,7 @@ First 2 bytes are for the instruction stuff, and data follows it
 
 - General purpose registers: it is simply the GPR number
 - Stack: scp is 0, sbp is 1, stp is 2, rest are reserved
-- Control, Flags & IPs: CR0-CR3 are numbers 0-3, FLAGS is 4, I0 is 5, I1 is 6, rest are reserved
+- Control, Flags & IPs: CR0-CR7 are numbers 0-7, FLAGS is 8, I0 is 9, I1 is 0xA, rest are reserved
 
 ### Opcode
 
@@ -133,7 +133,8 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                         if (instruction->opcode != Opcode::NOP && instruction->opcode != Opcode::HLT
                         && instruction->opcode != Opcode::RET
                         && instruction->opcode != Opcode::IRET
-                        && instruction->opcode != Opcode::PUSHA && instruction->opcode != Opcode::POPA)
+                        && instruction->opcode != Opcode::PUSHA && instruction->opcode != Opcode::POPA
+                        && instruction->opcode != Opcode::SYSCALL && instruction->opcode != Opcode::SYSRET)
                             error("Instruction has no operands");
                         header.flags.arg1_size = 1;
                         header.flags.arg1_type = 0;
@@ -145,7 +146,8 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                         && instruction->opcode != Opcode::PUSH && instruction->opcode != Opcode::POP
                         && instruction->opcode != Opcode::INC && instruction->opcode != Opcode::DEC && instruction->opcode != Opcode::NOT
                         && instruction->opcode != Opcode::CALL && instruction->opcode != Opcode::JMP && instruction->opcode != Opcode::JC && instruction->opcode != Opcode::JNC && instruction->opcode != Opcode::JZ && instruction->opcode != Opcode::JNZ
-                        && instruction->opcode != Opcode::INT && instruction->opcode != Opcode::LIDT)
+                        && instruction->opcode != Opcode::INT && instruction->opcode != Opcode::LIDT
+                        && instruction->opcode != Opcode::ENTERUSER)
                             error("Instruction has 1 operand");
                         header.flags.arg2_size = 1;
                         header.flags.arg2_type = 0;
@@ -299,9 +301,13 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                                 REG_CASE(cr1, 2, 1)
                                 REG_CASE(cr2, 2, 2)
                                 REG_CASE(cr3, 2, 3)
-                                REG_CASE(flags, 2, 4)
-                                REG_CASE(i0, 2, 5)
-                                REG_CASE(i1, 2, 6)
+                                REG_CASE(cr4, 2, 4)
+                                REG_CASE(cr5, 2, 5)
+                                REG_CASE(cr6, 2, 6)
+                                REG_CASE(cr7, 2, 7)
+                                REG_CASE(flags, 2, 8)
+                                REG_CASE(i0, 2, 9)
+                                REG_CASE(i1, 2, 10)
                                 default:
                                     error("Invalid register type");
                                     break;
@@ -365,9 +371,13 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                             REG_CASE(cr1, 2, 1)
                             REG_CASE(cr2, 2, 2)
                             REG_CASE(cr3, 2, 3)
-                            REG_CASE(flags, 2, 4)
-                            REG_CASE(i0, 2, 5)
-                            REG_CASE(i1, 2, 6)
+                            REG_CASE(cr4, 2, 4)
+                            REG_CASE(cr5, 2, 5)
+                            REG_CASE(cr6, 2, 6)
+                            REG_CASE(cr7, 2, 7)
+                            REG_CASE(flags, 2, 8)
+                            REG_CASE(i0, 2, 9)
+                            REG_CASE(i1, 2, 10)
                             default:
                                 error("Invalid register type");
                                 break;
@@ -483,6 +493,9 @@ uint8_t Assembler::GetRealOpcode(Opcode opcode) const {
     OPCODE_CASE(JNC, 0x14)
     OPCODE_CASE(JZ, 0x15)
     OPCODE_CASE(JNZ, 0x16)
+    OPCODE_CASE(SYSCALL, 0x17)
+    OPCODE_CASE(SYSRET, 0x18)
+    OPCODE_CASE(ENTERUSER, 0x19)
     OPCODE_CASE(INB, 0x20)
     OPCODE_CASE(OUTB, 0x21)
     OPCODE_CASE(INW, 0x22)
