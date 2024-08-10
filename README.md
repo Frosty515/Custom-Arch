@@ -20,9 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ## Design
 
 - 64-bit architecture
-
-Full design can be found in [docs/design.md](docs/design.md)
-The design of some internal aspects can be found in [docs/internals.md](docs/internals.md)
+- Full design can be found in [docs/design.md](docs/design.md)
+- Design of some internal aspects can be found in [docs/internals.md](docs/internals.md)
 
 ## Pre-requisites
 
