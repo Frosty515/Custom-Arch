@@ -207,3 +207,26 @@ Has a register called IDTR which contains the address of a table called the Inte
 
 - Bit 1 of the IDT entry is set to 1 if the interrupt is available in user mode.
 - Interrupts are **always** handled in kernel mode.
+
+## Assembly syntax
+
+### Labels
+
+- Labels are defined by a string followed by a colon
+
+### Sub-labels
+
+- Sub-labels are defined by a period followed by a string followed by a colon
+- Sub-labels are only accessible within the scope of the label they are defined in
+
+### Comments
+
+- Single line comments are defined by a semicolon followed by a string
+- Multi-line comments are defined by a `/*` followed by a string and ending with a `*/`
+
+### Directives
+
+- `db` to define a byte
+- `dw` to define a word (2 bytes)
+- `dd` to define a double-word (4 bytes)
+- `dq` to define a quad-word (8 bytes)

@@ -179,12 +179,20 @@ void Buffer::Clear(uint64_t offset, size_t size) {
     }
 }
 
+
+
+void Buffer::Clear() {
+    for (uint64_t i = 0; i < m_blocks.getCount(); i++)
+        DeleteBlock(0);
+}
+
 void Buffer::AutoShrink() {
     for (uint64_t i = m_blocks.getCount(); i > 0; i--) {
         Block* block = m_blocks.get(i - 1);
         if (block->empty) {
+            printf("Shrinking block %lu\n", i - 1);
             delete[] block->data;
-            m_blocks.remove(i - 1);
+            m_blocks.remove(block);
             m_size -= block->size;
             delete block;
         }

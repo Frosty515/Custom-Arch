@@ -27,6 +27,7 @@ set(assembler_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LinkedList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Parser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PreProcessor.cpp
 )
 
 add_executable(Assembler ${assembler_sources})

@@ -41,6 +41,9 @@ public:
     // Clear size bytes starting at offset. Potentially could remove the block if it is empty
     void Clear(uint64_t offset, size_t size);
 
+    // Empty the buffer
+    void Clear();
+
     // Remove any unused blocks at the end
     void AutoShrink();
 
