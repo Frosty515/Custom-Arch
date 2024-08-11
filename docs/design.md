@@ -224,6 +224,10 @@ Has a register called IDTR which contains the address of a table called the Inte
 - Single line comments are defined by a semicolon followed by a string
 - Multi-line comments are defined by a `/*` followed by a string and ending with a `*/`
 
+### Includes
+
+- `%include "path/to/file.asm"` to include another assembly file
+
 ### Directives
 
 - `db` to define a byte

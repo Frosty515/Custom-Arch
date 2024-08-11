@@ -35,6 +35,8 @@ public:
 private:
     char* GetLine(char* source, size_t source_size, size_t& line_size);
 
+    void error(const char* message);
+
 private:
     Buffer m_buffer;
     uint64_t m_current_offset;

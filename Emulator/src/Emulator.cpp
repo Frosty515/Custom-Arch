@@ -415,7 +415,7 @@ namespace Emulator {
         uint64_t flags = g_flags->GetValue();
         g_flags->SetValue(g_Control[1]->GetValue(), true);
         g_Control[1]->SetValue(flags, true);
-        g_I[1]->SetValue(GetNextIP());
+        g_I[1]->SetValue(GetNextIP(), true);
         g_NextIP = g_Control[2]->GetValue();
         g_GPR[15]->SetValue(g_SCP->GetValue());
     }
