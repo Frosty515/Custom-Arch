@@ -18,7 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _IO_BUS_HPP
 #define _IO_BUS_HPP
 
+#include "IODevice.hpp"
+
 #include <stdint.h>
+
+#include <Data-structures/LinkedList.hpp>
 
 class IOBus {
 public:
@@ -35,8 +39,17 @@ public:
     void WriteDWord(uint64_t address, uint32_t data);
     void WriteQWord(uint64_t address, uint64_t data);
 
+    bool AddDevice(IODevice* device);
+    void RemoveDevice(IODevice* device);
+
 private:
     void Validate() const;
+
+    IODevice* FindDevice(uint64_t address);
+    IODevice* FindDevice(uint64_t address, uint64_t size);
+
+private:
+    LinkedList::SimpleLinkedList<IODevice> m_devices;
 };
 
 extern IOBus* g_IOBus;

@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Emulator.hpp"
 
-#include <IOBus.hpp>
 #include <Register.hpp>
 #include <Stack.hpp>
 #include <Interrupts.hpp>
@@ -25,6 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Instruction/Instruction.hpp>
 #include <Instruction/Operand.hpp>
+
+#include <IO/IOBus.hpp>
+
+#include <IO/devices/ConsoleDevice.hpp>
 
 #include <MMU/MMU.hpp>
 
@@ -43,6 +46,8 @@ namespace Emulator {
     Register* g_GPR[16]; // general purpose registers
     Register* g_flags;  // flags register
     Register* g_Control[8]; // control registers
+
+    ConsoleDevice* g_ConsoleDevice;
 
     uint64_t g_NextIP;
 
@@ -129,6 +134,10 @@ namespace Emulator {
 
         // Configure the IO bus
         g_IOBus = new IOBus();
+
+        // Configure the console device
+        g_ConsoleDevice = new ConsoleDevice(0, 0xF);
+        g_IOBus->AddDevice(g_ConsoleDevice);
 
         // Configure the stack
         g_stack = new Stack(&g_MMU, 0, 0, 0);
@@ -418,6 +427,14 @@ namespace Emulator {
         g_I[1]->SetValue(GetNextIP(), true);
         g_NextIP = g_Control[2]->GetValue();
         g_GPR[15]->SetValue(g_SCP->GetValue());
+    }
+
+    void WriteCharToConsole(char c) {
+        fputc(c, stderr);
+    }
+
+    char ReadCharFromConsole() {
+        return fgetc(stdin);
     }
 
 }

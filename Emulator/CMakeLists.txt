@@ -26,6 +26,8 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/LinkedList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Instruction.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Operand.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOBus.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/ConsoleDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/StandardMemoryRegion.cpp
@@ -33,7 +35,6 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/FileUtil.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Interrupts.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/IOBus.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Register.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Stack.cpp

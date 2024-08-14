@@ -20,8 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Emulator.hpp>
 #include <Exceptions.hpp>
-#include <IOBus.hpp>
 #include <Stack.hpp>
+
+#include <IO/IOBus.hpp>
 
 #include <MMU/MMU.hpp>
 
@@ -266,7 +267,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
 | jnz  | 6 |
 | syscall | 7 |
 | sysret | 8 |
-| (invalid) | 9 |
+| enteruse | 9 |
 | (invalid) | a |
 | (invalid) | b |
 | (invalid) | c |

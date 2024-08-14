@@ -209,7 +209,7 @@ x86_64_cmp:
     push rbp
     mov rbp, rsp
 
-    cmp rsi, rdi
+    cmp rdi, rsi
     
     pushf
     pop rdi

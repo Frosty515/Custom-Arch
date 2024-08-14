@@ -63,6 +63,9 @@ namespace Emulator {
     void EnterUserMode();
     void EnterUserMode(uint64_t address);
     void ExitUserMode();
+
+    void WriteCharToConsole(char c);
+    char ReadCharFromConsole();
 }
 
 #endif /* _EMULATOR_HPP */

@@ -234,3 +234,13 @@ Has a register called IDTR which contains the address of a table called the Inte
 - `dw` to define a word (2 bytes)
 - `dd` to define a double-word (4 bytes)
 - `dq` to define a quad-word (8 bytes)
+
+## Devices
+
+- 1 64-bit IO bus
+
+### Console device
+
+- There is a console I/O device on ports 0-15
+- A raw read/write of a byte will read/write to the console via stdin/stderr respectively
+- Any other sized read/write will be ignored
