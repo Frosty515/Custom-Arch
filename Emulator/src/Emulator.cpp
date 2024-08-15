@@ -16,6 +16,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Emulator.hpp"
+#include "Data-structures/LinkedList.hpp"
+#include "spinlock.h"
 
 #include <Register.hpp>
 #include <Stack.hpp>
@@ -34,6 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <thread>
 
 namespace Emulator {
 
@@ -69,6 +72,11 @@ namespace Emulator {
     bool g_isInProtectedMode = false;
     bool g_AllowUserIO = false;
     bool g_isInUserMode = false;
+
+    LinkedList::LockableLinkedList<Event> g_events;
+
+    std::thread* ExecutionThread;
+    std::thread* EmulatorThread;
 
     void HandleMemoryOperation(uint64_t address, void* data, uint64_t size, uint64_t count, bool write) {
         if (write) {
@@ -111,6 +119,33 @@ namespace Emulator {
                     printf("Invalid size: %lu\n", size);
                     abort();
                 }
+            }
+        }
+    }
+
+    // what the EmulatorThread will run. just loops waiting for events.
+    void WaitForOperation() {
+        while (true) {
+            g_events.lock();
+            if (g_events.getCount() == 0) {
+                g_events.unlock();
+                continue;
+            }
+            for (uint64_t i = 0; i < g_events.getCount(); i++) {
+                Event* event = g_events.getHead();
+                switch (event->type) {
+                case EventType::SwitchToIP: {
+                    SetCPU_IP(event->data);
+                    ExecutionThread->detach();
+                    delete ExecutionThread;
+                    ExecutionThread = new std::thread(ExecutionLoop, std::ref(g_MMU), std::ref(g_CurrentState), std::ref(last_error));
+                    break;
+                }
+                default:
+                    break;
+                }
+                g_events.remove(g_events.getHead());
+                delete event;
             }
         }
     }
@@ -285,33 +320,17 @@ namespace Emulator {
 
         SyncRegisters();
 
+        // setup instruction switch handling
+        EmulatorThread = new std::thread(WaitForOperation);
+
         // setup instruction stuff
         g_InstructionInProgress = false;
 
         // begin instruction loop.
-        ExecuteInstruction(g_I[0]->GetValue(), g_MMU, g_CurrentState, last_error);
+        ExecutionThread = new std::thread(ExecutionLoop, std::ref(g_MMU), std::ref(g_CurrentState), std::ref(last_error));
 
-        // Dump the registers
-        DumpRegisters(stdout);
-
-        // Dump the RAM
-        DumpRAM(stdout);
-
-        // Delete all the registers
-        for (int i = 0; i < 16; i++)
-            delete g_GPR[i];
-
-        delete g_SBP;
-        delete g_SCP;
-        delete g_STP;
-
-        delete g_I[0];
-        delete g_I[1];
-
-        for (int i = 0; i < 8; i++)
-            delete g_Control[i];
-
-        delete g_flags;
+        // join with the emulator thread
+        EmulatorThread->join();
     }
 
     void SetCPUFlags(uint64_t mask) {
@@ -343,8 +362,11 @@ namespace Emulator {
     }
 
     void JumpToIP(uint64_t value) {
-        SetCPU_IP(value);
-        ExecuteInstruction(g_I[0]->GetValue(), g_MMU, g_CurrentState, last_error);
+        g_events.lock();
+        g_events.insert(new Event{EventType::SwitchToIP, value});
+        g_events.unlock();
+        EmulatorThread->join();
+        Emulator::Crash("Emulator thread exited unexpectedly"); // should be unreachable
     }
 
     void SyncRegisters() {

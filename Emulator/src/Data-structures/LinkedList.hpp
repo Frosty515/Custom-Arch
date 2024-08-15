@@ -22,7 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <assert.h>
 
+#include <spinlock.h>
+
 namespace LinkedList {
+
+	static constexpr uint64_t POOL_SIZE = 128;
 
 	struct Node {
 		Node* previous;
@@ -32,6 +36,7 @@ namespace LinkedList {
 
 	// Get length of the Linked list
 	uint64_t length(Node* head);
+
 
 	// Helper function that allocates a new node with the given data and NULL previous and next pointers.
 	Node* newNode(uint64_t data);
@@ -51,12 +56,14 @@ namespace LinkedList {
 	// print the Linked list
 	void fprint(FILE* file, Node* head);
 
+	void panic(const char* str); // a tiny function which just expands the PANIC macro. This is so PANIC can be called from the template class below.
+
 	template <typename T> class SimpleLinkedList {
 	public:
 		SimpleLinkedList() : m_count(0), m_start(nullptr) {}
 		~SimpleLinkedList() {
 			for (uint64_t i = 0; i < m_count; i++)
-				remove(UINT64_C(0));
+				remove(0UL);
 		}
 
 		void insert(const T* obj) {
@@ -65,7 +72,6 @@ namespace LinkedList {
 			insertNode(m_start, (uint64_t)obj);
 			m_count++;
 		}
-
 		T* get(uint64_t index) const {
 			if (index >= m_count)
 				return nullptr;
@@ -79,7 +85,6 @@ namespace LinkedList {
 				return nullptr;
 			return (T*)(temp->data);
 		}
-
 		T* getNext(const T* obj) const {
 			Node* temp = findNode(m_start, (uint64_t)obj);
 			if (temp == nullptr)
@@ -88,7 +93,6 @@ namespace LinkedList {
 				return nullptr;
 			return (T*)(temp->next->data);
 		}
-
 		uint64_t getIndex(const T* obj) const {
 			Node* temp = m_start;
 			for (uint64_t i = 0; i < m_count; i++) {
@@ -159,6 +163,57 @@ namespace LinkedList {
 	private:
 		uint64_t m_count;
 		Node* m_start;
+	};
+
+	template <typename T> class LockableLinkedList { // has a internal SimpleLinkedList and a spinlock. We do not lock automatically, so the user must lock the list before using it.
+	public:
+		LockableLinkedList() : m_list(), m_lock() {}
+		~LockableLinkedList() {
+			spinlock_acquire(&m_lock);
+			m_list.~SimpleLinkedList();
+			spinlock_release(&m_lock);
+		}
+
+		void insert(const T* obj) {
+			m_list.insert(obj);
+		}
+		T* get(uint64_t index) const {
+			return m_list.get(index);
+		}
+		uint64_t getIndex(const T* obj) const {
+			return m_list.getIndex(obj);
+		}
+		void remove(uint64_t index) {
+			m_list.remove(index);
+		}
+		void remove(const T* obj) {
+			m_list.remove(obj);
+		}
+		void rotateLeft() {
+			m_list.rotateLeft();
+		}
+		void rotateRight() {
+			m_list.rotateRight();
+		}
+		T* getHead() {
+			return m_list.getHead();
+		}
+		void fprint(FILE* file) {
+			m_list.fprint(file);
+		}
+		uint64_t getCount() const {
+			return m_list.getCount();
+		}
+
+		void lock() const {
+			spinlock_acquire(&m_lock);
+		}
+		void unlock() const {
+			spinlock_release(&m_lock);
+		}
+	private:
+		SimpleLinkedList<T> m_list;
+		mutable spinlock_t m_lock;
 	};
 
 }

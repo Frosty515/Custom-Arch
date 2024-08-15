@@ -26,6 +26,7 @@ bool operator==(LinkedList::Node left, LinkedList::Node right) {
 }
 
 namespace LinkedList {
+
 	uint64_t length(Node* head) {
 		if (head == nullptr)
 			return 0;
@@ -45,8 +46,10 @@ namespace LinkedList {
 
 	Node* newNode(uint64_t data) {
 		Node* node = new Node();
+
 		if (node == nullptr)
-			return nullptr;
+			return nullptr; // protects against page faults
+
 		node->data = data;
 		node->previous = nullptr;
 		node->next = nullptr;
@@ -137,6 +140,11 @@ namespace LinkedList {
 
 		// clear the value of current to protect the node it is pointing to from possible deletion
 		current = nullptr;
+	}
+
+	void panic(const char* str) {
+		printf("LinkedList::panic: %s\n", str);
+		exit(1);
 	}
 
 }

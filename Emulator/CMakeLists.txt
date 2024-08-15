@@ -16,6 +16,7 @@
 if(BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/ALUInstruction.asm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/spinlock.asm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/util.asm
     )
 endif()

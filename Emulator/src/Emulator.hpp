@@ -31,6 +31,15 @@ namespace Emulator {
         SE_TOO_LITTLE_RAM = 2
     };
 
+    enum class EventType {
+        SwitchToIP
+    };
+
+    struct Event {
+        EventType type;
+        uint64_t data;
+    };
+
     void HandleMemoryOperation(uint64_t address, void* data, uint64_t size, uint64_t count, bool write);
 
     int Start(uint8_t* data, size_t size, size_t RAM);

@@ -221,7 +221,11 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
     Emulator::SyncRegisters();
 
     Emulator::SetCPU_IP(Emulator::GetNextIP());
-    return ExecuteInstruction(Emulator::GetCPU_IP(), mmu, CurrentState, last_error);
+}
+
+void ExecutionLoop(MMU& mmu, InstructionState& CurrentState, char const*& last_error) {
+    while (true)
+        ExecuteInstruction(Emulator::GetCPU_IP(), mmu, CurrentState, last_error);
 }
 
 /*
