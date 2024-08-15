@@ -20,6 +20,13 @@ if(BUILD_ARCHITECTURE STREQUAL "x86_64")
     )
 endif()
 
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    set(emulator_sources
+        ${emulator_sources}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Linux/Memory.cpp
+    )
+endif()
+
 set(emulator_sources
     ${emulator_sources}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/Buffer.cpp

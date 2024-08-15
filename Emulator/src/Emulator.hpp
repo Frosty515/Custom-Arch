@@ -53,7 +53,7 @@ namespace Emulator {
 
     Register* GetRegisterPointer(uint8_t ID);
 
-    void Crash(const char* message);
+    __attribute__((noreturn)) void Crash(const char* message);
     void HandleHalt();
 
     bool isInProtectedMode();

@@ -379,7 +379,7 @@ namespace Emulator {
         }
     }
 
-    void Crash(const char* message) {
+    __attribute__((noreturn)) void Crash(const char* message) {
         g_EmulatorRunning = false;
         printf("Crash: %s\n", message);
         DumpRegisters(stdout);

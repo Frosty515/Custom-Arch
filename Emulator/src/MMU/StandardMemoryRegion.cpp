@@ -19,12 +19,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <string.h>
 
+#include <OSSpecific/Memory.hpp>
+
 StandardMemoryRegion::StandardMemoryRegion(uint64_t start, uint64_t end) : MemoryRegion(start, end) {
-    m_data = new uint8_t[getSize()];
+    m_data = (uint8_t*)OSSpecific::AllocateCOWMemory(getSize());
 }
 
 StandardMemoryRegion::~StandardMemoryRegion() {
-    delete[] m_data;
+    OSSpecific::FreeCOWMemory(m_data);
 }
 
 void StandardMemoryRegion::read(uint64_t address, uint8_t* buffer, size_t size) {
