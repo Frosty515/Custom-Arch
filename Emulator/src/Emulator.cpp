@@ -16,8 +16,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Emulator.hpp"
-#include "Data-structures/LinkedList.hpp"
-#include "spinlock.h"
 
 #include <Register.hpp>
 #include <Stack.hpp>
@@ -28,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <Instruction/Operand.hpp>
 
 #include <IO/IOBus.hpp>
+#include <IO/IOMemoryRegion.hpp>
 
 #include <IO/devices/ConsoleDevice.hpp>
 
@@ -42,12 +41,12 @@ namespace Emulator {
 
     void EmulatorMain();
 
-    Register* g_I[2]; // instruction pointers
+    Register* g_IP; // instruction pointer
     Register* g_SCP; // stack current pos
     Register* g_SBP; // stack base
     Register* g_STP; // stack top
     Register* g_GPR[16]; // general purpose registers
-    Register* g_flags;  // flags register
+    Register* g_STS;  // status (STS) register
     Register* g_Control[8]; // control registers
 
     ConsoleDevice* g_ConsoleDevice;
@@ -70,13 +69,14 @@ namespace Emulator {
     char const* last_error = nullptr;
 
     bool g_isInProtectedMode = false;
-    bool g_AllowUserIO = false;
     bool g_isInUserMode = false;
 
     LinkedList::LockableLinkedList<Event> g_events;
 
     std::thread* ExecutionThread;
     std::thread* EmulatorThread;
+
+    IOMemoryRegion* g_IOMemoryRegion;
 
     void HandleMemoryOperation(uint64_t address, void* data, uint64_t size, uint64_t count, bool write) {
         if (write) {
@@ -170,6 +170,10 @@ namespace Emulator {
         // Configure the IO bus
         g_IOBus = new IOBus();
 
+        // Add an IOMemoryRegion
+        g_IOMemoryRegion = new IOMemoryRegion(0xE000'0000, 0xF000'0000, g_IOBus);
+        g_MMU.AddMemoryRegion(g_IOMemoryRegion);
+
         // Configure the console device
         g_ConsoleDevice = new ConsoleDevice(0, 0xF);
         g_IOBus->AddDevice(g_ConsoleDevice);
@@ -180,7 +184,7 @@ namespace Emulator {
         // Load program into RAM
         g_MMU.WriteBuffer(0, program, size < RAMSize ? size : RAMSize); // temp copy size for debugging
 
-        g_I[0] = new Register(RegisterType::Instruction, 0, false, 0); // explicitly initialise instruction pointer to 0
+        g_IP = new Register(RegisterType::Instruction, 0, false, 0); // explicitly initialise instruction pointer to 0
         g_NextIP = 0;
 
         g_EmulatorRunning = true;
@@ -213,21 +217,15 @@ namespace Emulator {
         fprintf(fp, "R8 =%016lx R9 =%016lx R10=%016lx R11=%016lx\n", g_GPR[8]->GetValue(), g_GPR[9]->GetValue(), g_GPR[10]->GetValue(), g_GPR[11]->GetValue());
         fprintf(fp, "R12=%016lx R13=%016lx R14=%016lx R15=%016lx\n", g_GPR[12]->GetValue(), g_GPR[13]->GetValue(), g_GPR[14]->GetValue(), g_GPR[15]->GetValue());
         fprintf(fp, "SCP=%016lx SBP=%016lx STP=%016lx\n", g_SCP->GetValue(), g_SBP->GetValue(), g_STP->GetValue());
-        fprintf(fp, "I0 =%016lx I1 =%016lx\n", g_I[0]->GetValue(), g_I[1]->GetValue());
+        fprintf(fp, "IP =%016lx\n", g_IP->GetValue());
         fprintf(fp, "CR0=%016lx CR1=%016lx CR2=%016lx CR3=%016lx\n", g_Control[0]->GetValue(), g_Control[1]->GetValue(), g_Control[2]->GetValue(), g_Control[3]->GetValue());
         fprintf(fp, "CR4=%016lx CR5=%016lx CR6=%016lx CR7=%016lx\n", g_Control[4]->GetValue(), g_Control[5]->GetValue(), g_Control[6]->GetValue(), g_Control[7]->GetValue());
-        fprintf(fp, "Flags = %016lx\n", g_flags->GetValue());
+        fprintf(fp, "STS = %016lx\n", g_STS->GetValue());
     }
 
     void DumpRAM(FILE* fp) {
-        fprintf(fp, "RAM:");
-        for (uint64_t i = 0; i < g_RAMSize; i++) {
-            if ((i % 16) == 0)
-                fprintf(fp, "\n%08lx: ", i);
-            else if ((i % 8) == 0)
-                fprintf(fp, " ");
-            fprintf(fp, "%02x ", g_MMU.read8(i));
-        }
+        fprintf(fp, "RAM:\n");
+        g_MMU.DumpMemory();
         fprintf(fp, "\n");
     }
 
@@ -260,14 +258,11 @@ namespace Emulator {
                 else {
                     index -= 8;
                     switch (index) {
-                        case 0: // flags
-                            returnVal = g_flags;
+                        case 0: // STS
+                            returnVal = g_STS;
                             break;
-                        case 1: // I0
-                            returnVal = g_I[0];
-                            break;
-                        case 2: // I1
-                            returnVal = g_I[1];
+                        case 1: // IP
+                            returnVal = g_IP;
                             break;
                         default:
                             break;
@@ -303,17 +298,15 @@ namespace Emulator {
         g_SBP = new Register(RegisterType::Stack, 1, true);
         g_STP = new Register(RegisterType::Stack, 2, true);
 
-        g_I[1] = new Register(RegisterType::Instruction, 1, false);
-
         for (int i = 0; i < 8; i++)
             g_Control[i] = new Register(RegisterType::Control, i, true);
 
 
-        g_flags = new Register(RegisterType::Flags, 0, false);
+        g_STS = new Register(RegisterType::Status, 0, false);
 
 
         // run some checks
-        if (g_I[0]->GetValue() % 8 != 0) {
+        if (g_IP->GetValue() % 8 != 0) {
             last_error = "Instruction Pointer is not 64-bit aligned";
             return;
         }
@@ -333,16 +326,16 @@ namespace Emulator {
         EmulatorThread->join();
     }
 
-    void SetCPUFlags(uint64_t mask) {
-        g_flags->SetValue(g_flags->GetValue() | mask, true);
+    void SetCPUStatus(uint64_t mask) {
+        g_STS->SetValue(g_STS->GetValue() | mask, true);
     }
 
-    void ClearCPUFlags(uint64_t mask) {
-        g_flags->SetValue(g_flags->GetValue() & ~mask, true);
+    void ClearCPUStatus(uint64_t mask) {
+        g_STS->SetValue(g_STS->GetValue() & ~mask, true);
     }
 
-    uint64_t GetCPUFlags() {
-        return g_flags->GetValue();
+    uint64_t GetCPUStatus() {
+        return g_STS->GetValue();
     }
 
     void SetNextIP(uint64_t value) {
@@ -354,11 +347,11 @@ namespace Emulator {
     }
 
     void SetCPU_IP(uint64_t value) {
-        g_I[0]->SetValue(value, true);
+        g_IP->SetValue(value, true);
     }
 
     uint64_t GetCPU_IP() {
-        return g_I[0]->GetValue();
+        return g_IP->GetValue();
     }
 
     void JumpToIP(uint64_t value) {
@@ -396,7 +389,6 @@ namespace Emulator {
         }
         if (g_Control[0]->IsDirty()) {
             g_isInProtectedMode = g_Control[0]->GetValue() & 1;
-            g_AllowUserIO = g_Control[0]->GetValue() & 2;
             g_Control[0]->SetDirty(false);
         }
     }
@@ -405,6 +397,7 @@ namespace Emulator {
         g_EmulatorRunning = false;
         printf("Crash: %s\n", message);
         DumpRegisters(stdout);
+        // DumpRAM(stdout);
         exit(0);
     }
 
@@ -417,36 +410,31 @@ namespace Emulator {
         return g_isInProtectedMode;
     }
 
-    bool isUserIOAllowed() {
-        return g_AllowUserIO;
-    }
-
     bool isInUserMode() {
         return g_isInUserMode;
     }
 
     void EnterUserMode() {
-        uint64_t flags = g_flags->GetValue();
-        g_flags->SetValue(g_Control[1]->GetValue(), true);
-        g_Control[1]->SetValue(flags, true);
-        g_NextIP = g_I[1]->GetValue();
+        uint64_t status = g_STS->GetValue();
+        g_STS->SetValue(g_Control[1]->GetValue(), true);
+        g_Control[1]->SetValue(status, true);
+        g_NextIP = g_GPR[14]->GetValue();
         g_SCP->SetValue(g_GPR[15]->GetValue());
         g_isInUserMode = true;
     }
 
     void EnterUserMode(uint64_t address) {
-        g_flags->SetValue(0, true);
-        g_I[1]->SetValue(0, true);
+        g_STS->SetValue(0, true);
         g_NextIP = address;
         g_isInUserMode = true;
     }
 
     void ExitUserMode() {
         g_isInUserMode = false;
-        uint64_t flags = g_flags->GetValue();
-        g_flags->SetValue(g_Control[1]->GetValue(), true);
-        g_Control[1]->SetValue(flags, true);
-        g_I[1]->SetValue(GetNextIP(), true);
+        uint64_t status = g_STS->GetValue();
+        g_STS->SetValue(g_Control[1]->GetValue(), true);
+        g_Control[1]->SetValue(status, true);
+        g_GPR[14]->SetValue(GetNextIP(), true);
         g_NextIP = g_Control[2]->GetValue();
         g_GPR[15]->SetValue(g_SCP->GetValue());
     }

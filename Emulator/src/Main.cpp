@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MAX_PROGRAM_FILE_SIZE MiB(25)
 #define MIN_PROGRAM_FILE_SIZE 8
 
-#define DEFAULT_RAM MiB(8)
+#define DEFAULT_RAM KiB(4)
 
 /* Argument layout: <file name> [RAM size]*/
 

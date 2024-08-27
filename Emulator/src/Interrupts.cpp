@@ -50,14 +50,14 @@ void InterruptHandler::RaiseInterrupt(uint8_t interrupt, uint64_t IP) {
     g_stack->push(IP);
     if (g_stack->WillOverflowOnPush())
         HandleFailure(interrupt);
-    g_stack->push(Emulator::GetCPUFlags());
+    g_stack->push(Emulator::GetCPUStatus());
     Emulator::JumpToIP(m_IDT[interrupt].handler);
 }
 
 void InterruptHandler::ReturnFromInterrupt() {
     if (g_stack->WillUnderflowOnPop())
         m_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION);
-    Emulator::SetCPUFlags(g_stack->pop());
+    Emulator::SetCPUStatus(g_stack->pop());
     if (g_stack->WillUnderflowOnPop())
         m_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION);
     Emulator::JumpToIP(g_stack->pop());

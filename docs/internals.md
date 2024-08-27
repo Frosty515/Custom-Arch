@@ -30,13 +30,7 @@ First 2 bytes are for the instruction stuff, and data follows it
 
 - General purpose registers: it is simply the GPR number
 - Stack: scp is 0, sbp is 1, stp is 2, rest are reserved
-- Control, Flags & IPs: CR0-CR7 are numbers 0-7, FLAGS is 8, I0 is 9, I1 is 0xA, rest are reserved
-
-### Instruction ID
-
-- 8-bit integer that identifies a specific instruction
-- upper 3 bits are type (0 for other, 1 for stack, 2 for ALU, 3 for program flow, 4 for IO, 5-7 are reserved)
-- last 5 bits are number
+- Control, Flags & IPs: CR0-CR7 are numbers 0-7, STS is 8, IP is 9, rest are reserved
 
 ### Argument layout
 
@@ -133,7 +127,7 @@ First 2 bytes are for the instruction stuff, and data follows it
 #### Numbering
 
 - Bits 0-3 are the offset
-- Bits 4-6 are the group (0 for ALU, 1 for control flow, 2 for IO, 3 for other, 4-7 are reserved)
+- Bits 4-6 are the group (0 for ALU, 1 for control flow, 2 for other, 3-7 are reserved)
 - Bit 7 is reserved and should always be 0
 
 #### ALU
@@ -171,27 +165,6 @@ First 2 bytes are for the instruction stuff, and data follows it
 | syscall | 7 |
 | sysret | 8 |
 | enteruser | 9 |
-| (invalid) | a |
-| (invalid) | b |
-| (invalid) | c |
-| (invalid) | d |
-| (invalid) | e |
-| (invalid) | f |
-
-#### IO
-
-| Name | offset |
-| ---- | --- |
-| inb  | 0 |
-| outb | 1 |
-| inw  | 2 |
-| outw | 3 |
-| ind  | 4 |
-| outd | 5 |
-| inq  | 6 |
-| outq | 7 |
-| (invalid) | 8 |
-| (invalid) | 9 |
 | (invalid) | a |
 | (invalid) | b |
 | (invalid) | c |

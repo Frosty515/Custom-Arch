@@ -52,9 +52,8 @@ enum class Register {
     cr5,
     cr6,
     cr7,
-    flags,
-    i0,
-    i1,
+    sts,
+    ip,
     unknown
 };
 
@@ -119,14 +118,6 @@ enum class Opcode {
     SYSCALL,
     SYSRET,
     ENTERUSER,
-    INB,
-    OUTB,
-    INW,
-    OUTW,
-    IND,
-    OUTD,
-    INQ,
-    OUTQ,
     INT,
     LIDT,
     IRET,

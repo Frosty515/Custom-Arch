@@ -47,17 +47,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 - `jz (address or register)` jump to address provided or address in register if zero flag is set, otherwise `nop`
 - `jnz (address or register)` jump to address provided or address in register if zero flag is not set, otherwise `nop`
 
-### IO
-
-- `inb port(address, register or immediate), out(address or register)` receive byte from port and put it in out
-- `outb port(address, register or immediate), byte(address, register or immediate)` send byte to port
-- `inw port(address, register or immediate), out(address or register)` receive word from port and put it in out
-- `outw port(address, register or immediate), word(address, register or immediate)` send word to port
-- `ind port(address, register or immediate), out(address or register)` receive double-word from port and put it in out
-- `outd port(address, register or immediate), double-word(address, register or immediate)` send double-word to port
-- `inq port(address, register or immediate), out(address or register)` receive quad-word from port and put it in out
-- `outq port(address, register or immediate), quad-word(address, register or immediate)` send quad-word to port
-
 ### Misc
 
 - `mov dst(address or register), src(address, register or immediate)` instruction to move values between registers and memory addresses
@@ -110,15 +99,6 @@ void ins_jc(Operand& dst);
 void ins_jnc(Operand& dst);
 void ins_jz(Operand& dst);
 void ins_jnz(Operand& dst);
-
-void ins_inb(Operand& port, Operand& out);
-void ins_outb(Operand& port, Operand& byte);
-void ins_inw(Operand& port, Operand& out);
-void ins_outw(Operand& port, Operand& word);
-void ins_ind(Operand& port, Operand& out);
-void ins_outd(Operand& port, Operand& dword);
-void ins_inq(Operand& port, Operand& out);
-void ins_outq(Operand& port, Operand& qword);
 
 void ins_mov(Operand& dst, Operand& src);
 void ins_nop();

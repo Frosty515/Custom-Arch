@@ -4,9 +4,9 @@
 
 - 16 64-bit general purpose registers (GPRs) named r0-r15
 - 3 64-bit stack related registers. See [Stack](#stack-info)
-- 1 64-bit flags register that is read-only. named FLAGS. See [Flags Layout](#flags-layout) for more info
+- 1 64-bit state register that is read-only. named STS. See [Status Layout](#status-layout) for more info
 - 4 64-bit control registers named CR0-CR8, see [Control Registers Layout](#control-registers-layout) for more info
-- 2 64-bit instruction registers, I0 for current address and I1 for previous frames address (return address). I0 and I1 are read-only.
+- 1 64-bit instruction register, named IP. It is read-only.
 
 ### Control Registers Layout
 
@@ -15,8 +15,7 @@
 | Bit | Name | Description |
 | --- | ---- | ----------- |
 | 0   | PE   | Protected mode enabled |
-| 1   | IO   | IO instructions enabled in user mode |
-| 2-63| RESERVED | Reserved |
+| 1-63| RESERVED | Reserved |
 
 #### CR1
 
@@ -40,7 +39,7 @@
 | --- | ---- | ----------- |
 | 0-63| RESERVED | Reserved |
 
-### Flags Layout
+### Status Layout
 
 | Bit | Name | Description |
 | --- | ---- | ----------- |
@@ -48,9 +47,7 @@
 | 1   | ZF   | Zero flag |
 | 2   | SF   | Sign flag |
 | 3   | IF   | Interrupt flag |
-| 4   | IOF  | Is writing to the IO bus |
-| 5   | IIF  | Is reading from the IO bus |
-| 6-63| RESERVED | Reserved |
+| 4-63| RESERVED | Reserved |
 
 ## Stack Info
 
@@ -106,24 +103,23 @@
 ### 64-bit real mode
 
 - All memory is accessible by everything
-- All registers are accessible by everything (I0, I1, and FLAGS are read-only)
+- All registers are accessible by everything (IP, and STS are read-only)
 - All valid instructions always work
 
 ### 64-bit protected mode
 
-- 2 levels of access: user, supervisor
-- bit 0 of CR0 is set to 1 to enable protected mode
-- defaults to supervisor mode
-- Interrupts behave differently. See [Protected mode interrupts](#protected-mode-interrupts) for more info
-- bit 1 of CR0 controls where [IO instructions](#io) are available in user mode.
+- 2 levels of access: user, supervisor.
+- bit 0 of CR0 is set to 1 to enable protected mode.
+- defaults to supervisor mode.
+- Interrupts behave differently. See [Protected mode interrupts](#protected-mode-interrupts) for more info.
 
 #### Switching privilege levels
 
-On supervisor mode entry, the contents of `FLAGS` is swapped with the contents of `CR1`, and `I0` will be set to `CR2`. `I1` will be set to the address of the instruction after the `syscall` instruction. The old value of I1 is not saved. `r15` will be set to the user mode stack. Supervisor mode is responsible for saving `sbp`, `stp`, and `r0`-`r14` if they are of importance. Supervisor mode is also responsible for getting its own stack. After all this, the values of `I1` and `r15` would have been overridden. If they are of importance, they should be saved prior to the `syscall` instruction.
+On supervisor mode entry, the contents of `STS` is swapped with the contents of `CR1`, and `IP` will be set to `CR2`. `r14` will be set to the address of the instruction after the `syscall` instruction. The old value of `r14` is not saved. `r15` will be set to the user mode stack. Supervisor mode is responsible for saving `sbp`, `stp`, and `r0`-`r13` if they are of importance. Supervisor mode is also responsible for getting its own stack. After all this, the values of `r14` and `r15` would have been overridden. If they are of importance, they should be saved prior to the `syscall` instruction.
 
-On supervisor mode exit, the contents of `CR1` is swapped with the contents of `FLAGS`, and `I0` will be set to `I1`. `scp` will be set to `r15`. The old value of `I0` is not saved. Supervisor mode is responsible for restoring `sbp`, `stp`, and `r0`-`r14` if they were saved.
+On supervisor mode exit, the contents of `CR1` is swapped with the contents of `STS`, and `I0` will be set to `r14`. `scp` will be set to `r15`. The old value of `IP` is not saved. Supervisor mode is responsible for restoring `sbp`, `stp`, and `r0`-`r13` if they were saved.
 
-On user mode entry (different from supervisor mode exit), `I1` and `FLAGS` are cleared. `I0` will be set to the first argument of the instruction. All other registers are untouched.
+On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP` will be set to the first argument of the instruction. All other registers are untouched.
 
 ## Instructions
 
@@ -152,17 +148,6 @@ On user mode entry (different from supervisor mode exit), `I1` and `FLAGS` are c
 - `jnc (address or register)` jump to address provided or address in register if carry flag is not set, otherwise `nop`
 - `jz (address or register)` jump to address provided or address in register if zero flag is set, otherwise `nop`
 - `jnz (address or register)` jump to address provided or address in register if zero flag is not set, otherwise `nop`
-
-### IO
-
-- `inb port(address, register or immediate), out(address or register)` receive byte from port and put it in out
-- `outb port(address, register or immediate), byte(address, register or immediate)` send byte to port
-- `inw port(address, register or immediate), out(address or register)` receive word from port and put it in out
-- `outw port(address, register or immediate), word(address, register or immediate)` send word to port
-- `ind port(address, register or immediate), out(address or register)` receive double-word from port and put it in out
-- `outd port(address, register or immediate), double-word(address, register or immediate)` send double-word to port
-- `inq port(address, register or immediate), out(address or register)` receive quad-word from port and put it in out
-- `outq port(address, register or immediate), quad-word(address, register or immediate)` send quad-word to port
 
 ### Interrupts
 
@@ -237,7 +222,8 @@ Has a register called IDTR which contains the address of a table called the Inte
 
 ## Devices
 
-- 1 64-bit IO bus
+- 1 64-bit Memory mapped I/O bus from 0xE000'0000 to 0xEFFF'FFFF, which is 256MB in size
+- All accesses are 8-byte aligned regardless of the size of the access, allowing for up to 33,554,432 ports
 
 ### Console device
 

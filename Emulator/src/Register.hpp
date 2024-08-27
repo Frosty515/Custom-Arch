@@ -24,7 +24,7 @@ enum class RegisterType {
     GeneralPurpose,
     Instruction,
     Stack,
-    Flags,
+    Status,
     Control,
     Unknown // Should never be used, only here for error checking
 };
@@ -57,9 +57,8 @@ enum RegisterID {
     RegisterID_CR5,
     RegisterID_CR6,
     RegisterID_CR7,
-    RegisterID_FLAGS,
-    RegisterID_I0,
-    RegisterID_I1,
+    RegisterID_STS,
+    RegisterID_IP,
     RegisterID_UNKNOWN = 0xFF
 };
 

@@ -121,7 +121,7 @@ uint8_t MMU::read8(uint64_t address) {
     bool found = false;
     for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
         if (region->isInside(address, 1)) {
-            region->read(address, &data, 1);
+            region->read8(address, &data);
             found = true;
             break;
         }
@@ -132,41 +132,54 @@ uint8_t MMU::read8(uint64_t address) {
 }
 
 uint16_t MMU::read16(uint64_t address) {
-    // little endian format
-    uint8_t data[2] = {0};
-    ReadBuffer(address, data, sizeof(data));
-    return data[0]
-            | ((uint16_t)data[1] << 8); // [0] [1] -> [1] [0]
+    uint16_t data = 0;
+    bool found = false;
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        if (region->isInside(address, 2)) {
+            region->read16(address, &data);
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    return data;
 }
 
 uint32_t MMU::read32(uint64_t address) {
-    // little endian format
-    uint8_t data[4] = {0};
-    ReadBuffer(address, data, sizeof(data));
-    return data[0]
-            | ((uint32_t)data[1] << 8)
-            | ((uint32_t)data[2] << 16)
-            | ((uint32_t)data[3] << 24); // [0] [1] [2] [3] -> [3] [2] [1] [0]
+    uint32_t data = 0;
+    bool found = false;
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        if (region->isInside(address, 4)) {
+            region->read32(address, &data);
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    return data;
 }
 
 uint64_t MMU::read64(uint64_t address) {
-    // little endian format
-    uint8_t data[8] = {0};
-    ReadBuffer(address, data, sizeof(data));
-    return data[0]
-            | ((uint64_t)data[1] << 8)
-            | ((uint64_t)data[2] << 16)
-            | ((uint64_t)data[3] << 24)
-            | ((uint64_t)data[4] << 32)
-            | ((uint64_t)data[5] << 40)
-            | ((uint64_t)data[6] << 48)
-            | ((uint64_t)data[7] << 56); // [0] [1] [2] [3] [4] [5] [6] [7] -> [7] [6] [5] [4] [3] [2] [1] [0]
+    uint64_t data = 0;
+    bool found = false;
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        if (region->isInside(address, 8)) {
+            region->read64(address, &data);
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    return data;
 }
 
 void MMU::write8(uint64_t address, uint8_t data) {
     for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
         if (region->isInside(address, 1)) {
-            region->write(address, &data, 1);
+            region->write8(address, &data);
             return;
         }
     }
@@ -174,35 +187,34 @@ void MMU::write8(uint64_t address, uint8_t data) {
 }
 
 void MMU::write16(uint64_t address, uint16_t data) {
-    // little endian format
-    uint8_t temp[2] = {0};
-    temp[0] = (uint8_t)data;
-    temp[1] = (uint8_t)(data >> 8);
-    WriteBuffer(address, temp, sizeof(temp));
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        if (region->isInside(address, 2)) {
+            region->write16(address, &data);
+            return;
+        }
+    }
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
 }
 
 void MMU::write32(uint64_t address, uint32_t data) {
-    // little endian format
-    uint8_t temp[4] = {0};
-    temp[0] = (uint8_t)data;
-    temp[1] = (uint8_t)(data >> 8);
-    temp[2] = (uint8_t)(data >> 16);
-    temp[3] = (uint8_t)(data >> 24);
-    WriteBuffer(address, temp, sizeof(temp));
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        if (region->isInside(address, 4)) {
+            region->write32(address, &data);
+            return;
+        }
+    }
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
 }
 
 void MMU::write64(uint64_t address, uint64_t data) {
-    // little endian format
-    uint8_t temp[8] = {0};
-    temp[0] = (uint8_t)data;
-    temp[1] = (uint8_t)(data >> 8);
-    temp[2] = (uint8_t)(data >> 16);
-    temp[3] = (uint8_t)(data >> 24);
-    temp[4] = (uint8_t)(data >> 32);
-    temp[5] = (uint8_t)(data >> 40);
-    temp[6] = (uint8_t)(data >> 48);
-    temp[7] = (uint8_t)(data >> 56);
-    WriteBuffer(address, temp, sizeof(temp));
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        if (region->isInside(address, 8)) {
+            region->write64(address, &data);
+            return;
+        }
+    }
+    printf("Address: %lx\n", address);
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
 }
 
 bool MMU::ValidateRead(uint64_t address, size_t size) {
@@ -242,4 +254,14 @@ bool MMU::ValidateRead(uint64_t address, size_t size) {
         }
     }
     return true;
+}
+
+void MMU::AddMemoryRegion(MemoryRegion* region) {
+    m_regions.insert(region);
+}
+
+void MMU::DumpMemory() const {
+    for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
+        region->dump();
+    }
 }

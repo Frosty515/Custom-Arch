@@ -526,7 +526,7 @@ void Parser::PrintSections(FILE* fd) const {
                         }
                     }
                 }
-                /*else { // raw data
+                else { // raw data
                     RawData* raw_data = (RawData*)(data->data);
                     if (raw_data == nullptr || raw_data->data == nullptr)
                         return;
@@ -534,7 +534,7 @@ void Parser::PrintSections(FILE* fd) const {
                     for (uint64_t l = 0; l < raw_data->data_size; l++)
                         fprintf(fd, "%#02hhx%c", ((uint8_t*)(raw_data->data))[l], (l % 8) == 0 ? '\n' : ' ');
                     fputc('\n', fd);
-                }*/
+                }
             }
         }
     }
@@ -603,22 +603,6 @@ Opcode Parser::GetOpcode(const char* name, size_t name_size) const {
         return Opcode::SYSRET;
     else if (EQUALS(name, "enteruser"))
         return Opcode::ENTERUSER;
-    else if (EQUALS(name, "inb"))
-        return Opcode::INB;
-    else if (EQUALS(name, "outb"))
-        return Opcode::OUTB;
-    else if (EQUALS(name, "inw"))
-        return Opcode::INW;
-    else if (EQUALS(name, "outw"))
-        return Opcode::OUTW;
-    else if (EQUALS(name, "ind"))
-        return Opcode::IND;
-    else if (EQUALS(name, "outd"))
-        return Opcode::OUTD;
-    else if (EQUALS(name, "inq"))
-        return Opcode::INQ;
-    else if (EQUALS(name, "outq"))
-        return Opcode::OUTQ;
     else if (EQUALS(name, "int"))
         return Opcode::INT;
     else if (EQUALS(name, "lidt"))
@@ -664,9 +648,8 @@ Register Parser::GetRegister(const char* name, size_t name_size) const {
     REG_EQUAL(cr5);
     REG_EQUAL(cr6);
     REG_EQUAL(cr7);
-    REG_EQUAL(flags);
-    REG_EQUAL(i0);
-    REG_EQUAL(i1);
+    REG_EQUAL(sts);
+    REG_EQUAL(ip);
 #undef REG_EQUAL
     return Register::unknown;
 }
@@ -710,14 +693,6 @@ const char* Parser::GetInstructionName(Opcode opcode) const {
     NAME_CASE(SYSCALL)
     NAME_CASE(SYSRET)
     NAME_CASE(ENTERUSER)
-    NAME_CASE(INB)
-    NAME_CASE(OUTB)
-    NAME_CASE(INW)
-    NAME_CASE(OUTW)
-    NAME_CASE(IND)
-    NAME_CASE(OUTD)
-    NAME_CASE(INQ)
-    NAME_CASE(OUTQ)
     NAME_CASE(INT)
     NAME_CASE(LIDT)
     NAME_CASE(IRET)
@@ -760,9 +735,8 @@ const char* Parser::GetRegisterName(Register i_reg) const {
     NAME_CASE(cr5)
     NAME_CASE(cr6)
     NAME_CASE(cr7)
-    NAME_CASE(flags)
-    NAME_CASE(i0)
-    NAME_CASE(i1)
+    NAME_CASE(sts)
+    NAME_CASE(ip)
     NAME_CASE(unknown)
     }
 #undef NAME_CASE

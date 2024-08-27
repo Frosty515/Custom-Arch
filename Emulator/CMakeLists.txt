@@ -35,6 +35,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Instruction.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Operand.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOBus.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOMemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/ConsoleDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp

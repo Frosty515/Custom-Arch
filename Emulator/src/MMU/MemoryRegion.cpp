@@ -17,8 +17,42 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "MemoryRegion.hpp"
 
+#include <stdio.h>
+
 MemoryRegion::MemoryRegion(uint64_t start, uint64_t end) : m_start(start), m_end(end), m_size(end - start + 1) {
 
+}
+
+void MemoryRegion::read8(uint64_t address, uint8_t* buffer) {
+    read(address, buffer, 1);
+}
+
+void MemoryRegion::read16(uint64_t address, uint16_t* buffer) {
+    read(address, reinterpret_cast<uint8_t*>(buffer), 2);
+}
+
+void MemoryRegion::read32(uint64_t address, uint32_t* buffer) {
+    read(address, reinterpret_cast<uint8_t*>(buffer), 4);
+}
+
+void MemoryRegion::read64(uint64_t address, uint64_t* buffer) {
+    read(address, reinterpret_cast<uint8_t*>(buffer), 8);
+}
+
+void MemoryRegion::write8(uint64_t address, const uint8_t* buffer) {
+    write(address, buffer, 1);
+}
+
+void MemoryRegion::write16(uint64_t address, const uint16_t* buffer) {
+    write(address, reinterpret_cast<const uint8_t*>(buffer), 2);
+}
+
+void MemoryRegion::write32(uint64_t address, const uint32_t* buffer) {
+    write(address, reinterpret_cast<const uint8_t*>(buffer), 4);
+}
+
+void MemoryRegion::write64(uint64_t address, const uint64_t* buffer) {
+    write(address, reinterpret_cast<const uint8_t*>(buffer), 8);
 }
 
 uint64_t MemoryRegion::getStart() {
@@ -35,4 +69,18 @@ size_t MemoryRegion::getSize() {
 
 bool MemoryRegion::isInside(uint64_t address, size_t size) {
     return address >= m_start && (address + size) <= m_end;
+}
+
+void MemoryRegion::dump() {
+    printf("MemoryRegion: %lx - %lx", m_start, m_end);
+    for (uint64_t i = m_start; i < m_end; i++) {
+        if ((i - m_start) % 16 == 0)
+            printf("\n%016lx: ", i);
+        else if ((i - m_start) % 8 == 0)
+            printf(" ");
+        uint8_t data = 0;
+        read8(i, &data);
+        printf("%02X ", data);
+    }
+    printf("\n");
 }

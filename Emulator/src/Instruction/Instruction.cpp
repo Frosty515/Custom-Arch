@@ -234,7 +234,7 @@ void ExecutionLoop(MMU& mmu, InstructionState& CurrentState, char const*& last_e
 #### Numbering
 
 - Bits 0-3 are the offset
-- Bits 4-6 are the group (0 for ALU, 1 for control flow, 2 for IO, 3 for other, 4-7 are reserved)
+- Bits 4-6 are the group (0 for ALU, 1 for control flow, 2 for other, 3-7 are reserved)
 - Bit 7 is reserved and should always be 0
 
 #### ALU
@@ -271,28 +271,7 @@ void ExecutionLoop(MMU& mmu, InstructionState& CurrentState, char const*& last_e
 | jnz  | 6 |
 | syscall | 7 |
 | sysret | 8 |
-| enteruse | 9 |
-| (invalid) | a |
-| (invalid) | b |
-| (invalid) | c |
-| (invalid) | d |
-| (invalid) | e |
-| (invalid) | f |
-
-#### IO
-
-| Name | offset |
-| ---- | --- |
-| inb  | 0 |
-| outb | 1 |
-| inw  | 2 |
-| outw | 3 |
-| ind  | 4 |
-| outd | 5 |
-| inq  | 6 |
-| outq | 7 |
-| (invalid) | 8 |
-| (invalid) | 9 |
+| enteruser | 9 |
 | (invalid) | a |
 | (invalid) | b |
 | (invalid) | c |
@@ -436,44 +415,7 @@ void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count) {
         default:
             return nullptr;
         }
-    case 2: // IO
-        switch (offset) {
-        case 0: // inb
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_inb;
-        case 1: // outb
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_outb;
-        case 2: // inw
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_inw;
-        case 3: // outw
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_outw;
-        case 4: // ind
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_ind;
-        case 5: // outd
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_outd;
-        case 6: // inq
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_inq;
-        case 7: // outq
-            if (argument_count != nullptr)
-                *argument_count = 2;
-            return (void*)ins_outq;
-        default:
-            return nullptr;
-        }
-    case 3: // other
+    case 2: // other
         switch (offset) {
         case 0: // mov
             if (argument_count != nullptr)
@@ -542,24 +484,24 @@ extern "C" int printf(const char* format, ...);
     PRINT_INS_INFO2(dst, src); \
     uint64_t flags = 0; \
     dst.SetValue(x86_64_##name(dst.GetValue(), src.GetValue(), &flags)); \
-    Emulator::ClearCPUFlags(7); \
-    Emulator::SetCPUFlags(flags & 7); \
+    Emulator::ClearCPUStatus(7); \
+    Emulator::SetCPUStatus(flags & 7); \
 }
 
 #define ALU_INSTRUCTION2_NO_RET_VAL(name) void ins_##name(Operand& dst, Operand& src) { \
     PRINT_INS_INFO2(dst, src); \
     uint64_t flags = 0; \
     x86_64_##name(dst.GetValue(), src.GetValue(), &flags); \
-    Emulator::ClearCPUFlags(7); \
-    Emulator::SetCPUFlags(flags & 7); \
+    Emulator::ClearCPUStatus(7); \
+    Emulator::SetCPUStatus(flags & 7); \
 }
 
 #define ALU_INSTRUCTION1(name) void ins_##name(Operand& dst) { \
     PRINT_INS_INFO1(dst); \
     uint64_t flags = 0; \
     dst.SetValue(x86_64_##name(dst.GetValue(), &flags)); \
-    Emulator::ClearCPUFlags(7); \
-    Emulator::SetCPUFlags(flags & 7); \
+    Emulator::ClearCPUStatus(7); \
+    Emulator::SetCPUStatus(flags & 7); \
 }
 
 ALU_INSTRUCTION2(add)
@@ -573,8 +515,8 @@ void ins_div(Operand& dst, Operand& src) {
         g_ExceptionHandler->RaiseException(Exception::DIV_BY_ZERO);
     uint64_t flags = 0;
     dst.SetValue(x86_64_div(dst.GetValue(), src_val, &flags));
-    Emulator::ClearCPUFlags(7);
-    Emulator::SetCPUFlags(flags & 7);
+    Emulator::ClearCPUStatus(7);
+    Emulator::SetCPUStatus(flags & 7);
 }
 
 ALU_INSTRUCTION2(or)
@@ -686,70 +628,30 @@ void ins_jmp(Operand& dst) {
 
 void ins_jc(Operand& dst) {
     PRINT_INS_INFO1(dst);
-    uint64_t flags = Emulator::GetCPUFlags();
+    uint64_t flags = Emulator::GetCPUStatus();
     if (flags & 1)
         Emulator::SetNextIP(dst.GetValue());
 }
 
 void ins_jnc(Operand& dst) {
     PRINT_INS_INFO1(dst);
-    uint64_t flags = Emulator::GetCPUFlags();
+    uint64_t flags = Emulator::GetCPUStatus();
     if (!(flags & 1))
         Emulator::SetNextIP(dst.GetValue());
 }
 
 void ins_jz(Operand& dst) {
     PRINT_INS_INFO1(dst);
-    uint64_t flags = Emulator::GetCPUFlags();
+    uint64_t flags = Emulator::GetCPUStatus();
     if (flags & 2)
         Emulator::SetNextIP(dst.GetValue());
 }
 
 void ins_jnz(Operand& dst) {
     PRINT_INS_INFO1(dst);
-    uint64_t flags = Emulator::GetCPUFlags();
+    uint64_t flags = Emulator::GetCPUStatus();
     if (!(flags & 2))
         Emulator::SetNextIP(dst.GetValue());
-}
-
-void ins_inb(Operand& port, Operand& out) {
-    PRINT_INS_INFO2(port, out);
-    out.SetValue(g_IOBus->ReadByte(port.GetValue()));
-}
-
-void ins_outb(Operand& port, Operand& byte) {
-    PRINT_INS_INFO2(port, byte);
-    g_IOBus->WriteByte(port.GetValue(), byte.GetValue());
-}
-
-void ins_inw(Operand& port, Operand& out) {
-    PRINT_INS_INFO2(port, out);
-    out.SetValue(g_IOBus->ReadWord(port.GetValue()));
-}
-
-void ins_outw(Operand& port, Operand& word) {
-    PRINT_INS_INFO2(port, word);
-    g_IOBus->WriteWord(port.GetValue(), word.GetValue());
-}
-
-void ins_ind(Operand& port, Operand& out) {
-    PRINT_INS_INFO2(port, out);
-    out.SetValue(g_IOBus->ReadDWord(port.GetValue()));
-}
-
-void ins_outd(Operand& port, Operand& dword) {
-    PRINT_INS_INFO2(port, dword);
-    g_IOBus->WriteDWord(port.GetValue(), dword.GetValue());
-}
-
-void ins_inq(Operand& port, Operand& out) {
-    PRINT_INS_INFO2(port, out);
-    out.SetValue(g_IOBus->ReadQWord(port.GetValue()));
-}
-
-void ins_outq(Operand& port, Operand& qword) {
-    PRINT_INS_INFO2(port, qword);
-    g_IOBus->WriteQWord(port.GetValue(), qword.GetValue());
 }
 
 void ins_mov(Operand& dst, Operand& src) {

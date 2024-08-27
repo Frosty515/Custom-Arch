@@ -133,7 +133,7 @@ void IOBus::RemoveDevice(IODevice* device) {
 }
 
 void IOBus::Validate() const {
-    if (Emulator::isInProtectedMode() && Emulator::isInUserMode() && !Emulator::isUserIOAllowed())
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
 }
 

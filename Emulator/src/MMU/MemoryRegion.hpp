@@ -28,11 +28,23 @@ public:
     virtual void read(uint64_t address, uint8_t* buffer, size_t size) = 0;
     virtual void write(uint64_t address, const uint8_t* buffer, size_t size) = 0;
 
+    virtual void read8(uint64_t address, uint8_t* buffer);
+    virtual void read16(uint64_t address, uint16_t* buffer);
+    virtual void read32(uint64_t address, uint32_t* buffer);
+    virtual void read64(uint64_t address, uint64_t* buffer);
+
+    virtual void write8(uint64_t address, const uint8_t* buffer);
+    virtual void write16(uint64_t address, const uint16_t* buffer);
+    virtual void write32(uint64_t address, const uint32_t* buffer);
+    virtual void write64(uint64_t address, const uint64_t* buffer);
+
     virtual uint64_t getStart();
     virtual uint64_t getEnd();
     virtual size_t getSize();
 
     virtual bool isInside(uint64_t address, size_t size);
+
+    virtual void dump();
 
 private:
     uint64_t m_start;

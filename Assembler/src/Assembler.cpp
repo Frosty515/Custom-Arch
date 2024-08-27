@@ -57,7 +57,7 @@ First 2 bytes are for the instruction stuff, and data follows it
 1. 1-byte opcode
 2. 1-byte argument info
 
-### Flags Layout
+## Status (STS) Layout
 
 - bits 0-3: argument 1 info
 - bits 4-7: argument 2 info
@@ -71,14 +71,14 @@ First 2 bytes are for the instruction stuff, and data follows it
 ### Register ID
 
 - 8-bit integer that identifies a specific register
-- first 4 bits are type (0 is general purpose, 1 is stack, 2 is control & flags & instruction pointers)
+- first 4 bits are type (0 is general purpose, 1 is stack, 2 is control & status & instruction pointers)
 - last 4 bits are the number
 
 ### Register numbers
 
 - General purpose registers: it is simply the GPR number
 - Stack: scp is 0, sbp is 1, stp is 2, rest are reserved
-- Control, Flags & IPs: CR0-CR7 are numbers 0-7, FLAGS is 8, I0 is 9, I1 is 0xA, rest are reserved
+- Control, Status & IPs: CR0-CR7 are numbers 0-7, STS is 8, IP is 9, rest are reserved
 
 ### Opcode
 
@@ -189,8 +189,7 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                     }
                     if (instruction->operands.getCount() == 2) {
                         if (instruction->opcode != Opcode::ADD && instruction->opcode != Opcode::MUL && instruction->opcode != Opcode::SUB && instruction->opcode != Opcode::DIV && instruction->opcode != Opcode::OR && instruction->opcode != Opcode::XOR && instruction->opcode != Opcode::NOR && instruction->opcode != Opcode::AND && instruction->opcode != Opcode::NAND && instruction->opcode != Opcode::CMP && instruction->opcode != Opcode::SHL && instruction->opcode != Opcode::SHR
-                        && instruction->opcode != Opcode::MOV && instruction->opcode != Opcode::NOP
-                        && instruction->opcode != Opcode::INB && instruction->opcode != Opcode::OUTB && instruction->opcode != Opcode::INW && instruction->opcode != Opcode::OUTW && instruction->opcode != Opcode::IND && instruction->opcode != Opcode::OUTD && instruction->opcode != Opcode::INQ && instruction->opcode != Opcode::OUTQ) {
+                        && instruction->opcode != Opcode::MOV && instruction->opcode != Opcode::NOP) {
                             printf("Opcode = %d\n", (int)instruction->opcode);
                             error("Instruction has 2 operands");
                         }
@@ -305,9 +304,8 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                                 REG_CASE(cr5, 2, 5)
                                 REG_CASE(cr6, 2, 6)
                                 REG_CASE(cr7, 2, 7)
-                                REG_CASE(flags, 2, 8)
-                                REG_CASE(i0, 2, 9)
-                                REG_CASE(i1, 2, 10)
+                                REG_CASE(sts, 2, 8)
+                                REG_CASE(ip, 2, 9)
                                 default:
                                     error("Invalid register type");
                                     break;
@@ -375,9 +373,8 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<Label>& labels) {
                             REG_CASE(cr5, 2, 5)
                             REG_CASE(cr6, 2, 6)
                             REG_CASE(cr7, 2, 7)
-                            REG_CASE(flags, 2, 8)
-                            REG_CASE(i0, 2, 9)
-                            REG_CASE(i1, 2, 10)
+                            REG_CASE(sts, 2, 8)
+                            REG_CASE(ip, 2, 9)
                             default:
                                 error("Invalid register type");
                                 break;
@@ -496,24 +493,16 @@ uint8_t Assembler::GetRealOpcode(Opcode opcode) const {
     OPCODE_CASE(SYSCALL, 0x17)
     OPCODE_CASE(SYSRET, 0x18)
     OPCODE_CASE(ENTERUSER, 0x19)
-    OPCODE_CASE(INB, 0x20)
-    OPCODE_CASE(OUTB, 0x21)
-    OPCODE_CASE(INW, 0x22)
-    OPCODE_CASE(OUTW, 0x23)
-    OPCODE_CASE(IND, 0x24)
-    OPCODE_CASE(OUTD, 0x25)
-    OPCODE_CASE(INQ, 0x26)
-    OPCODE_CASE(OUTQ, 0x27)
-    OPCODE_CASE(MOV, 0x30)
-    OPCODE_CASE(NOP, 0x31)
-    OPCODE_CASE(HLT, 0x32)
-    OPCODE_CASE(PUSH, 0x33)
-    OPCODE_CASE(POP, 0x34)
-    OPCODE_CASE(PUSHA, 0x35)
-    OPCODE_CASE(POPA, 0x36)
-    OPCODE_CASE(INT, 0x37)
-    OPCODE_CASE(LIDT, 0x38)
-    OPCODE_CASE(IRET, 0x39)
+    OPCODE_CASE(MOV, 0x20)
+    OPCODE_CASE(NOP, 0x21)
+    OPCODE_CASE(HLT, 0x22)
+    OPCODE_CASE(PUSH, 0x23)
+    OPCODE_CASE(POP, 0x24)
+    OPCODE_CASE(PUSHA, 0x25)
+    OPCODE_CASE(POPA, 0x26)
+    OPCODE_CASE(INT, 0x27)
+    OPCODE_CASE(LIDT, 0x28)
+    OPCODE_CASE(IRET, 0x29)
     default:
         return 0xff;
 #undef OPCODE_CASE

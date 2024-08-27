@@ -47,6 +47,10 @@ public:
 
     bool ValidateRead(uint64_t address, size_t size);
 
+    void AddMemoryRegion(MemoryRegion* region);
+
+    void DumpMemory() const;
+
 private:
     LinkedList::SimpleLinkedList<MemoryRegion> m_regions;
 };

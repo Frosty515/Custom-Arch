@@ -46,9 +46,9 @@ namespace Emulator {
     int RequestEmulatorStop();
     int SendInstruction(uint64_t instruction);
 
-    void SetCPUFlags(uint64_t mask);
-    void ClearCPUFlags(uint64_t mask);
-    uint64_t GetCPUFlags();
+    void SetCPUStatus(uint64_t mask);
+    void ClearCPUStatus(uint64_t mask);
+    uint64_t GetCPUStatus();
 
     void SetNextIP(uint64_t value);
     uint64_t GetNextIP();
@@ -66,7 +66,6 @@ namespace Emulator {
     void HandleHalt();
 
     bool isInProtectedMode();
-    bool isUserIOAllowed();
     bool isInUserMode();
 
     void EnterUserMode();

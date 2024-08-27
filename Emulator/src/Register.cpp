@@ -38,11 +38,11 @@ Register::Register(RegisterType type, uint8_t index, bool writable, uint64_t val
     case RegisterType::Control:
         m_ID = 0x20 | index;
         break;
-    case RegisterType::Flags:
+    case RegisterType::Status:
         m_ID = 0x24;
         break;
     case RegisterType::Instruction:
-        m_ID = 0x25 + index;
+        m_ID = 0x25;
         break;
     default:
         m_ID = 0xFF;
@@ -173,17 +173,10 @@ const char* Register::GetName() const {
         default:
             return "Unknown";
         }
-    case RegisterType::Flags:
-        return "FLAGS";
+    case RegisterType::Status:
+        return "STS";
     case RegisterType::Instruction:
-        switch (m_index) {
-        case 0:
-            return "I0";
-        case 1:
-            return "I1";
-        default:
-            return "Unknown";
-        }
+        return "IP";
     default:
         return "Unknown";
     }
@@ -216,12 +209,12 @@ void Register::DecodeID(uint8_t ID) {
             m_index = index;
         }
         else if (index == 8) {
-            m_type = RegisterType::Flags;
+            m_type = RegisterType::Status;
             m_index = 0;
         }
-        else if (index == 9 || index == 10) {
+        else if (index == 9) {
             m_type = RegisterType::Instruction;
-            m_index = index;
+            m_index = 0;
         }
         break;
     }
