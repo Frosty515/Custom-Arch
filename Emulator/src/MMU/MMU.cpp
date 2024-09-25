@@ -74,7 +74,7 @@ void MMU::ReadBuffer(uint64_t address, uint8_t* data, size_t size) {
     }
 }
 
-void MMU::WriteBuffer(uint64_t address, uint8_t* data, size_t size) {
+void MMU::WriteBuffer(uint64_t address, const uint8_t* data, size_t size) {
     MemoryRegion* startingRegion = nullptr;
     uint64_t regionIndex = 0;
     for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region), regionIndex++) {

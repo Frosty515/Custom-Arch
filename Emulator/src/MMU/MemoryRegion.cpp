@@ -73,14 +73,25 @@ bool MemoryRegion::isInside(uint64_t address, size_t size) {
 
 void MemoryRegion::dump() {
     printf("MemoryRegion: %lx - %lx", m_start, m_end);
-    for (uint64_t i = m_start; i < m_end; i++) {
-        if ((i - m_start) % 16 == 0)
+    uint8_t buffer[16];
+    uint8_t buffer_index = 0;
+    for (uint64_t i = m_start; i < m_end; i++, buffer_index++) {
+        if ((i - m_start) % 16 == 0) {
+            buffer_index = 0;
             printf("\n%016lx: ", i);
+        }
         else if ((i - m_start) % 8 == 0)
             printf(" ");
         uint8_t data = 0;
         read8(i, &data);
+        buffer[buffer_index] = data;
         printf("%02X ", data);
+        if ((i - m_start) % 16 == 15) {
+            printf(" |");
+            for (uint64_t j = 0; j < 16; j++)
+                printf("%c", buffer[j] >= 32 && buffer[j] <= 126 ? buffer[j] : '.');
+            printf("|");
+        }
     }
     printf("\n");
 }

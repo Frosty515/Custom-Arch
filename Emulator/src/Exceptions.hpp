@@ -39,7 +39,7 @@ public:
     ExceptionHandler(InterruptHandler* INTHandler);
     ~ExceptionHandler();
 
-    void RaiseException(Exception exception);
+    [[noreturn]] void RaiseException(Exception exception);
 
     void SetINTHandler(InterruptHandler* INTHandler);
 

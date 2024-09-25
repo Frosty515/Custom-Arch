@@ -220,6 +220,18 @@ Has a register called IDTR which contains the address of a table called the Inte
 - `dd` to define a double-word (4 bytes)
 - `dq` to define a quad-word (8 bytes)
 
+### Operands
+
+- Operands are separated by commas
+- Operands can be registers, memory addresses, or immediates
+
+#### Memory addresses
+
+- 2 forms
+- form 1: `[literal]` where literal is a 64-bit integer (also known as `MEMORY`).
+- form 2: `[base*index+offset]`, where any of the 3 can be a register or a literal of any size (also known as `COMPLEX`).
+- In form 2, index or offset can be excluded. If the offset is a register, it can be positive or negative.
+
 ## Devices
 
 - 1 64-bit Memory mapped I/O bus from 0xE000'0000 to 0xEFFF'FFFF, which is 256MB in size

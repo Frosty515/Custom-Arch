@@ -48,7 +48,7 @@ public:
 
     void SetIDTR(uint64_t base);
 
-    void RaiseInterrupt(uint8_t interrupt, uint64_t IP);
+    [[noreturn]] void RaiseInterrupt(uint8_t interrupt, uint64_t IP);
     void ReturnFromInterrupt();
 
 private:

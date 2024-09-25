@@ -7,18 +7,24 @@ First 2 bytes are for the instruction stuff, and data follows it
 ### Layout
 
 1. 1-byte opcode
-2. 1-byte argument info
-
-### Flags Layout
-
-- bits 0-3: argument 1 info
-- bits 4-7: argument 2 info
+2. minimum 1-byte argument info for each argument
 
 ### Argument info layout
 
-- bits 0 & 1: data type (0 for register, 1 for memory address, 2 for literal, 3 for register and offset)
-- bits 2 & 3: data size (literals: 0 for 8-bit, 1 for 16-bit, 2 for 32-bit, 3 for 64-bit. other: 1-3 for unused argument) [NOTE: only used if literal type is used (because others have set sizes), otherwise ignored]
-- If argument is unused: data type is 0, 1 or 3, data size is 1-3
+- bits 0-1 are data type (0 for register, 1 for memory address, 2 for literal, 3 for complex memory address)
+- bits 2-3 are the operand size (0 for 8-bit, 1 for 16-bit, 2 for 32-bit, 3 for 64-bit), also the size for literals
+
+#### complex memory address
+
+- bit 4 is the type of the base (0 for register, 1 for literal)
+- bit 5-6 is the size of the base (0 for 8-bit, 1 for 16-bit, 2 for 32-bit, 3 for 64-bit) if it is a literal
+- bit 7 is set if the base is present
+- bits 8 is the type of the index (0 for register, 1 for literal)
+- bits 9-10 is the size of the index (0 for 8-bit, 1 for 16-bit, 2 for 32-bit, 3 for 64-bit) if it is a literal
+- bit 11 is set if the index is present
+- bit 12 is the type of the offset (0 for register, 1 for literal)
+- bits 13-14 is the size of the offset (0 for 8-bit, 1 for 16-bit, 2 for 32-bit, 3 for 64-bit) if it is a literal or the sign of the offset if it is a register
+- bit 15 is set if the offset is present
 
 ### Register ID
 
@@ -34,93 +40,8 @@ First 2 bytes are for the instruction stuff, and data follows it
 
 ### Argument layout
 
-#### Arg 1 & 2 are registers
-
-- 1-byte arg1 Register ID
-- 1-byte arg2 Register ID
-
-#### Arg 1 is register and Arg 2 is memory address
-
-- 1-byte arg1 Register ID
-- 8-byte arg2 address
-
-#### Arg 1 is register and Arg 2 is literal
-
-- 1-byte arg1 Register ID
-- n-byte arg2 literal
-
-#### Arg 1 is register and Arg 2 is register + offset
-
-- 1-byte arg1 Register ID
-- 1-byte arg2 Register ID
-- 8-byte arg2 offset
-
-#### Arg 1 is memory address and Arg 2 is Register
-
-- 8-byte arg1 address
-- 1-byte arg2 Register ID
-
-#### Arg 1 & 2 are memory addresses
-
-- 8-byte arg1 address
-- 8-byte arg2 address
-
-#### Arg 1 is memory address and Arg 2 is literal
-
-- 8-byte arg1 address
-- n-byte arg2 literal
-
-#### Arg 1 is memory address and Arg 2 is register + offset
-
-- 1-byte arg1 address
-- 1-byte arg2 Register ID
-- 8-byte arg2 offset
-
-#### Arg 1 is literal and Arg2 is register
-
-- n-byte arg1 literal
-- 1-byte arg2 Register ID
-
-#### Arg 1 is literal and Arg2 is address
-
-- n-byte arg1 literal
-- 8-byte arg2 address
-
-#### Arg 1 is literal and Arg2 is literal
-
-- n-byte arg1 literal
-- n-byte arg2 literal
-
-#### Arg 1 is literal and Arg2 is register + offset
-
-- n-byte arg1 literal
-- 1-byte arg2 Register ID
-- 8-byte arg2 offset
-
-#### Arg 1 is register + offset and Arg2 is register
-
-- 1-byte arg1 Register ID
-- 8-byte arg1 offset
-- 1-byte arg2 Register ID
-
-#### Arg 1 is register + offset and Arg2 is memory address
-
-- 1-byte arg1 Register ID
-- 8-byte arg1 offset
-- 8-byte arg2 address
-
-#### Arg 1 is register + offset and Arg2 is literal
-
-- 1-byte arg1 Register ID
-- 8-byte arg1 offset
-- n-byte arg2 literal
-
-#### Arg 1 is register + offset and Arg2 is register + offset
-
-- 1-byte arg1 Register ID
-- 8-byte arg1 offset
-- 1-byte arg2 Register ID
-- 8-byte arg1 offset
+- When there are 2 arguments, one being standard and the other being complex, there are an extra 4-bits of padding after the standard argument.
+- On the case where arg 1 is standard, and arg 2 is complex, the padding for arg 1 has a copy of the first 4 bits of the complex argument. Only the arg type matters, the size is ignored.
 
 ### Opcode
 

@@ -190,7 +190,6 @@ void Buffer::AutoShrink() {
     for (uint64_t i = m_blocks.getCount(); i > 0; i--) {
         Block* block = m_blocks.get(i - 1);
         if (block->empty) {
-            printf("Shrinking block %lu\n", i - 1);
             delete[] block->data;
             m_blocks.remove(block);
             m_size -= block->size;

@@ -38,7 +38,7 @@ void InterruptHandler::SetIDTR(uint64_t base) {
         m_IDT[i].loaded = false;
 }
 
-void InterruptHandler::RaiseInterrupt(uint8_t interrupt, uint64_t IP) {
+[[noreturn]] void InterruptHandler::RaiseInterrupt(uint8_t interrupt, uint64_t IP) {
     if (!m_IDT[interrupt].loaded)
         m_IDT[interrupt] = ReadDescriptor(interrupt);
     if ((m_IDT[interrupt].flags & 1) == 0)

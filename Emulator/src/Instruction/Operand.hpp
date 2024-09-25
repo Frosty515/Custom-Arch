@@ -20,11 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Register.hpp>
 
+#include <libarch/Instruction.hpp>
+
 enum class OperandType {
     Register,
     Immediate,
     Memory,
-    RegisterOffset
+    Complex
 };
 
 enum class OperandSize {
@@ -33,6 +35,28 @@ enum class OperandSize {
     DWORD,
     QWORD,
     Unknown
+};
+
+struct ComplexItem {
+    bool present;
+    bool sign;
+    enum class Type {
+        REGISTER,
+        IMMEDIATE
+    } type;
+    union CI_Data {
+        Register* reg;
+        struct {
+            OperandSize size;
+            void* data;
+        } imm;
+    } data;
+};
+
+struct ComplexData {
+    ComplexItem base;
+    ComplexItem index;
+    ComplexItem offset;
 };
 
 typedef void (*MemoryOperation_t)(uint64_t address, void* data, uint64_t size, uint64_t count, bool write);
@@ -64,6 +88,7 @@ private:
     OperandSize m_size;
     uint64_t m_offset;
     uint64_t m_address;
+    ComplexData* m_complexData;
     MemoryOperation_t m_memoryOperation;
 };
 

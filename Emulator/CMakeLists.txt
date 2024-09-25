@@ -33,6 +33,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/Buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/LinkedList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Instruction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/InstructionBuffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Operand.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOBus.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOMemoryRegion.cpp
@@ -59,6 +60,9 @@ set_target_properties(Emulator PROPERTIES C_EXTENSIONS OFF)
 set_target_properties(Emulator PROPERTIES C_STANDARD_REQUIRED ON)
 
 target_include_directories(Emulator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(Emulator PUBLIC ${CMAKE_SOURCE_DIR}/LibArch/include)
+
+target_link_libraries(Emulator PRIVATE arch)
 
 if (BUILD_CONFIG STREQUAL "Debug")
     target_compile_definitions(Emulator PRIVATE EMULATOR_DEBUG=1)

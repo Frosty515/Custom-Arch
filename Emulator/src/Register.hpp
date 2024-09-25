@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+enum class OperandSize;
+
 enum class RegisterType {
     GeneralPurpose,
     Instruction,
@@ -74,7 +76,9 @@ public:
     uint8_t GetID() const;
 
     uint64_t GetValue() const;
+    uint64_t GetValue(OperandSize size) const;
     bool SetValue(uint64_t value, bool force = false);
+    bool SetValue(uint64_t value, OperandSize size);
 
     Register& operator=(const uint64_t value);
     Register* operator=(const uint64_t* value);

@@ -56,7 +56,7 @@ namespace Emulator {
     void SetCPU_IP(uint64_t value);
     uint64_t GetCPU_IP();
 
-    void JumpToIP(uint64_t value);
+    [[noreturn]] void JumpToIP(uint64_t value);
 
     void SyncRegisters();
 

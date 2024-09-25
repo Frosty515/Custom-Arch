@@ -16,191 +16,129 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Instruction.hpp"
-#include "Interrupts.hpp"
+#include "InstructionBuffer.hpp"
 
 #include <Emulator.hpp>
 #include <Exceptions.hpp>
+#include <Interrupts.hpp>
 #include <Stack.hpp>
 
 #include <IO/IOBus.hpp>
 
 #include <MMU/MMU.hpp>
 
+#include <libarch/Instruction.hpp>
+#include <libarch/Operand.hpp>
+
 
 void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, char const*& last_error) {
-    uint8_t Opcode = 0xff;
-
+    (void)CurrentState;
+    (void)last_error;
+    InstructionBuffer buffer(mmu, IP);
+    uint64_t current_offset = 0;
+    InsEncoding::Instruction* instruction = InsEncoding::DecodeInstruction(buffer, current_offset);
+    if (instruction == nullptr)
+        g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
+    uint8_t Opcode = (uint8_t)instruction->GetOpcode();
     Operand operands[2];
-
-    OperandType operand_types[2];
-
-    OperandSize operand_sizes[2];
-
-    size_t operand_count = 0;
-
-    CurrentState = InstructionState::OPCODE;
-    Opcode = mmu.read8(IP);
-
-    CurrentState = InstructionState::OPERAND_INFO;
-    uint8_t operand_info = mmu.read8(IP + 1);
-    if ((operand_info & 3) != 2 && ((operand_info >> 2) & 3) > 0) {
-        operand_count = 0;
-    }
-    else if (((operand_info >> 4) & 3) != 2 && ((operand_info >> 6) & 3) > 0) {
-        operand_count = 1;
-    }
-    else
-        operand_count = 2;
-    if (operand_count > 0) {
-        switch (operand_info & 3) {
-        case 0:
-            operand_types[0] = OperandType::Register;
-            break;
-        case 1:
-            operand_types[0] = OperandType::Memory;
-            break;
-        case 2:
-            operand_types[0] = OperandType::Immediate;
-            break;
-        case 3:
-            operand_types[0] = OperandType::RegisterOffset;
+    for (uint8_t i = 0; i < instruction->operands.getCount(); i++) {
+        InsEncoding::Operand* op = instruction->operands.get(i);
+        switch (op->type) {
+        case InsEncoding::OperandType::REGISTER: {
+            InsEncoding::Register* temp_reg = (InsEncoding::Register*)(op->data);
+            Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+            operands[i] = Operand((OperandSize)op->size, OperandType::Register, reg);
             break;
         }
-        switch ((operand_info >> 2) & 3) {
-        case 0:
-            operand_sizes[0] = OperandSize::BYTE;
-            break;
-        case 1:
-            operand_sizes[0] = OperandSize::WORD;
-            break;
-        case 2:
-            operand_sizes[0] = OperandSize::DWORD;
-            break;
-        case 3:
-            operand_sizes[0] = OperandSize::QWORD;
-            break;
-        }
-        if (operand_count > 1) {
-            switch ((operand_info >> 4) & 3) {
-            case 0:
-                operand_types[1] = OperandType::Register;
-                break;
-            case 1:
-                operand_types[1] = OperandType::Memory;
-                break;
-            case 2:
-                operand_types[1] = OperandType::Immediate;
-                break;
-            case 3:
-                operand_types[1] = OperandType::RegisterOffset;
-                break;
-            }
-            switch ((operand_info >> 6) & 3) {
-            case 0:
-                operand_sizes[1] = OperandSize::BYTE;
-                break;
-            case 1:
-                operand_sizes[1] = OperandSize::WORD;
-                break;
-            case 2:
-                operand_sizes[1] = OperandSize::DWORD;
-                break;
-            case 3:
-                operand_sizes[1] = OperandSize::QWORD;
-                break;
-            }
-        }
-    }
-
-    uint64_t operand_offset = 0;
-
-    if (operand_count > 0) {
-        CurrentState = InstructionState::OPERAND0;
-        switch (operand_types[0]) {
-        case OperandType::Register:
-            operands[0] = Operand(operand_sizes[0], operand_types[0], Emulator::GetRegisterPointer(mmu.read8(IP + 2)));
-            operand_offset++;
-            break;
-        case OperandType::Memory:
-            operands[0] = Operand(operand_sizes[0], operand_types[0], mmu.read64(IP + 2), Emulator::HandleMemoryOperation);
-            operand_offset += 8;
-            break;
-        case OperandType::Immediate: {
+        case InsEncoding::OperandType::IMMEDIATE: {
             uint64_t data;
-            switch (operand_sizes[0]) {
-            case OperandSize::BYTE:
-                data = mmu.read8(IP + 2);
-                operand_offset++;
+            switch (op->size) {
+            case InsEncoding::OperandSize::BYTE:
+                data = *(uint8_t*)op->data;
                 break;
-            case OperandSize::WORD:
-                data = mmu.read16(IP + 2);
-                operand_offset += 2;
+            case InsEncoding::OperandSize::WORD:
+                data = *(uint16_t*)op->data;
                 break;
-            case OperandSize::DWORD:
-                data = mmu.read32(IP + 2);
-                operand_offset += 4;
+            case InsEncoding::OperandSize::DWORD:
+                data = *(uint32_t*)op->data;
                 break;
-            case OperandSize::QWORD:
-                data = mmu.read64(IP + 2);
-                operand_offset += 8;
+            case InsEncoding::OperandSize::QWORD:
+                data = *(uint64_t*)op->data;
                 break;
-            case OperandSize::Unknown:
-                last_error = "Unknown operand0 size";
-                return;
+            default:
+                g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
+                break;
             }
-            operands[0] = Operand(operand_sizes[0], operand_types[0], data);
+            operands[i] = Operand((OperandSize)op->size, OperandType::Immediate, data);
             break;
         }
-        case OperandType::RegisterOffset:
-            operands[0] = Operand(operand_sizes[0], operand_types[0], Emulator::GetRegisterPointer(mmu.read8(IP + 2)), mmu.read64(IP + 3), Emulator::HandleMemoryOperation);
-            operand_offset += 9;
+        case InsEncoding::OperandType::MEMORY: {
+            uint64_t* temp = (uint64_t*)op->data;
+            operands[i] = Operand((OperandSize)op->size, OperandType::Memory, *temp, Emulator::HandleMemoryOperation);
             break;
         }
-        if (operand_count > 1) {
-            CurrentState = InstructionState::OPERAND1;
-            switch (operand_types[1]) {
-            case OperandType::Register:
-                operands[1] = Operand(operand_sizes[1], operand_types[1], Emulator::GetRegisterPointer(mmu.read8(IP + 2 + operand_offset)));
-                operand_offset++;
-                break;
-            case OperandType::Memory:
-                operands[1] = Operand(operand_sizes[1], operand_types[1], mmu.read64(IP + 2 + operand_offset), Emulator::HandleMemoryOperation);
-                operand_offset += 8;
-                break;
-            case OperandType::Immediate: {
-                uint64_t data;
-                switch (operand_sizes[1]) {
-                case OperandSize::BYTE:
-                    data = mmu.read8(IP + 2 + operand_offset);
-                    operand_offset++;
-                    break;
-                case OperandSize::WORD:
-                    data = mmu.read16(IP + 2 + operand_offset);
-                    operand_offset += 2;
-                    break;
-                case OperandSize::DWORD:
-                    data = mmu.read32(IP + 2 + operand_offset);
-                    operand_offset += 4;
-                    break;
-                case OperandSize::QWORD:
-                    data = mmu.read64(IP + 2 + operand_offset);
-                    operand_offset += 8;
-                    break;
-                case OperandSize::Unknown:
-                    last_error = "Unknown operand1 size";
-                    return;
+        case InsEncoding::OperandType::COMPLEX: {
+            ComplexData* complex = new ComplexData();
+            InsEncoding::ComplexData* temp = (InsEncoding::ComplexData*)op->data;
+            complex->base.present = temp->base.present;
+            complex->index.present = temp->index.present;
+            complex->offset.present = temp->offset.present;
+            if (complex->base.present) {
+                if (temp->base.type == InsEncoding::ComplexItem::Type::REGISTER) {
+                    InsEncoding::Register* temp_reg = (InsEncoding::Register*)temp->base.data.reg;
+                    Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+                    complex->base.data.reg = reg;
+                    complex->base.type = ComplexItem::Type::REGISTER;
                 }
-                operands[1] = Operand(operand_sizes[1], operand_types[1], data);
-                break;
+                else {
+                    complex->base.data.imm.size = (OperandSize)temp->base.data.imm.size;
+                    complex->base.data.imm.data = temp->base.data.imm.data;
+                    complex->base.type = ComplexItem::Type::IMMEDIATE;
+                }
             }
-            case OperandType::RegisterOffset:
-                operands[1] = Operand(operand_sizes[1], operand_types[1], Emulator::GetRegisterPointer(mmu.read8(IP + 2 + operand_offset)), mmu.read64(IP + 3 + operand_offset), Emulator::HandleMemoryOperation);
-                operand_offset += 9;
-                break;
+            else
+                complex->base.present = false;
+            if (complex->index.present) {
+                if (temp->index.type == InsEncoding::ComplexItem::Type::REGISTER) {
+                    InsEncoding::Register* temp_reg = (InsEncoding::Register*)temp->index.data.reg;
+                    Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+                    complex->index.data.reg = reg;
+                    complex->index.type = ComplexItem::Type::REGISTER;
+                }
+                else {
+                    complex->index.data.imm.size = (OperandSize)temp->index.data.imm.size;
+                    complex->index.data.imm.data = temp->index.data.imm.data;
+                    complex->index.type = ComplexItem::Type::IMMEDIATE;
+                }
             }
-            
+            else
+                complex->index.present = false;
+            if (complex->offset.present) {
+                if (temp->offset.type == InsEncoding::ComplexItem::Type::REGISTER) {
+                    InsEncoding::Register* temp_reg = (InsEncoding::Register*)temp->offset.data.reg;
+                    Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+                    complex->offset.data.reg = reg;
+                    complex->offset.type = ComplexItem::Type::REGISTER;
+                    complex->offset.sign = temp->offset.sign;
+                }
+                else {
+                    complex->offset.data.imm.size = (OperandSize)temp->offset.data.imm.size;
+                    complex->offset.data.imm.data = temp->offset.data.imm.data;
+                    complex->offset.type = ComplexItem::Type::IMMEDIATE;
+                }
+            }
+            else
+                complex->offset.present = false;
+            operands[i] = Operand(OperandSize::QWORD, OperandType::Complex, complex, Emulator::HandleMemoryOperation);
+            break;
+        }
+        default:
+            g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
+            break;
         }
     }
+
+
     // Get the instruction
     uint8_t argument_count = 0;
     void* ins = DecodeOpcode(Opcode, &argument_count);
@@ -208,7 +146,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
         g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
 
     // Increment instruction pointer
-    Emulator::SetNextIP(IP + 2 + operand_offset);
+    Emulator::SetNextIP(IP + current_offset);
 
     // Execute the instruction
     if (argument_count == 0)

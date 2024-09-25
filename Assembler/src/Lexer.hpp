@@ -30,7 +30,7 @@ enum class TokenType {
     INSTRUCTION,
     REGISTER,
     NUMBER,
-    //SIZE,
+    SIZE,
     LBRACKET,
     RBRACKET,
     DIRECTIVE,
@@ -39,6 +39,7 @@ enum class TokenType {
     LABEL,
     SUBLABEL,
     COMMA,
+    OPERATOR,
     UNKNOWN
 };
 

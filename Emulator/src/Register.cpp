@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Emulator.hpp"
 #include "Exceptions.hpp"
 
+#include "Instruction/Operand.hpp"
+
 Register::Register() : m_index(0), m_ID(0xFF), m_value(0), m_type(RegisterType::Unknown), m_dirty(false) {
 
 }
@@ -74,6 +76,25 @@ uint64_t Register::GetValue() const {
     return m_value;
 }
 
+uint64_t Register::GetValue(OperandSize size) const {
+    if (m_type == RegisterType::Control) {
+        if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+            g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    }
+    switch (size) {
+    case OperandSize::BYTE:
+        return m_value & 0xFF;
+    case OperandSize::WORD:
+        return m_value & 0xFFFF;
+    case OperandSize::DWORD:
+        return m_value & 0xFFFFFFFF;
+    case OperandSize::QWORD:
+        return m_value;
+    default:
+        return 0;
+    }
+}
+
 bool Register::SetValue(uint64_t value, bool force) {
     if (!force && !m_writable)
         return false;
@@ -82,6 +103,33 @@ bool Register::SetValue(uint64_t value, bool force) {
             g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
     }
     m_value = value;
+    m_dirty = true;
+    return true;
+}
+
+bool Register::SetValue(uint64_t value, OperandSize size) {
+    if (!m_writable)
+        return false;
+    if (m_type == RegisterType::Control) {
+        if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+            g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    }
+    switch (size) {
+    case OperandSize::BYTE:
+        m_value = (m_value & 0xFFFFFFFFFFFFFF00) | (value & 0xFF);
+        break;
+    case OperandSize::WORD:
+        m_value = (m_value & 0xFFFFFFFFFFFF0000) | (value & 0xFFFF);
+        break;
+    case OperandSize::DWORD:
+        m_value = (m_value & 0xFFFFFFFF00000000) | (value & 0xFFFFFFFF);
+        break;
+    case OperandSize::QWORD:
+        m_value = value;
+        break;
+    default:
+        return false;
+    }
     m_dirty = true;
     return true;
 }

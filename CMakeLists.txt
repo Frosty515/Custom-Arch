@@ -25,5 +25,6 @@ if (NOT DEFINED BUILD_ARCHITECTURE)
     set(BUILD_ARCHITECTURE "x86_64")
 endif()
 
+add_subdirectory(LibArch)
 add_subdirectory(Assembler)
 add_subdirectory(Emulator)

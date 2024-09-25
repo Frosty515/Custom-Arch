@@ -19,10 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define _ASSEMBLER_HPP
 
 #include "Buffer.hpp"
-#include "Parser.hpp"
 #include "LinkedList.hpp"
 
 #include <stdint.h>
+
+#include <libarch/Instruction.hpp>
 
 class Section {
 public:
@@ -46,14 +47,13 @@ public:
     Assembler();
     ~Assembler();
 
-    void assemble(const LinkedList::SimpleLinkedList<Label>& data);
+    void assemble(const LinkedList::SimpleLinkedList<InsEncoding::Label>& data);
 
     const Buffer& GetBuffer() const;
 
 private:
-    uint8_t GetRealOpcode(Opcode opcode) const;
 
-    void error(const char* message) const;
+    [[noreturn]] void error(const char* message) const;
 
     uint64_t m_current_offset;
     Buffer m_buffer;

@@ -33,7 +33,7 @@ public:
     void init(size_t RAMSize);
 
     void ReadBuffer(uint64_t address, uint8_t* data, size_t size);
-    void WriteBuffer(uint64_t address, uint8_t* data, size_t size);
+    void WriteBuffer(uint64_t address, const uint8_t* data, size_t size);
 
     uint8_t read8(uint64_t address);
     uint16_t read16(uint64_t address);

@@ -14,35 +14,33 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 if(BUILD_ARCHITECTURE STREQUAL "x86_64")
-    set(assembler_sources
+    set(arch_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/spinlock.asm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/util.asm
     )
 endif()
 
-set(assembler_sources
-    ${assembler_sources}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Assembler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Buffer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Lexer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/LinkedList.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Parser.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/PreProcessor.cpp
+set(arch_sources
+    ${arch_sources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/Buffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/LinkedList.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Operand.cpp
 )
 
-add_executable(Assembler ${assembler_sources})
+add_library(arch STATIC ${arch_sources})
 
-set_target_properties(Assembler PROPERTIES CXX_STANDARD 23)
-set_target_properties(Assembler PROPERTIES CXX_STANDARD_REQUIRED ON)
-set_target_properties(Assembler PROPERTIES CXX_EXTENSIONS OFF)
-set_target_properties(Assembler PROPERTIES C_STANDARD 23)
-set_target_properties(Assembler PROPERTIES C_EXTENSIONS OFF)
-set_target_properties(Assembler PROPERTIES C_STANDARD_REQUIRED ON)
+set_target_properties(arch PROPERTIES CXX_STANDARD 23)
+set_target_properties(arch PROPERTIES CXX_STANDARD_REQUIRED ON)
+set_target_properties(arch PROPERTIES CXX_EXTENSIONS OFF)
+set_target_properties(arch PROPERTIES C_STANDARD 23)
+set_target_properties(arch PROPERTIES C_EXTENSIONS OFF)
+set_target_properties(arch PROPERTIES C_STANDARD_REQUIRED ON)
 
-target_include_directories(Assembler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(Assembler PUBLIC ${CMAKE_SOURCE_DIR}/LibArch/include)
+target_include_directories(arch PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(arch PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/libarch)
 
-target_compile_options(Assembler
+target_compile_options(arch
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-g>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wall>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wextra>
@@ -54,14 +52,6 @@ target_compile_options(Assembler
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 )
 
-target_link_libraries(Assembler PRIVATE arch)
-
 if (BUILD_CONFIG STREQUAL "Debug")
-   target_compile_definitions(Assembler PRIVATE ASSEMBLER_DEBUG=1)
+    target_compile_definitions(arch PRIVATE LIBARCH_DEBUG=1)
 endif()
-
-add_custom_target(RunAssembler
-    COMMAND $<TARGET_FILE:Assembler>
-    DEPENDS Assembler
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)

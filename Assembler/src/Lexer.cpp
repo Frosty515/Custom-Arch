@@ -46,6 +46,12 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 token = "";
                 current_offset_in_token = 0;
             }
+            else if ((source[i] == '+' || source[i] == '*') || (source[i] == '-' && ((i + 1) >= source_size || !(source[i + 1] >= '0' && source[i + 1] <= '9')))) {
+                token += source[i];
+                AddToken(token);
+                token = "";
+                current_offset_in_token = 0;
+            }
             else {
                 start_of_token = false;
                 token += source[i];
@@ -68,11 +74,24 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 AddToken(token);
                 token = "";
             }
-            else if (source[i] == '+' || source[i] == '-') {
+            else if (source[i] == '+' || source[i] == '*' || source[i] == '-') {
+                if (source[i] == '-' && (i + 1) < source_size) {
+                    if (source[i + 1] >= '0' && source[i + 1] <= '9') { // do not read outside of bounds
+                        start_of_token = true;
+                        AddToken(token);
+                        token = "";
+                        token += source[i];
+                        current_offset_in_token = 1;
+                        continue;
+                    }
+                }
                 start_of_token = true;
                 AddToken(token);
-                token = source[i];
-                current_offset_in_token = 1;
+                token = "";
+                current_offset_in_token = 0;
+                token += source[i];
+                AddToken(token);
+                token = "";
             }
             else {
                 token += source[i];
@@ -104,8 +123,8 @@ const char* Lexer::TokenTypeToString(TokenType type) {
         return "REGISTER";
     case TokenType::NUMBER:
         return "NUMBER";
-    /*case TokenType::SIZE:
-        return "SIZE";*/
+    case TokenType::SIZE:
+        return "SIZE";
     case TokenType::LBRACKET:
         return "LBRACKET";
     case TokenType::RBRACKET:
@@ -122,6 +141,8 @@ const char* Lexer::TokenTypeToString(TokenType type) {
         return "SUBLABEL";
     case TokenType::COMMA:
         return "COMMA";
+    case TokenType::OPERATOR:
+        return "OPERATOR";
     case TokenType::UNKNOWN:
         return "UNKNOWN";
     default:
@@ -158,6 +179,10 @@ void Lexer::AddToken(const std::string& g_token) {
         new_token->type = TokenType::COMMA;
     else if (token == "db" || token == "dw" || token == "dd" || token == "dq")
         new_token->type = TokenType::DIRECTIVE;
+    else if (token == "byte" || token == "word" || token == "dword" || token == "qword")
+        new_token->type = TokenType::SIZE;
+    else if (token == "+" || token == "-" || token == "*")
+        new_token->type = TokenType::OPERATOR;
     else {
         uint64_t offset = 0;
         uint64_t size = token.size();

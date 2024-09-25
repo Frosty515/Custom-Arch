@@ -31,12 +31,11 @@ ExceptionHandler::~ExceptionHandler() {
 
 }
 
-void ExceptionHandler::RaiseException(Exception exception) {
+[[noreturn]] void ExceptionHandler::RaiseException(Exception exception) {
     if (exception == Exception::TWICE_UNHANDLED_INTERRUPT || m_INTHandler == nullptr) {
         Emulator::Crash("ExceptionHandler::RaiseException(): unhandled exception");
-        return;
     }
-
+    printf("Exception: %d at IP=%016lx\n", (uint8_t)exception, Emulator::GetCPU_IP());
     m_INTHandler->RaiseInterrupt((uint8_t)exception, Emulator::GetCPU_IP());
 }
 

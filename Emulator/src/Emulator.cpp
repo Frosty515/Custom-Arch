@@ -230,8 +230,8 @@ namespace Emulator {
     }
 
     Register* GetRegisterPointer(uint8_t ID) {
-        uint8_t type = ID & 0xF;
-        uint8_t index = (ID & 0xF0) >> 4;
+        uint8_t type = (ID & 0xF0) >> 4;
+        uint8_t index = ID & 0xF;
         Register* returnVal = nullptr;
         switch (type) {
             case 0: // GPR
@@ -354,7 +354,7 @@ namespace Emulator {
         return g_IP->GetValue();
     }
 
-    void JumpToIP(uint64_t value) {
+    [[noreturn]] void JumpToIP(uint64_t value) {
         g_events.lock();
         g_events.insert(new Event{EventType::SwitchToIP, value});
         g_events.unlock();
@@ -402,6 +402,8 @@ namespace Emulator {
     }
 
     void HandleHalt() {
+        // DumpRAM(stdout);
+        // DumpRegisters(stdout);
         g_EmulatorRunning = false;
         exit(0);
     }
@@ -440,7 +442,7 @@ namespace Emulator {
     }
 
     void WriteCharToConsole(char c) {
-        fputc(c, stderr);
+        fputc(c, stdout);
     }
 
     char ReadCharFromConsole() {
