@@ -66,7 +66,7 @@ private:
 private:
     size_t m_size;
     size_t m_blockSize;
-    LinkedList::SimpleLinkedList<Block> m_blocks;
+    LinkedList::RearInsertLinkedList<Block> m_blocks;
 };
 
 #endif /* _BUFFER_HPP */

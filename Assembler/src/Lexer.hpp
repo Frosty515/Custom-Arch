@@ -56,16 +56,18 @@ public:
 
     void tokenize(const char* source, size_t source_size);
 
-    const LinkedList::SimpleLinkedList<Token>& GetTokens() const;
+    const LinkedList::RearInsertLinkedList<Token>& GetTokens() const;
 
     static const char* TokenTypeToString(TokenType type);
+
+    void Clear();
 
 private:
 
     void AddToken(const std::string& token);
 
 private:
-    LinkedList::SimpleLinkedList<Token> m_tokens;
+    LinkedList::RearInsertLinkedList<Token> m_tokens;
 };
 
 #endif /* _LEXER_HPP */

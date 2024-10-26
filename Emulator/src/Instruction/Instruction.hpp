@@ -76,43 +76,43 @@ void ExecutionLoop(MMU& mmu, InstructionState& CurrentState, char const*& last_e
 // return function pointer to instruction based on opcode, output argument count into argument_count if non-null.
 void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count);
 
-void ins_add(Operand& dst, Operand& src);
-void ins_mul(Operand& dst, Operand& src);
-void ins_sub(Operand& dst, Operand& src);
-void ins_div(Operand& dst, Operand& src);
-void ins_or(Operand& dst, Operand& src);
-void ins_xor(Operand& dst, Operand& src);
-void ins_nor(Operand& dst, Operand& src);
-void ins_and(Operand& dst, Operand& src);
-void ins_nand(Operand& dst, Operand& src);
-void ins_not(Operand& dst);
-void ins_cmp(Operand& a, Operand& b);
-void ins_inc(Operand& dst);
-void ins_dec(Operand& dst);
-void ins_shl(Operand& dst, Operand& src);
-void ins_shr(Operand& dst, Operand& src);
+void ins_add(Operand* dst, Operand* src);
+void ins_mul(Operand* dst, Operand* src);
+void ins_sub(Operand* dst, Operand* src);
+void ins_div(Operand* dst, Operand* src);
+void ins_or(Operand* dst, Operand* src);
+void ins_xor(Operand* dst, Operand* src);
+void ins_nor(Operand* dst, Operand* src);
+void ins_and(Operand* dst, Operand* src);
+void ins_nand(Operand* dst, Operand* src);
+void ins_not(Operand* dst);
+void ins_cmp(Operand* a, Operand* b);
+void ins_inc(Operand* dst);
+void ins_dec(Operand* dst);
+void ins_shl(Operand* dst, Operand* src);
+void ins_shr(Operand* dst, Operand* src);
 
 void ins_ret();
-void ins_call(Operand& dst);
-void ins_jmp(Operand& dst);
-void ins_jc(Operand& dst);
-void ins_jnc(Operand& dst);
-void ins_jz(Operand& dst);
-void ins_jnz(Operand& dst);
+void ins_call(Operand* dst);
+void ins_jmp(Operand* dst);
+void ins_jc(Operand* dst);
+void ins_jnc(Operand* dst);
+void ins_jz(Operand* dst);
+void ins_jnz(Operand* dst);
 
-void ins_mov(Operand& dst, Operand& src);
+void ins_mov(Operand* dst, Operand* src);
 void ins_nop();
 void ins_hlt();
-void ins_push(Operand& src);
-void ins_pop(Operand& dst);
+void ins_push(Operand* src);
+void ins_pop(Operand* dst);
 void ins_pusha();
 void ins_popa();
-void ins_int(Operand& number);
-void ins_lidt(Operand& src);
+void ins_int(Operand* number);
+void ins_lidt(Operand* src);
 void ins_iret();
 
 void ins_syscall();
 void ins_sysret();
-void ins_enteruser(Operand& dst);
+void ins_enteruser(Operand* dst);
 
 #endif /* _INSTRUCTION_HPP */

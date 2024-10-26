@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "Buffer.hpp"
 #include "Lexer.hpp"
@@ -58,6 +59,7 @@ int main(int argc, char** argv) {
 
     Lexer* lexer = new Lexer();
     lexer->tokenize((const char*)processed_buffer_data, processed_buffer_size);
+    // lexer->tokenize((const char*)file_contents, file_size);
 
     Parser parser;
     parser.parse(lexer->GetTokens());
@@ -81,6 +83,16 @@ int main(int argc, char** argv) {
     fclose(output_file);
 
     delete[] file_contents;
+    delete[] processed_buffer_data;
+    delete[] buffer_data;
+
+    assembler.Clear();
+
+    parser.Clear();
+
+    lexer->Clear();
+
+    delete lexer;
 
     return 0;
 }

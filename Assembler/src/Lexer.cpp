@@ -111,7 +111,7 @@ void Lexer::tokenize(const char* source, size_t source_size) {
 
 }
 
-const LinkedList::SimpleLinkedList<Token>& Lexer::GetTokens() const {
+const LinkedList::RearInsertLinkedList<Token>& Lexer::GetTokens() const {
     return m_tokens;
 }
 
@@ -150,6 +150,15 @@ const char* Lexer::TokenTypeToString(TokenType type) {
     }
 }
 
+void Lexer::Clear() {
+    m_tokens.EnumerateReverse([&](Token* token) -> bool {
+        delete[] (char*)token->data;
+        delete token;
+        return true;
+    });
+    m_tokens.clear();
+}
+
 void Lexer::AddToken(const std::string& g_token) {
     std::string token = "";
     for (char c : g_token) { // convert the token to lowercase
@@ -158,8 +167,9 @@ void Lexer::AddToken(const std::string& g_token) {
         token += c;
     }
     Token* new_token = new Token;
-    new_token->data = new char[token.size()];
+    new_token->data = new char[token.size() + 1];
     memcpy(new_token->data, token.c_str(), token.size());
+    ((char*)new_token->data)[token.size()] = 0;
     new_token->data_size = token.size();
     
     /* now we identify the token type */

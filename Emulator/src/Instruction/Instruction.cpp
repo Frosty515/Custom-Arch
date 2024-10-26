@@ -30,8 +30,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libarch/Instruction.hpp>
 #include <libarch/Operand.hpp>
 
+bool deleted[2] = {true, true};
 
 void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, char const*& last_error) {
+    assert(deleted[0] && deleted[1]);
     (void)CurrentState;
     (void)last_error;
     InstructionBuffer buffer(mmu, IP);
@@ -40,14 +42,16 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
     if (instruction == nullptr)
         g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
     uint8_t Opcode = (uint8_t)instruction->GetOpcode();
-    Operand operands[2];
+    Operand* operands[2];
     for (uint8_t i = 0; i < instruction->operands.getCount(); i++) {
         InsEncoding::Operand* op = instruction->operands.get(i);
         switch (op->type) {
         case InsEncoding::OperandType::REGISTER: {
             InsEncoding::Register* temp_reg = (InsEncoding::Register*)(op->data);
             Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
-            operands[i] = Operand((OperandSize)op->size, OperandType::Register, reg);
+            delete temp_reg;
+            operands[i] = new Operand((OperandSize)op->size, OperandType::Register, reg);
+            deleted[i] = false;
             break;
         }
         case InsEncoding::OperandType::IMMEDIATE: {
@@ -55,26 +59,33 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
             switch (op->size) {
             case InsEncoding::OperandSize::BYTE:
                 data = *(uint8_t*)op->data;
+                delete[] (uint8_t*)op->data;
                 break;
             case InsEncoding::OperandSize::WORD:
                 data = *(uint16_t*)op->data;
+                delete[] (uint8_t*)op->data;
                 break;
             case InsEncoding::OperandSize::DWORD:
                 data = *(uint32_t*)op->data;
+                delete[] (uint8_t*)op->data;
                 break;
             case InsEncoding::OperandSize::QWORD:
                 data = *(uint64_t*)op->data;
+                delete[] (uint8_t*)op->data;
                 break;
             default:
                 g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
                 break;
             }
-            operands[i] = Operand((OperandSize)op->size, OperandType::Immediate, data);
+            operands[i] = new Operand((OperandSize)op->size, OperandType::Immediate, data);
+            deleted[i] = false;
             break;
         }
         case InsEncoding::OperandType::MEMORY: {
             uint64_t* temp = (uint64_t*)op->data;
-            operands[i] = Operand((OperandSize)op->size, OperandType::Memory, *temp, Emulator::HandleMemoryOperation);
+            operands[i] = new Operand((OperandSize)op->size, OperandType::Memory, *temp, Emulator::HandleMemoryOperation);
+            delete[] (uint8_t*)temp;
+            deleted[i] = false;
             break;
         }
         case InsEncoding::OperandType::COMPLEX: {
@@ -87,6 +98,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
                 if (temp->base.type == InsEncoding::ComplexItem::Type::REGISTER) {
                     InsEncoding::Register* temp_reg = (InsEncoding::Register*)temp->base.data.reg;
                     Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+                    delete temp_reg;
                     complex->base.data.reg = reg;
                     complex->base.type = ComplexItem::Type::REGISTER;
                 }
@@ -102,6 +114,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
                 if (temp->index.type == InsEncoding::ComplexItem::Type::REGISTER) {
                     InsEncoding::Register* temp_reg = (InsEncoding::Register*)temp->index.data.reg;
                     Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+                    delete temp_reg;
                     complex->index.data.reg = reg;
                     complex->index.type = ComplexItem::Type::REGISTER;
                 }
@@ -117,6 +130,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
                 if (temp->offset.type == InsEncoding::ComplexItem::Type::REGISTER) {
                     InsEncoding::Register* temp_reg = (InsEncoding::Register*)temp->offset.data.reg;
                     Register* reg = Emulator::GetRegisterPointer((uint8_t)*temp_reg);
+                    delete temp_reg;
                     complex->offset.data.reg = reg;
                     complex->offset.type = ComplexItem::Type::REGISTER;
                     complex->offset.sign = temp->offset.sign;
@@ -129,7 +143,9 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
             }
             else
                 complex->offset.present = false;
-            operands[i] = Operand(OperandSize::QWORD, OperandType::Complex, complex, Emulator::HandleMemoryOperation);
+            delete temp;
+            operands[i] = new Operand(OperandSize::QWORD, OperandType::Complex, complex, Emulator::HandleMemoryOperation);
+            deleted[i] = false;
             break;
         }
         default:
@@ -152,9 +168,39 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
     if (argument_count == 0)
         ((void(*)(void))ins)();
     else if (argument_count == 1)
-        ((void(*)(Operand&))ins)(operands[0]);
+        ((void(*)(Operand*))ins)(operands[0]);
     else if (argument_count == 2)
-        ((void(*)(Operand&, Operand&))ins)(operands[0], operands[1]);
+        ((void(*)(Operand*, Operand*))ins)(operands[0], operands[1]);
+
+    // perform cleanup
+    const uint64_t count = instruction->operands.getCount();
+    for (uint8_t i = 0; i < count; i++) {
+        if (operands[i]->GetType() == OperandType::Complex) {
+            ComplexData* complex = (ComplexData*)operands[i]->GetComplexData();
+            ComplexItem* items[3] = { &complex->base, &complex->index, &complex->offset };
+            for (uint8_t j = 0; j < 3; j++) {
+                if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
+                    if (items[j]->data.imm.size == OperandSize::BYTE)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                    else if (items[j]->data.imm.size == OperandSize::WORD)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                    else if (items[j]->data.imm.size == OperandSize::DWORD)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                    else if (items[j]->data.imm.size == OperandSize::QWORD)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                }
+            }
+            delete complex;
+        }
+        // printf("Deleting operand %d\n", i);
+        delete operands[i];
+        deleted[i] = true;
+        InsEncoding::Operand* op = instruction->operands.get(0);
+        instruction->operands.remove(op);
+        delete op;
+    }
+    delete instruction;
+    
 
     Emulator::SyncRegisters();
 
@@ -405,8 +451,8 @@ void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count) {
 extern "C" int printf(const char* format, ...);
 
 #ifdef EMULATOR_DEBUG
-#define PRINT_INS_INFO2(dst, src) printf("%s: dst = \"", __extension__ __PRETTY_FUNCTION__); dst.PrintInfo(); printf("\", src = \""); src.PrintInfo(); printf("\"\n")
-#define PRINT_INS_INFO1(dst) printf("%s: dst = \"", __extension__ __PRETTY_FUNCTION__); dst.PrintInfo(); printf("\"\n")
+#define PRINT_INS_INFO2(dst, src) printf("%s: dst = \"", __extension__ __PRETTY_FUNCTION__); dst->PrintInfo(); printf("\", src = \""); src->PrintInfo(); printf("\"\n")
+#define PRINT_INS_INFO1(dst) printf("%s: dst = \"", __extension__ __PRETTY_FUNCTION__); dst->PrintInfo(); printf("\"\n")
 #define PRINT_INS_INFO0() printf("%s\n", __extension__ __PRETTY_FUNCTION__)
 #else
 #define PRINT_INS_INFO2(dst, src)
@@ -418,26 +464,26 @@ extern "C" int printf(const char* format, ...);
 
 #include <arch/x86_64/ALUInstruction.h>
 
-#define ALU_INSTRUCTION2(name) void ins_##name(Operand& dst, Operand& src) { \
+#define ALU_INSTRUCTION2(name) void ins_##name(Operand* dst, Operand* src) { \
     PRINT_INS_INFO2(dst, src); \
     uint64_t flags = 0; \
-    dst.SetValue(x86_64_##name(dst.GetValue(), src.GetValue(), &flags)); \
+    dst->SetValue(x86_64_##name(dst->GetValue(), src->GetValue(), &flags)); \
     Emulator::ClearCPUStatus(7); \
     Emulator::SetCPUStatus(flags & 7); \
 }
 
-#define ALU_INSTRUCTION2_NO_RET_VAL(name) void ins_##name(Operand& dst, Operand& src) { \
+#define ALU_INSTRUCTION2_NO_RET_VAL(name) void ins_##name(Operand* dst, Operand* src) { \
     PRINT_INS_INFO2(dst, src); \
     uint64_t flags = 0; \
-    x86_64_##name(dst.GetValue(), src.GetValue(), &flags); \
+    x86_64_##name(dst->GetValue(), src->GetValue(), &flags); \
     Emulator::ClearCPUStatus(7); \
     Emulator::SetCPUStatus(flags & 7); \
 }
 
-#define ALU_INSTRUCTION1(name) void ins_##name(Operand& dst) { \
+#define ALU_INSTRUCTION1(name) void ins_##name(Operand* dst) { \
     PRINT_INS_INFO1(dst); \
     uint64_t flags = 0; \
-    dst.SetValue(x86_64_##name(dst.GetValue(), &flags)); \
+    dst->SetValue(x86_64_##name(dst->GetValue(), &flags)); \
     Emulator::ClearCPUStatus(7); \
     Emulator::SetCPUStatus(flags & 7); \
 }
@@ -446,13 +492,13 @@ ALU_INSTRUCTION2(add)
 ALU_INSTRUCTION2(mul)
 ALU_INSTRUCTION2(sub)
 
-void ins_div(Operand& dst, Operand& src) {
+void ins_div(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    uint64_t src_val = src.GetValue();
+    uint64_t src_val = src->GetValue();
     if (src_val == 0)
         g_ExceptionHandler->RaiseException(Exception::DIV_BY_ZERO);
     uint64_t flags = 0;
-    dst.SetValue(x86_64_div(dst.GetValue(), src_val, &flags));
+    dst->SetValue(x86_64_div(dst->GetValue(), src_val, &flags));
     Emulator::ClearCPUStatus(7);
     Emulator::SetCPUStatus(flags & 7);
 }
@@ -471,79 +517,79 @@ ALU_INSTRUCTION1(dec)
 
 #else /* __x86_64__ */
 
-void ins_add(Operand& dst, Operand& src) {
+void ins_add(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() + src.GetValue());
+    dst->SetValue(dst->GetValue() + src->GetValue());
 }
 
-void ins_mul(Operand& dst, Operand& src) {
+void ins_mul(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() * src.GetValue());
+    dst->SetValue(dst->GetValue() * src->GetValue());
 }
 
-void ins_sub(Operand& dst, Operand& src) {
+void ins_sub(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() - src.GetValue());
+    dst->SetValue(dst->GetValue() - src->GetValue());
 }
 
-void ins_div(Operand& dst, Operand& src) {
+void ins_div(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() / src.GetValue());
+    dst->SetValue(dst->GetValue() / src->GetValue());
 }
 
-void ins_or(Operand& dst, Operand& src) {
+void ins_or(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() | src.GetValue());
+    dst->SetValue(dst->GetValue() | src->GetValue());
 }
 
-void ins_xor(Operand& dst, Operand& src) {
+void ins_xor(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() ^ src.GetValue());
+    dst->SetValue(dst->GetValue() ^ src->GetValue());
 }
 
-void ins_nor(Operand& dst, Operand& src) {
+void ins_nor(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(~(dst.GetValue() | src.GetValue()));
+    dst->SetValue(~(dst->GetValue() | src->GetValue()));
 }
 
-void ins_and(Operand& dst, Operand& src) {
+void ins_and(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() & src.GetValue());
+    dst->SetValue(dst->GetValue() & src->GetValue());
 }
 
-void ins_nand(Operand& dst, Operand& src) {
+void ins_nand(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(~(dst.GetValue() & src.GetValue()));
+    dst->SetValue(~(dst->GetValue() & src->GetValue()));
 }
 
-void ins_not(Operand& dst) {
+void ins_not(Operand* dst) {
     PRINT_INS_INFO1(dst);
-    dst.SetValue(~dst.GetValue());
+    dst->SetValue(~dst->GetValue());
 }
 
-void ins_cmp(Operand& dst, Operand& src) {
+void ins_cmp(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
 
 }
 
-void ins_inc(Operand& dst) {
+void ins_inc(Operand* dst) {
     PRINT_INS_INFO1(dst);
-    dst.SetValue(dst.GetValue() + 1);
+    dst->SetValue(dst->GetValue() + 1);
 }
 
-void ins_dec(Operand& dst) {
+void ins_dec(Operand* dst) {
     PRINT_INS_INFO1(dst);
-    dst.SetValue(dst.GetValue() - 1);
+    dst->SetValue(dst->GetValue() - 1);
 }
 
-void ins_shl(Operand& dst, Operand& src) {
+void ins_shl(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() << src.GetValue());
+    dst->SetValue(dst->GetValue() << src->GetValue());
 }
 
-void ins_shr(Operand& dst, Operand& src) {
+void ins_shr(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(dst.GetValue() >> src.GetValue());
+    dst->SetValue(dst->GetValue() >> src->GetValue());
 }
 
 #endif /* __x86_64__ */
@@ -553,48 +599,48 @@ void ins_ret() {
     Emulator::SetNextIP(g_stack->pop());
 }
 
-void ins_call(Operand& dst) {
+void ins_call(Operand* dst) {
     PRINT_INS_INFO1(dst);
     g_stack->push(Emulator::GetNextIP());
-    Emulator::SetNextIP(dst.GetValue());
+    Emulator::SetNextIP(dst->GetValue());
 }
 
-void ins_jmp(Operand& dst) {
+void ins_jmp(Operand* dst) {
     PRINT_INS_INFO1(dst);
-    Emulator::SetNextIP(dst.GetValue());
+    Emulator::SetNextIP(dst->GetValue());
 }
 
-void ins_jc(Operand& dst) {
+void ins_jc(Operand* dst) {
     PRINT_INS_INFO1(dst);
     uint64_t flags = Emulator::GetCPUStatus();
     if (flags & 1)
-        Emulator::SetNextIP(dst.GetValue());
+        Emulator::SetNextIP(dst->GetValue());
 }
 
-void ins_jnc(Operand& dst) {
+void ins_jnc(Operand* dst) {
     PRINT_INS_INFO1(dst);
     uint64_t flags = Emulator::GetCPUStatus();
     if (!(flags & 1))
-        Emulator::SetNextIP(dst.GetValue());
+        Emulator::SetNextIP(dst->GetValue());
 }
 
-void ins_jz(Operand& dst) {
+void ins_jz(Operand* dst) {
     PRINT_INS_INFO1(dst);
     uint64_t flags = Emulator::GetCPUStatus();
     if (flags & 2)
-        Emulator::SetNextIP(dst.GetValue());
+        Emulator::SetNextIP(dst->GetValue());
 }
 
-void ins_jnz(Operand& dst) {
+void ins_jnz(Operand* dst) {
     PRINT_INS_INFO1(dst);
     uint64_t flags = Emulator::GetCPUStatus();
     if (!(flags & 2))
-        Emulator::SetNextIP(dst.GetValue());
+        Emulator::SetNextIP(dst->GetValue());
 }
 
-void ins_mov(Operand& dst, Operand& src) {
+void ins_mov(Operand* dst, Operand* src) {
     PRINT_INS_INFO2(dst, src);
-    dst.SetValue(src.GetValue());
+    dst->SetValue(src->GetValue());
 }
 
 void ins_nop() {
@@ -606,14 +652,14 @@ void ins_hlt() {
     Emulator::HandleHalt();
 }
 
-void ins_push(Operand& src) {
+void ins_push(Operand* src) {
     PRINT_INS_INFO1(src);
-    g_stack->push(src.GetValue());
+    g_stack->push(src->GetValue());
 }
 
-void ins_pop(Operand& dst) {
+void ins_pop(Operand* dst) {
     PRINT_INS_INFO1(dst);
-    dst.SetValue(g_stack->pop());
+    dst->SetValue(g_stack->pop());
 }
 
 void ins_pusha() {
@@ -688,18 +734,18 @@ void ins_popa() {
     r0->SetValue(g_stack->pop());
 }
 
-void ins_int(Operand& number) {
+void ins_int(Operand* number) {
     PRINT_INS_INFO1(number);
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
-    g_InterruptHandler->RaiseInterrupt(number.GetValue(), Emulator::GetNextIP());
+    g_InterruptHandler->RaiseInterrupt(number->GetValue(), Emulator::GetNextIP());
 }
 
-void ins_lidt(Operand& src) {
+void ins_lidt(Operand* src) {
     PRINT_INS_INFO1(src);
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
-    g_InterruptHandler->SetIDTR(src.GetValue());
+    g_InterruptHandler->SetIDTR(src->GetValue());
 }
 
 void ins_iret() {
@@ -723,9 +769,9 @@ void ins_sysret() {
     Emulator::EnterUserMode();
 }
 
-void ins_enteruser(Operand &dst) {
+void ins_enteruser(Operand* dst) {
     PRINT_INS_INFO1(dst);
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
-    Emulator::EnterUserMode(dst.GetValue());
+    Emulator::EnterUserMode(dst->GetValue());
 }

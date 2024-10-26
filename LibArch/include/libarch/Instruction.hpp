@@ -106,15 +106,15 @@ namespace InsEncoding {
     struct Block {
         char* name;
         size_t name_size;
-        LinkedList::SimpleLinkedList<Data> data_blocks;
-        LinkedList::SimpleLinkedList<uint64_t> jumps_to_here;
+        LinkedList::RearInsertLinkedList<Data> data_blocks;
+        LinkedList::RearInsertLinkedList<uint64_t> jumps_to_here;
     };
 
 
     struct Label {
         char* name;
         size_t name_size;
-        LinkedList::SimpleLinkedList<Block> blocks;
+        LinkedList::RearInsertLinkedList<Block> blocks;
     };
 
     struct ComplexItem {
@@ -124,7 +124,8 @@ namespace InsEncoding {
             REGISTER,
             IMMEDIATE,
             LABEL,
-            SUBLABEL
+            SUBLABEL,
+            UNKNOWN
         } type;
         union {
             Register* reg;
@@ -134,6 +135,7 @@ namespace InsEncoding {
             } imm;
             Label* label;
             Block* sublabel;
+            uint64_t raw;
         } data;
     };
 
@@ -214,7 +216,7 @@ namespace InsEncoding {
 
         Opcode GetOpcode();
 
-        LinkedList::SimpleLinkedList<Operand> operands;
+        LinkedList::RearInsertLinkedList<Operand> operands;
     private:
         Opcode m_opcode;
 

@@ -52,12 +52,10 @@ Assembler::~Assembler() {
 }
 
 
-void Assembler::assemble(const LinkedList::SimpleLinkedList<InsEncoding::Label>& labels) {
+void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Label>& labels) {
     using namespace InsEncoding;
-    for (uint64_t i = 0; i < labels.getCount(); i++) {
-        Label* label = labels.get(i);
-        for (uint64_t j = 0; j < label->blocks.getCount(); j++) {
-            Block* block = label->blocks.get(j);
+    labels.Enumerate([&](Label* label) {
+        label->blocks.Enumerate([&](Block* block) {
             size_t name_size = label->name_size + block->name_size;
             char* name = new char[name_size + 1];
             memcpy(name, label->name, label->name_size);
@@ -66,8 +64,7 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<InsEncoding::Label>&
             Section* section = new Section(name, name_size, m_current_offset);
             m_sections.insert(section);
 
-            for (uint64_t k = 0; k < block->data_blocks.getCount(); k++) {
-                Data* data = block->data_blocks.get(k);
+            block->data_blocks.Enumerate([&](Data* data) {
                 if (data->type) { // instruction
                     Instruction* instruction = (Instruction*)data->data;
                     uint8_t data[64];
@@ -106,28 +103,36 @@ void Assembler::assemble(const LinkedList::SimpleLinkedList<InsEncoding::Label>&
                     }
                     }
                 }
-            }
-        }
-    }
+            });
+        });
+    });
     // Enumerate through the labels, and the blocks within them again and fill in the jumps
     uint64_t section_index = 0;
-    for (uint64_t i = 0; i < labels.getCount(); i++) {
-        Label* label = labels.get(i);
-        for (uint64_t j = 0; j < label->blocks.getCount(); j++, section_index++) {
-            Block* block = label->blocks.get(j);
+    labels.Enumerate([&](Label* label) {
+        label->blocks.Enumerate([&](Block* block) {
             Section* section = m_sections.get(section_index);
             uint64_t real_offset = section->GetOffset();
-            for (uint64_t k = 0; k < block->jumps_to_here.getCount(); k++) {
-                uint64_t* offset = block->jumps_to_here.get(k);
+            block->jumps_to_here.Enumerate([&](uint64_t* offset) {
                 m_buffer.Write(*offset, (uint8_t*)&real_offset, 8);
-            }
-        }
-    }
+            });
+            section_index++;
+        });
+    });
 
 }
 
 const Buffer& Assembler::GetBuffer() const {
     return m_buffer;
+}
+
+void Assembler::Clear() {
+    m_buffer.Clear();
+    m_sections.Enumerate([&](Section* section) {
+        delete[] section->GetName();
+        delete section;
+    });
+    m_sections.clear();
+    m_current_offset = 0;
 }
 
 [[noreturn]] void Assembler::error(const char* message) const {

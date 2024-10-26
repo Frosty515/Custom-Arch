@@ -47,7 +47,7 @@ target_compile_options(arch
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wpedantic>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wno-packed-bitfield-compat>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fstack-protector>
-    PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-O2>
+    PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-O3>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fno-omit-frame-pointer>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
 )

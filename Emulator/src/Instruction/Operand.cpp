@@ -71,6 +71,10 @@ uint64_t Operand::GetAddress() const {
     return m_address;
 }
 
+ComplexData* Operand::GetComplexData() {
+    return m_complexData;
+}
+
 void Operand::PrintInfo() const {
     switch (m_type) {
     case OperandType::Register:

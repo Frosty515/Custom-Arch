@@ -32,11 +32,13 @@ public:
     Parser();
     ~Parser();
 
-    void parse(const LinkedList::SimpleLinkedList<Token>& tokens);
+    void parse(const LinkedList::RearInsertLinkedList<Token>& tokens);
 
     void PrintSections(FILE* fd) const;
 
-    const LinkedList::SimpleLinkedList<InsEncoding::Label>& GetLabels() const;
+    void Clear();
+
+    const LinkedList::RearInsertLinkedList<InsEncoding::Label>& GetLabels() const;
 
 private:
     InsEncoding::Opcode GetOpcode(const char* name, size_t name_size) const;
@@ -47,7 +49,7 @@ private:
     const char* GetRegisterName(InsEncoding::Register reg) const;
 
 private:
-    LinkedList::SimpleLinkedList<InsEncoding::Label> m_labels;
+    LinkedList::RearInsertLinkedList<InsEncoding::Label> m_labels;
 };
 
 #endif /* _PARSER_HPP */

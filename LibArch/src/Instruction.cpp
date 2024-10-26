@@ -611,6 +611,9 @@ namespace InsEncoding {
                                 current_offset += 8;
                                 break;
                             }
+                            default:
+                                error("Invalid complex item type");
+                                break;
                         }
                     }
                 }

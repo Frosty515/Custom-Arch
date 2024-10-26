@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LIBARCH_LINKED_LIST_HPP
 #define _LIBARCH_LINKED_LIST_HPP
 
+#include <functional>
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -69,8 +70,8 @@ namespace InsEncoding {
 			}
 
 			void insert(const T* obj) {
-				if (findNode(m_start, (uint64_t)&obj) != nullptr)
-					return; // object already exists
+				// if (findNode(m_start, (uint64_t)&obj) != nullptr)
+				// 	return; // object already exists
 				insertNode(m_start, (uint64_t)obj);
 				m_count++;
 			}
@@ -165,6 +166,133 @@ namespace InsEncoding {
 		private:
 			uint64_t m_count;
 			Node* m_start;
+		};
+
+		template <typename T> class RearInsertLinkedList {
+		public:
+			RearInsertLinkedList() : m_count(0), m_start(nullptr), m_end(nullptr) {}
+			~RearInsertLinkedList() {
+				for (uint64_t i = 0; i < m_count; i++)
+					remove(0UL);
+			}
+
+			void insert(const T* obj) {
+				Node* node = newNode((uint64_t)obj);
+				if (m_count == 0) {
+					m_start = node;
+					m_end = node;
+				}
+				else {
+					m_end->next = node;
+					node->previous = m_end;
+					m_end = node;
+				}
+				m_count++;
+			}
+
+			T* get(uint64_t index) const {
+				if (index >= m_count)
+					return nullptr;
+				Node* temp = m_start;
+				for (uint64_t i = 0; i < index; i++) {
+					if (temp == nullptr)
+						return nullptr;
+					temp = temp->next;
+				}
+				if (temp == nullptr)
+					return nullptr;
+				return (T*)(temp->data);
+			}
+
+			uint64_t getIndex(const T* obj) const {
+				Node* temp = m_start;
+				for (uint64_t i = 0; i < m_count; i++) {
+					if (temp == nullptr)
+						return UINT64_MAX;
+					if (temp->data == (uint64_t)obj)
+						return i;
+					temp = temp->next;
+				}
+				return UINT64_MAX;
+			}
+
+			void remove(uint64_t index) {
+				deleteNode(m_start, (uint64_t)get(index));
+				m_count--;
+			}
+
+			void remove(const T* obj) {
+				deleteNode(m_start, (uint64_t)obj);
+				m_count--;
+			}
+
+			void Enumerate(std::function<void(T* obj)> func) const {
+				Node* temp = m_start;
+				for (uint64_t i = 0; i < m_count; i++) {
+					// if (temp == nullptr)
+					// 	return;
+					func((T*)(temp->data));
+					temp = temp->next;
+				}
+			}
+
+			void Enumerate(std::function<bool(T* obj, uint64_t index)> func, uint64_t start = 0) const {
+				Node* temp = m_start;
+				for (uint64_t i = 0; i < start; i++) {
+					// if (temp == nullptr)
+					// 	return;
+					temp = temp->next;
+				}
+				for (uint64_t i = start; i < m_count; i++) {
+					// if (temp == nullptr)
+					// 	return;
+					if (!func((T*)(temp->data), i))
+						return;
+					temp = temp->next;
+				}
+			}
+
+			void EnumerateReverse(std::function<bool(T* obj)> func) const {
+				Node* temp = m_end;
+				for (uint64_t i = 0; i < m_count; i++) {
+					// if (temp == nullptr)
+					// 	return;
+					func((T*)(temp->data));
+					temp = temp->previous;
+				}
+			}
+
+			void EnumerateReverse(std::function<bool(T* obj, uint64_t index)> func, uint64_t start = 0) const {
+				Node* temp = m_end;
+				for (uint64_t i = 0; i < start; i++) {
+					// if (temp == nullptr)
+					// 	return;
+					temp = temp->previous;
+				}
+				for (uint64_t i = start; i < m_count; i++) {
+					// if (temp == nullptr)
+					// 	return;
+					if (!func((T*)(temp->data), i))
+						return;
+					temp = temp->previous;
+				}
+			}
+
+			uint64_t getCount() const {
+				return m_count;
+			}
+
+			void clear() {
+				for (uint64_t i = 0; i < m_count; i++)
+					deleteNode(m_start, m_start);
+				m_count = 0;
+				m_end = nullptr;
+			}
+
+		private:
+			uint64_t m_count;
+			Node* m_start;
+			Node* m_end;
 		};
 
 		template <typename T> class LockableLinkedList { // has a internal SimpleLinkedList and a spinlock. We do not lock automatically, so the user must lock the list before using it.

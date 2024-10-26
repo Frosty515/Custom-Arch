@@ -77,6 +77,8 @@ public:
 
     uint64_t GetAddress() const;
 
+    ComplexData* GetComplexData();
+
     void PrintInfo() const;
 
     uint64_t GetValue() const;

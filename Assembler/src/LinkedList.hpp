@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LINKED_LIST_HPP
 #define _LINKED_LIST_HPP
 
+#include <functional>
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -132,7 +133,7 @@ namespace LinkedList {
 				return nullptr;
 			return (T*)(m_start->data);
 		}
-		void fprint(const FILE* file) {
+		void fprint(FILE* file) {
 			fprintf(file, "LinkedList order: ");
 			Node* node = m_start;
 			for (uint64_t i = 0; i < m_count; i++) {
@@ -153,6 +154,122 @@ namespace LinkedList {
 		Node* m_start;
 	};
 
+	template <typename T> class RearInsertLinkedList {
+	public:
+		RearInsertLinkedList() : m_count(0), m_start(nullptr), m_end(nullptr) {}
+		~RearInsertLinkedList() {
+			for (uint64_t i = 0; i < m_count; i++)
+				remove(i);
+		}
+
+		void insert(const T* obj) {
+			// if (findNode(m_start, (uint64_t)&obj) != nullptr) {
+			// 	return; // object already exists
+			// }
+			Node* node = newNode((uint64_t)obj);
+			if (m_start == nullptr) {
+				m_start = node;
+				m_end = node;
+			}
+			else {
+				m_end->next = node;
+				node->previous = m_end;
+				m_end = node;
+			}
+			m_count++;
+		}
+
+		T* get(uint64_t index) const {
+			if (index >= m_count)
+				return nullptr;
+			Node* temp = m_start;
+			for (uint64_t i = 0; i < index; i++) {
+				if (temp == nullptr)
+					return nullptr;
+				temp = temp->next;
+			}
+			if (temp == nullptr)
+				return nullptr;
+			return (T*)(temp->data);
+		}
+
+		uint64_t getIndex(const T* obj) const {
+			Node* temp = m_start;
+			for (uint64_t i = 0; i < m_count; i++) {
+				if (temp == nullptr)
+					return UINT64_MAX;
+				if (temp->data == (uint64_t)obj)
+					return i;
+				temp = temp->next;
+			}
+			return UINT64_MAX;
+		}
+
+		void remove(uint64_t index) {
+			deleteNode(m_start, (uint64_t)get(index));
+			m_count--;
+		}
+
+		void remove(const T* obj) {
+			deleteNode(m_start, (uint64_t)obj);
+			m_count--;
+		}
+
+		void Enumerate(std::function<void(T*)> func) const {
+			Node* temp = m_start;
+			for (uint64_t i = 0; i < m_count; i++) {
+				// if (temp == nullptr)
+				// 	return;
+				func((T*)(temp->data));
+				temp = temp->next;
+			}
+		}
+
+		void Enumerate(std::function<bool(T*, uint64_t index)> func, uint64_t starting_index = 0) const {
+			Node* temp = m_start;
+			for (uint64_t i = 0; i < starting_index; i++) {
+				// if (temp == nullptr)
+				// 	return;
+				temp = temp->next;
+			}
+			for (uint64_t i = starting_index; i < m_count; i++) {
+				// if (temp == nullptr)
+				// 	return;
+				if (!func((T*)(temp->data), i))
+					return;
+				temp = temp->next;
+			}
+		}
+
+		// Enumerate in reserve order
+		void EnumerateReverse(std::function<bool(T*)> func) const {
+			Node* temp = m_end;
+			for (uint64_t i = 0; i < m_count; i++) {
+				// if (temp == nullptr)
+				// 	return;
+				if (!func((T*)(temp->data)))
+					return;
+				temp = temp->previous;
+			}
+		}
+
+		void clear() {
+			for (uint64_t i = 0; i < m_count; i++)
+				deleteNode(m_start, m_start);
+			m_count = 0;
+			m_end = nullptr;
+		}
+
+		uint64_t getCount() const {
+			return m_count;
+		}
+
+
+	private:
+		uint64_t m_count;
+		Node* m_start;
+		Node* m_end;
+	};
 }
 
 extern bool operator==(LinkedList::Node left, LinkedList::Node right);

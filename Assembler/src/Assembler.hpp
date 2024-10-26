@@ -47,9 +47,11 @@ public:
     Assembler();
     ~Assembler();
 
-    void assemble(const LinkedList::SimpleLinkedList<InsEncoding::Label>& data);
+    void assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Label>& data);
 
     const Buffer& GetBuffer() const;
+
+    void Clear();
 
 private:
 
@@ -57,7 +59,7 @@ private:
 
     uint64_t m_current_offset;
     Buffer m_buffer;
-    LinkedList::SimpleLinkedList<Section> m_sections;
+    LinkedList::RearInsertLinkedList<Section> m_sections;
 };
 
 #endif /* _ASSEMBLER_HPP */

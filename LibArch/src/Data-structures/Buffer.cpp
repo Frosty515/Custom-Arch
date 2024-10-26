@@ -46,17 +46,18 @@ namespace InsEncoding {
         uint64_t starting_block_index = 0;
         uint64_t offset_within_block = 0;
         uint8_t const* i_data = data;
-        uint64_t i;
-        for (i = 0; i < m_blocks.getCount(); i++) {
-            Block* block = m_blocks.get(i);
+        uint64_t i = 0;
+        m_blocks.Enumerate([&](Block* block, uint64_t index) -> bool {
+            i = index;
             if (offset >= starting_block_offset && offset < (starting_block_offset + block->size)) {
                 starting_block = block;
                 offset_within_block = offset - starting_block_offset;
                 starting_block_index = i;
-                break;
+                return false;
             }
             starting_block_offset += block->size;
-        }
+            return true;
+        });
         if (starting_block == nullptr) {
             starting_block = AddBlock(ALIGN_UP(size, m_blockSize));
             starting_block_offset = m_size - size;
@@ -72,20 +73,21 @@ namespace InsEncoding {
             memcpy((void*)((uint64_t)starting_block->data + offset_within_block), i_data, starting_block->size - offset_within_block);
             size -= starting_block->size - offset_within_block;
             i_data = (uint8_t const*)((uint64_t)i_data + (starting_block->size - offset_within_block));
-            for (i = starting_block_index + 1; i < m_blocks.getCount(); i++) {
-                Block* block = m_blocks.get(i);
+            m_blocks.Enumerate([&](Block* block, uint64_t index) -> bool {
+                i = index;
                 if (size <= block->size) {
                     memcpy(block->data, i_data, size);
                     block->empty = false;
-                    return;
+                    return false;
                 }
                 else {
                     memcpy(block->data, i_data, block->size);
                     block->empty = false;
                     size -= block->size;
                     i_data = (uint8_t const*)((uint64_t)i_data + block->size);
+                    return true;
                 }
-            }
+            }, starting_block_index + 1);
             Block* block = AddBlock(ALIGN_UP(size, m_blockSize));
             block->empty = false;
             memcpy(block->data, i_data, size);
@@ -99,16 +101,18 @@ namespace InsEncoding {
         uint64_t starting_block_index = 0;
         uint64_t offset_within_block = 0;
         uint8_t* i_data = data;
-        for (uint64_t i = 0; i < m_blocks.getCount(); i++) {
-            Block* block = m_blocks.get(i);
+        uint64_t i = 0;
+        m_blocks.Enumerate([&](Block* block, uint64_t index) -> bool {
+            i = index;
             if (offset >= starting_block_offset && offset < (starting_block_offset + block->size)) {
                 starting_block = block;
                 offset_within_block = offset - starting_block_offset;
                 starting_block_index = i;
-                break;
+                return false;
             }
             starting_block_offset += block->size;
-        }
+            return true;
+        });
         if (starting_block == nullptr)
             return;
         if ((starting_block->size - offset_within_block) >= size) {
@@ -119,18 +123,19 @@ namespace InsEncoding {
             memcpy(i_data, (void*)((uint64_t)starting_block->data + offset_within_block), starting_block->size - offset_within_block);
             size -= starting_block->size - offset_within_block;
             i_data = (uint8_t*)((uint64_t)i_data + (starting_block->size - offset_within_block));
-            for (uint64_t i = starting_block_index + 1; i < m_blocks.getCount(); i++) {
-                Block* block = m_blocks.get(i);
+            m_blocks.Enumerate([&](Block* block, uint64_t index) -> bool {
+                i = index;
                 if (size <= block->size) {
                     memcpy(i_data, block->data, size);
-                    return;
+                    return false;
                 }
                 else {
                     memcpy(i_data, block->data, block->size);
                     size -= block->size;
                     i_data = (uint8_t*)((uint64_t)i_data + block->size);
+                    return true;
                 }
-            }
+            }, starting_block_index + 1);
         }
     }
 
@@ -139,16 +144,18 @@ namespace InsEncoding {
         uint64_t starting_block_offset = 0;
         uint64_t starting_block_index = 0;
         uint64_t offset_within_block = 0;
-        for (uint64_t i = 0; i < m_blocks.getCount(); i++) {
-            Block* block = m_blocks.get(i);
+        uint64_t i = 0;
+        m_blocks.Enumerate([&](Block* block, uint64_t index) -> bool {
+            i = index;
             if (offset >= starting_block_offset && offset < (starting_block_offset + block->size)) {
                 starting_block = block;
                 offset_within_block = offset - starting_block_offset;
                 starting_block_index = i;
-                break;
+                return false;
             }
             starting_block_offset += block->size;
-        }
+            return true;
+        });
         if (starting_block == nullptr)
             return;
         if ((starting_block->size - offset_within_block) <= size) {
@@ -162,37 +169,43 @@ namespace InsEncoding {
         else {
             memset((void*)((uint64_t)starting_block->data + offset_within_block), 0, starting_block->size - offset_within_block);
             size -= starting_block->size - offset_within_block;
-            for (uint64_t i = starting_block_index + 1; i < m_blocks.getCount(); i++) {
-                Block* block = m_blocks.get(i);
+            m_blocks.Enumerate([&](Block* block, uint64_t index) -> bool {
+                i = index;
                 if (size <= block->size) {
                     memset(block->data, 0, size);
                     if (block->size == size) {
                         block->empty = true;
                         AutoShrink();
                     }
-                    return;
+                    return false;
                 }
                 else {
                     memset(block->data, 0, block->size);
                     block->empty = true;
                     size -= block->size;
+                    return true;
                 }
-            }
+            }, starting_block_index + 1);
         }
     }
 
+    void Buffer::Clear() {
+        const uint64_t count = m_blocks.getCount();
+        for (uint64_t i = 0; i < count; i++)
+            DeleteBlock(0);
+    }
+
     void Buffer::AutoShrink() {
-        for (uint64_t i = m_blocks.getCount(); i > 0; i--) {
-            Block* block = m_blocks.get(i - 1);
+        m_blocks.EnumerateReverse([&](Block* block, uint64_t index) -> bool {
             if (block->empty) {
                 delete[] block->data;
-                m_blocks.remove(i - 1);
+                m_blocks.remove(index);
                 m_size -= block->size;
                 delete block;
+                return true;
             }
-            else
-                return;
-        }
+            return false;
+        });
     }
 
     uint64_t Buffer::ClearUntil(uint64_t offset) {

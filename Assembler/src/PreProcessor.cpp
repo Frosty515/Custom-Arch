@@ -103,35 +103,29 @@ void PreProcessor::process(const char* source, size_t source_size) {
     m_buffer.Clear();
     m_current_offset = 0;
 
-    size_t original_source2_size = source2_size;
+    const char* original_source2 = source2;
 
     // 2. remove single line comments starting with ;
-    char const* line = source2;
-    while (line != nullptr) {
-        size_t line_size = 0;
-        char* next_line = GetLine((char*)line, source2_size - m_current_offset, line_size);
-        if (line_size != 0) {
-            for (size_t i = 0; i < line_size; i++) {
-                if (line[i] == ';') {
-                    source2_size -= line_size - i + 1;
-                    line_size = i;
-                    break;
-                }
-            }
-            m_buffer.Write(m_current_offset, (const uint8_t*)line, line_size);
-            m_current_offset += line_size;
+    while (true) {
+        char const* comment_start = strchr(source2, ';');
+        if (comment_start == nullptr) {
+            m_buffer.Write(m_current_offset, (const uint8_t*)source2, source2_size - (source2 - original_source2));
+            m_current_offset += source2_size - (source2 - original_source2);
+            break;
         }
-        if ((line + line_size) < (source2 + original_source2_size)) {
-            if (line[line_size] == '\n') {
-                char c = '\n';
-                m_buffer.Write(m_current_offset, (const uint8_t*)&c, 1);
-                m_current_offset++;
-            }
+        else {
+            m_buffer.Write(m_current_offset, (const uint8_t*)source2, comment_start - source2);
+            m_current_offset += comment_start - source2;
+            source2 = comment_start;
+            char const* comment_end = strchr(source2, '\n');
+            if (comment_end == nullptr)
+                error("Unterminated comment");
+            else
+                source2 = comment_end;
         }
-        line = next_line;
     }
 
-    delete[] source2;
+    delete[] original_source2;
 
     // export the buffer to a char const* and size
     size_t source3_size = m_current_offset;
@@ -147,24 +141,29 @@ void PreProcessor::process(const char* source, size_t source_size) {
     m_buffer.Clear();
     m_current_offset = 0;
 
+    const char* original_source3 = source3;
+
     // 3. remove multi line comments starting with /* and ending with */
-    bool in_comment = false;
-    for (size_t i = 0; i < source3_size; i++) {
-        if (source3[i] == '/' && source3[i + 1] == '*' && !in_comment) {
-            in_comment = true;
-            i++;
+    while (true) {
+        char const* comment_start = strstr(source3, "/*");
+        if (comment_start == nullptr) {
+            m_buffer.Write(m_current_offset, (const uint8_t*)source3, source3_size - (source3 - original_source3));
+            m_current_offset += source3_size - (source3 - original_source3);
+            break;
         }
-        else if (source3[i] == '*' && source3[i + 1] == '/' && in_comment) {
-            in_comment = false;
-            i++;
-        }
-        else if (!in_comment) {
-            m_buffer.Write(m_current_offset, (const uint8_t*)&source3[i], 1);
-            m_current_offset++;
+        else {
+            m_buffer.Write(m_current_offset, (const uint8_t*)source3, comment_start - source3);
+            m_current_offset += comment_start - source3;
+            source3 = comment_start;
+            char const* comment_end = strstr(source3, "*/");
+            if (comment_end == nullptr)
+                error("Unterminated comment");
+            else
+                source3 = comment_end + 2;
         }
     }
     
-    delete[] source3;
+    delete[] original_source3;
 }
 
 size_t PreProcessor::GetProcessedBufferSize() const {
@@ -176,12 +175,17 @@ void PreProcessor::ExportProcessedBuffer(uint8_t* data) const {
 }
 
 char* PreProcessor::GetLine(char* source, size_t source_size, size_t& line_size) {
-    for (size_t i = 0; i < source_size; i++) {
-        if (source[i] == '\n') {
-            line_size = i;
-            return &(source[i+1]);
-        }
+    void* line = memchr(source, '\n', source_size);
+    if (line != nullptr) {
+        line_size = (char*)line - source;
+        return (char*)line + 1;
     }
+    // for (size_t i = 0; i < source_size; i++) {
+    //     if (source[i] == '\n') {
+    //         line_size = i;
+    //         return &(source[i+1]);
+    //     }
+    // }
     line_size = source_size;
     return nullptr;
 }

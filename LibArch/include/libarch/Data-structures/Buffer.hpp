@@ -43,6 +43,9 @@ namespace InsEncoding {
         // Clear size bytes starting at offset. Potentially could remove the block if it is empty
         void Clear(uint64_t offset, size_t size);
 
+        // Clear the buffer
+        void Clear();
+
         // Remove any unused blocks at the end
         void AutoShrink();
 
@@ -65,7 +68,7 @@ namespace InsEncoding {
     private:
         size_t m_size;
         size_t m_blockSize;
-        LinkedList::SimpleLinkedList<Block> m_blocks;
+        LinkedList::RearInsertLinkedList<Block> m_blocks;
     };
 
 } // namespace InsEncoding

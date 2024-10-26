@@ -32,7 +32,7 @@ Parser::~Parser() {
 
 #define EQUALS(str1, str2) (strlen(str2) == name_size && strncmp(str1, str2, name_size) == 0)
 
-void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
+void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
     using namespace InsEncoding;
     Label* current_label = nullptr;
     Block* current_block = nullptr;
@@ -43,8 +43,7 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
     bool in_operand = false;
 
     // First scan for labels
-    for (uint64_t i = 0; i < tokens.getCount(); i++) {
-        Token* token = tokens.get(i);
+    tokens.Enumerate([&](Token* token) -> void {
         if (token->type == TokenType::BLABEL) {
             Label* label = new Label;
             label->name = (char*)(token->data);
@@ -67,16 +66,18 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
             current_block = block;
             in_instruction = false;
         }
-    }
+    });
 
-    for (uint64_t i = 0; i < tokens.getCount(); i++) {
-        Token* token = tokens.get(i);
+    tokens.Enumerate([&](Token* token, uint64_t index) -> bool {
 #ifdef ASSEMBLER_DEBUG
-        printf("Token: \"%.*s\", index = %lu, type = %lu\n", (int)token->data_size, (char*)(token->data), i, (unsigned long int)token->type);
+        printf("Token: \"%.*s\", index = %lu, type = %lu\n", (int)token->data_size, (char*)(token->data), index, (unsigned long int)token->type);
+#else
+        (void)index;
 #endif
 
         if (in_directive) {
-            if (token->type == TokenType::NUMBER) {
+            switch (token->type) {
+            case TokenType::NUMBER:
                 switch (((RawData*)current_data->data)->data_size) {
                 case 1: { // byte
                     uint8_t* data = new uint8_t;
@@ -107,8 +108,8 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
                     break;
                 }
                 ((RawData*)current_data->data)->type = RawDataType::RAW;
-            }
-            else if (token->type == TokenType::LABEL) {
+                break;
+            case TokenType::LABEL: {
                 if (current_operand != nullptr)
                     error("Invalid label location");
                 Label* label = nullptr;
@@ -132,8 +133,9 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
                     error("Invalid label");
                 ((RawData*)current_data->data)->type = RawDataType::LABEL;
                 ((RawData*)current_data->data)->data = label;
+                break;
             }
-            else if (token->type == TokenType::SUBLABEL) {
+            case TokenType::SUBLABEL: {
                 if (current_operand != nullptr)
                     error("Invalid sublabel location");
                 Block* block = nullptr;
@@ -163,9 +165,12 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
                     error("Invalid sublabel");
                 ((RawData*)current_data->data)->type = RawDataType::SUBLABEL;
                 ((RawData*)current_data->data)->data = block;
+                break;
             }
-            else
+            default:
                 error("Invalid token after directive");
+                break;
+            }
             in_directive = false;
         }
         else if (token->type == TokenType::COMMA) {
@@ -310,6 +315,7 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
                         error("Invalid operand");
                     if (!(current_operand->complete)) {
                         // TODO
+                        error("Invalid operand");
                     }
                     current_operand = nullptr;
                     in_operand = false;
@@ -478,7 +484,11 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
                         data->base.data.reg = reg;
                         data->base.type = ComplexItem::Type::REGISTER;
                         data->index.present = false;
+                        data->index.data.raw = 0;
+                        data->index.type = ComplexItem::Type::UNKNOWN;
                         data->offset.present = false;
+                        data->offset.data.raw = 0;
+                        data->offset.type = ComplexItem::Type::UNKNOWN;
                         data->stage = ComplexData::Stage::BASE;
                         current_operand->data = data;
                     }
@@ -748,7 +758,184 @@ void Parser::parse(const LinkedList::SimpleLinkedList<Token>& tokens) {
         else {
             error("Invalid Token");
         }
-    }
+        return true;
+    });
+}
+
+void Parser::Clear() {
+    using namespace InsEncoding;
+    m_labels.EnumerateReverse([&](Label* label) -> bool {
+        if (label == nullptr)
+            return false;
+        label->blocks.EnumerateReverse([&](Block* block) -> bool {
+            if (block == nullptr)
+                return false;
+            block->data_blocks.EnumerateReverse([&](Data* data) -> bool {
+                if (data == nullptr)
+                    return false;
+                if (data->type) { // instruction
+                    Instruction* ins = (Instruction*)(data->data);
+                    if (ins == nullptr)
+                        return false;
+                    ins->operands.EnumerateReverse([&](Operand* operand) -> bool {
+                        if (operand == nullptr)
+                            return false;
+                        if (operand->type == OperandType::COMPLEX) {
+                            ComplexData* data = (ComplexData*)(operand->data);
+                            if (data == nullptr)
+                                return false;
+                            if (data->base.present) {
+                                if (data->base.type == ComplexItem::Type::IMMEDIATE) {
+                                    switch (data->base.data.imm.size) {
+                                    case OperandSize::BYTE:
+                                        delete (uint8_t*)(data->base.data.imm.data);
+                                        break;
+                                    case OperandSize::WORD:
+                                        delete (uint16_t*)(data->base.data.imm.data);
+                                        break;
+                                    case OperandSize::DWORD:
+                                        delete (uint32_t*)(data->base.data.imm.data);
+                                        break;
+                                    case OperandSize::QWORD:
+                                        delete (uint64_t*)(data->base.data.imm.data);
+                                        break;
+                                    }
+                                }
+                                else if (data->base.type == ComplexItem::Type::REGISTER) {
+                                    delete data->base.data.reg;
+                                }
+                                else if (data->base.type == ComplexItem::Type::LABEL) {
+                                    // do nothing
+                                }
+                                else if (data->base.type == ComplexItem::Type::SUBLABEL) {
+                                    // do nothing
+                                }
+                            }
+                            if (data->index.present) {
+                                if (data->index.type == ComplexItem::Type::IMMEDIATE) {
+                                    switch (data->index.data.imm.size) {
+                                    case OperandSize::BYTE:
+                                        delete (uint8_t*)(data->index.data.imm.data);
+                                        break;
+                                    case OperandSize::WORD:
+                                        delete (uint16_t*)(data->index.data.imm.data);
+                                        break;
+                                    case OperandSize::DWORD:
+                                        delete (uint32_t*)(data->index.data.imm.data);
+                                        break;
+                                    case OperandSize::QWORD:
+                                        delete (uint64_t*)(data->index.data.imm.data);
+                                        break;
+                                    }
+                                }
+                                else if (data->index.type == ComplexItem::Type::REGISTER) {
+                                    delete data->index.data.reg;
+                                }
+                                else if (data->index.type == ComplexItem::Type::LABEL) {
+                                    // do nothing
+                                }
+                                else if (data->index.type == ComplexItem::Type::SUBLABEL) {
+                                    // do nothing
+                                }
+                            }
+                            if (data->offset.present) {
+                                if (data->offset.type == ComplexItem::Type::IMMEDIATE) {
+                                    switch (data->offset.data.imm.size) {
+                                    case OperandSize::BYTE:
+                                        delete (uint8_t*)(data->offset.data.imm.data);
+                                        break;
+                                    case OperandSize::WORD:
+                                        delete (uint16_t*)(data->offset.data.imm.data);
+                                        break;
+                                    case OperandSize::DWORD:
+                                        delete (uint32_t*)(data->offset.data.imm.data);
+                                        break;
+                                    case OperandSize::QWORD:
+                                        delete (uint64_t*)(data->offset.data.imm.data);
+                                        break;
+                                    }
+                                }
+                                else if (data->offset.type == ComplexItem::Type::REGISTER) {
+                                    delete data->offset.data.reg;
+                                }
+                                else if (data->offset.type == ComplexItem::Type::LABEL) {
+                                    // do nothing
+                                }
+                                else if (data->offset.type == ComplexItem::Type::SUBLABEL) {
+                                    // do nothing
+                                }
+                            }
+                            delete data;
+                        }
+                        else if (operand->type == OperandType::MEMORY) {
+                            delete (uint64_t*)(operand->data);
+                        }
+                        else if (operand->type == OperandType::IMMEDIATE) {
+                            switch (operand->size) {
+                            case OperandSize::BYTE:
+                                delete (uint8_t*)(operand->data);
+                                break;
+                            case OperandSize::WORD:
+                                delete (uint16_t*)(operand->data);
+                                break;
+                            case OperandSize::DWORD:
+                                delete (uint32_t*)(operand->data);
+                                break;
+                            case OperandSize::QWORD:
+                                delete (uint64_t*)(operand->data);
+                                break;
+                            }
+                        }
+                        else if (operand->type == OperandType::REGISTER) {
+                            delete (Register*)(operand->data);
+                        }
+                        delete operand;
+                        return true;
+                    });
+                    ins->operands.clear();
+                    delete ins;
+                }
+                else {
+                    RawData* raw_data = (RawData*)(data->data);
+                    if (raw_data == nullptr)
+                        return false;
+                    if (raw_data->type == RawDataType::RAW) {
+                        switch (raw_data->data_size) {
+                        case 1:
+                            delete (uint8_t*)(raw_data->data);
+                            break;
+                        case 2:
+                            delete (uint16_t*)(raw_data->data);
+                            break;
+                        case 4:
+                            delete (uint32_t*)(raw_data->data);
+                            break;
+                        case 8:
+                            delete (uint64_t*)(raw_data->data);
+                            break;
+                        }
+                    }
+                    delete raw_data;
+                }
+                delete data;
+                return true;
+            });
+            block->data_blocks.clear();
+            block->jumps_to_here.EnumerateReverse([&](uint64_t* jump) -> bool {
+                if (jump == nullptr)
+                    return false;
+                delete jump;
+                return true;
+            });
+            block->jumps_to_here.clear();
+            delete block;
+            return true;
+        });
+        label->blocks.clear();
+        delete label;
+        return true;
+    });
+    m_labels.clear();
 }
 
 void Parser::PrintSections(FILE* fd) const {
@@ -853,6 +1040,8 @@ void Parser::PrintSections(FILE* fd) const {
                                     delete[] name;
                                     break;
                                 }
+                                case ComplexItem::Type::UNKNOWN:
+                                    break;
                                 }
                             }
                             if (data->index.present) {
@@ -895,12 +1084,14 @@ void Parser::PrintSections(FILE* fd) const {
                                     delete[] name;
                                     break;
                                 }
+                                case ComplexItem::Type::UNKNOWN:
+                                    break;
                                 }
                             }
                             if (data->offset.present) {
                                 fprintf(fd, "Offset: ");
                                 switch (data->offset.type) {
-                                    case ComplexItem::Type::IMMEDIATE:
+                                case ComplexItem::Type::IMMEDIATE:
                                     switch (data->offset.data.imm.size) {
                                     case OperandSize::BYTE:
                                         fprintf(fd, "size = 1, immediate = %#04hhx\n", *(uint8_t*)(data->offset.data.imm.data));
@@ -913,6 +1104,7 @@ void Parser::PrintSections(FILE* fd) const {
                                         break;
                                     case OperandSize::QWORD:
                                         fprintf(fd, "size = 8, immediate = %#018lx\n", *(uint64_t*)(data->offset.data.imm.data));
+                                        break;
                                         break;
                                     }
                                     break;
@@ -937,6 +1129,8 @@ void Parser::PrintSections(FILE* fd) const {
                                     delete[] name;
                                     break;
                                 }
+                                case ComplexItem::Type::UNKNOWN:
+                                    break;
                                 }
                             }
                             break;
@@ -994,7 +1188,7 @@ void Parser::PrintSections(FILE* fd) const {
     }
 }
 
-const LinkedList::SimpleLinkedList<InsEncoding::Label>& Parser::GetLabels() const {
+const LinkedList::RearInsertLinkedList<InsEncoding::Label>& Parser::GetLabels() const {
     return m_labels;
 }
 
