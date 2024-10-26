@@ -1,4 +1,4 @@
-# Custom Architecture
+# Frost64 - A Custom 64-bit Architecture
 
 ## COPYING
 
