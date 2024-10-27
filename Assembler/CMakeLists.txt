@@ -21,6 +21,7 @@ endif()
 
 set(assembler_sources
     ${assembler_sources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ArgsParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Assembler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Lexer.cpp

@@ -50,6 +50,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/StandardMemoryRegion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ArgsParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Emulator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Interrupts.cpp
@@ -83,7 +84,7 @@ target_compile_options(Emulator
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wpedantic>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wno-packed-bitfield-compat>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fstack-protector>
-    PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-O3>
+    PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-O1>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fno-omit-frame-pointer>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     # PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fsanitize=undefined,address>

@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "ArgsParser.hpp"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,23 +31,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define DEFAULT_RAM MiB(1)
 
 /* Argument layout: <file name> [RAM size]*/
+ArgsParser* g_args = nullptr;
 
 int main(int argc, char** argv) {
+    g_args = new ArgsParser();
 
-    if (argc < 2 || argc > 3) {
-        printf("Usage: %s <file name> [RAM size]\n", argv[0]);
+    g_args->AddOption('p', "program", "Program file to run", true);
+    g_args->AddOption('m', "ram", "RAM size in bytes", false);
+    g_args->AddOption('h', "help", "Print this help message", false);
+
+    g_args->ParseArgs(argc, argv);
+
+    if (g_args->HasOption('h')) {
+        printf("%s", g_args->GetHelpMessage().c_str());
+        return 0;
+    }
+
+    if (!g_args->HasOption('p')) {
+        printf("%s", g_args->GetHelpMessage().c_str());
         return 1;
     }
 
+    std::string_view program = g_args->GetOption('p');
+
+
     size_t RAM_Size;
 
-    if (argc == 3)
-        RAM_Size = strtoull(argv[2], nullptr, 0); // automatically detects base
+    if (g_args->HasOption('m'))
+        RAM_Size = strtoull(g_args->GetOption('m').data(), nullptr, 0); // automatically detects base
     else
         RAM_Size = DEFAULT_RAM;
 
     // open and read file
-    FILE* fp = fopen(argv[1], "r");
+    FILE* fp = fopen(program.data(), "r");
     if (fp == nullptr) {
         perror("fopen");
         return 1;
@@ -92,6 +109,9 @@ int main(int argc, char** argv) {
     }
 
     fclose(fp);
+
+    // delete the args parser
+    delete g_args;
 
     // Actually start emulator
 

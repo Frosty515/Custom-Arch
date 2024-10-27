@@ -19,27 +19,46 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <string.h>
 
+#include "ArgsParser.hpp"
 #include "Buffer.hpp"
 #include "Lexer.hpp"
 #include "Parser.hpp"
 #include "Assembler.hpp"
 #include "PreProcessor.hpp"
 
+ArgsParser* g_args = nullptr;
+
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        printf("Usage: %s <file> <out-file>\n", argv[0]);
+    g_args = new ArgsParser();
+
+    g_args->AddOption('p', "program", "Input program to assemble", true);
+    g_args->AddOption('o', "output", "Output file", true);
+    g_args->AddOption('h', "help", "Print this help message", false);
+
+    g_args->ParseArgs(argc, argv);
+
+    if (g_args->HasOption('h')) {
+        printf("%s", g_args->GetHelpMessage().c_str());
+        return 0;
+    }
+
+    if (!g_args->HasOption('p') || !g_args->HasOption('o')) {
+        printf("%s", g_args->GetHelpMessage().c_str());
         return 1;
     }
 
-    FILE* file = fopen(argv[1], "r");
+    std::string_view program = g_args->GetOption('p');
+    std::string_view output = g_args->GetOption('o');
+
+    FILE* file = fopen(program.data(), "r");
     if (file == nullptr) {
-        printf("Error: could not open file %s\n", argv[1]);
+        printf("Error: could not open file %s\n", program.data());
         return 1;
     }
 
-    FILE* output_file = fopen(argv[2], "w");
+    FILE* output_file = fopen(output.data(), "w");
     if (output_file == nullptr) {
-        printf("Error: could not open output file %s\n", argv[2]);
+        printf("Error: could not open output file %s\n", output.data());
         return 1;
     }
 
