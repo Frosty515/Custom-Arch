@@ -26,6 +26,11 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         ${emulator_sources}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Linux/Memory.cpp
     )
+else (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+    set(emulator_sources
+        ${emulator_sources}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Darwin/Memory.cpp
+    )
 endif()
 
 set(emulator_sources
