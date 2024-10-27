@@ -48,8 +48,20 @@ extern "C" {
 
 /* Implemented in x86_64 assembly */
 
+#ifdef __APPLE__
+
 void* fast_memset(void* ptr, uint8_t c, size_t n);
 void* fast_memcpy(void* dst, void* src, size_t n);
+
+#else /* __APPLE__ */
+
+#define fast_memset(ptr, c, n) _fast_memset(ptr, c, n)
+#define fast_memcpy(dst, src, n) _fast_memcpy(dst, src, n)
+
+void* _fast_memset(void* ptr, uint8_t c, size_t n);
+void* _fast_memcpy(void* dst, void* src, size_t n);
+
+#endif /* __APPLE__ */
 
 #ifdef __cplusplus
 }

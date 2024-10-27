@@ -34,6 +34,8 @@ enum FLAGS_OFFSETS {
 
 #include <stdint.h>
 
+#ifdef __APPLE__
+
 uint64_t x86_64_add(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_mul(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_sub(uint64_t a, uint64_t b, uint64_t* flags);
@@ -49,6 +51,42 @@ uint64_t x86_64_inc(uint64_t src, uint64_t* flags);
 uint64_t x86_64_dec(uint64_t src, uint64_t* flags);
 uint64_t x86_64_shl(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_shr(uint64_t a, uint64_t b, uint64_t* flags);
+
+#else /* __APPLE__ */
+
+#define x86_64_add(a, b, flags) _x86_64_add(a, b, flags)
+#define x86_64_mul(a, b, flags) _x86_64_mul(a, b, flags)
+#define x86_64_sub(a, b, flags) _x86_64_sub(a, b, flags)
+#define x86_64_div(a, b, flags) _x86_64_div(a, b, flags)
+#define x86_64_or(a, b, flags) _x86_64_or(a, b, flags)
+#define x86_64_xor(a, b, flags) _x86_64_xor(a, b, flags)
+#define x86_64_nor(a, b, flags) _x86_64_nor(a, b, flags)
+#define x86_64_and(a, b, flags) _x86_64_and(a, b, flags)
+#define x86_64_nand(a, b, flags) _x86_64_nand(a, b, flags)
+#define x86_64_not(src, flags) _x86_64_not(src, flags)
+#define x86_64_cmp(a, b, flags) _x86_64_cmp(a, b, flags)
+#define x86_64_inc(src, flags) _x86_64_inc(src, flags)
+#define x86_64_dec(src, flags) _x86_64_dec(src, flags)
+#define x86_64_shl(a, b, flags) _x86_64_shl(a, b, flags)
+#define x86_64_shr(a, b, flags) _x86_64_shr(a, b, flags)
+
+uint64_t _x86_64_add(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_mul(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_sub(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_div(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_or(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_xor(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_nor(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_and(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_nand(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_not(uint64_t src, uint64_t* flags);
+void _x86_64_cmp(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_inc(uint64_t src, uint64_t* flags);
+uint64_t _x86_64_dec(uint64_t src, uint64_t* flags);
+uint64_t _x86_64_shl(uint64_t a, uint64_t b, uint64_t* flags);
+uint64_t _x86_64_shr(uint64_t a, uint64_t b, uint64_t* flags);
+
+#endif /* __APPLE__ */
 
 #ifdef __cplusplus
 }

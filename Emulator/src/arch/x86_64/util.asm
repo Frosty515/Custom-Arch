@@ -13,10 +13,10 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-[bits 64]
+[bits 64]_
 
-global fast_memset
-fast_memset:
+global _fast_memset
+_fast_memset:
     push rbp
     mov rbp, rsp
 
@@ -75,8 +75,8 @@ fast_memset:
     pop rbp
     ret
 
-global fast_memcpy
-fast_memcpy:
+global _fast_memcpy
+_fast_memcpy:
     push rbp
     mov rbp, rsp
 

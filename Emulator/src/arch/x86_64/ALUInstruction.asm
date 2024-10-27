@@ -15,21 +15,21 @@
 
 [bits 64]
 
-global x86_64_add
-global x86_64_mul
-global x86_64_sub
-global x86_64_div
-global x86_64_or
-global x86_64_xor
-global x86_64_nor
-global x86_64_and
-global x86_64_nand
-global x86_64_not
-global x86_64_cmp
-global x86_64_inc
-global x86_64_dec
-global x86_64_shl
-global x86_64_shr
+global _x86_64_add
+global _x86_64_mul
+global _x86_64_sub
+global _x86_64_div
+global _x86_64_or
+global _x86_64_xor
+global _x86_64_nor
+global _x86_64_and
+global _x86_64_nand
+global _x86_64_not
+global _x86_64_cmp
+global _x86_64_inc
+global _x86_64_dec
+global _x86_64_shl
+global _x86_64_shr
 
 x86_64_convert_flags: ; dil = CPU flags --> rax = flags
     xor rax, rax
@@ -42,7 +42,7 @@ x86_64_convert_flags: ; dil = CPU flags --> rax = flags
     or al, sil
     ret
 
-x86_64_add:
+_x86_64_add:
     push rbp
     mov rbp, rsp
 
@@ -60,7 +60,7 @@ x86_64_add:
     pop rbp
     ret
 
-x86_64_mul:
+_x86_64_mul:
     push rbp
     mov rbp, rsp
 
@@ -79,7 +79,7 @@ x86_64_mul:
     pop rbp
     ret
 
-x86_64_sub:
+_x86_64_sub:
     push rbp
     mov rbp, rsp
 
@@ -97,7 +97,7 @@ x86_64_sub:
     pop rbp
     ret
 
-x86_64_div:
+_x86_64_div:
     push rbp
     mov rbp, rsp
 
@@ -111,7 +111,7 @@ x86_64_div:
     pop rbp
     ret
 
-x86_64_or:
+_x86_64_or:
     push rbp
     mov rbp, rsp
 
@@ -129,7 +129,7 @@ x86_64_or:
     pop rbp
     ret
 
-x86_64_xor:
+_x86_64_xor:
     push rbp
     mov rbp, rsp
 
@@ -147,21 +147,21 @@ x86_64_xor:
     pop rbp
     ret
 
-x86_64_nor:
+_x86_64_nor:
     push rbp
     mov rbp, rsp
 
     push rdx
-    call x86_64_or
+    call _x86_64_or
     mov rdi, rax
     pop rsi
-    call x86_64_not
+    call _x86_64_not
 
     mov rsp, rbp
     pop rbp
     ret
 
-x86_64_and:
+_x86_64_and:
     push rbp
     mov rbp, rsp
 
@@ -179,21 +179,21 @@ x86_64_and:
     pop rbp
     ret
 
-x86_64_nand:
+_x86_64_nand:
     push rbp
     mov rbp, rsp
 
     push rdx
-    call x86_64_and
+    call _x86_64_and
     mov rdi, rax
     pop rsi
-    call x86_64_not
+    call _x86_64_not
 
     mov rsp, rbp
     pop rbp
     ret
 
-x86_64_not:
+_x86_64_not:
     push rbp
     mov rbp, rsp
 
@@ -205,7 +205,7 @@ x86_64_not:
     pop rbp
     ret
 
-x86_64_cmp:
+_x86_64_cmp:
     push rbp
     mov rbp, rsp
 
@@ -220,7 +220,7 @@ x86_64_cmp:
     pop rbp
     ret
 
-x86_64_inc:
+_x86_64_inc:
     push rbp
     mov rbp, rsp
 
@@ -238,7 +238,7 @@ x86_64_inc:
     pop rbp
     ret
 
-x86_64_dec:
+_x86_64_dec:
     push rbp
     mov rbp, rsp
 
@@ -256,7 +256,7 @@ x86_64_dec:
     pop rbp
     ret
 
-x86_64_shl:
+_x86_64_shl:
     push rbp
     mov rbp, rsp
 
@@ -276,7 +276,7 @@ x86_64_shl:
     pop rbp
     ret
 
-x86_64_shr:
+_x86_64_shr:
     push rbp
     mov rbp, rsp
 

@@ -386,7 +386,7 @@ namespace Emulator {
         g_EmulatorRunning = false;
         printf("Crash: %s\n", message);
         DumpRegisters(stdout);
-        DumpRAM(stdout);
+        // DumpRAM(stdout);
         exit(0);
     }
 

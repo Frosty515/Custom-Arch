@@ -27,8 +27,20 @@ typedef unsigned long spinlock_t;
 #define spinlock_init(lock) (*(lock) = 0)
 #define spinlock_new(name) spinlock_t name = 0
 
+#ifdef __APPLE__
+
 void spinlock_acquire(spinlock_t* lock);
 void spinlock_release(spinlock_t* lock);
+
+#else /* __APPLE__ */
+
+#define spinlock_acquire(lock) _spinlock_acquire(lock)
+#define spinlock_release(lock) _spinlock_release(lock)
+
+void _spinlock_acquire(spinlock_t* lock);
+void _spinlock_release(spinlock_t* lock);
+
+#endif /* __APPLE__ */
 
 #ifdef __cplusplus
 }
