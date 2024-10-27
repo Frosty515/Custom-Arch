@@ -4,7 +4,7 @@
 
 - 16 64-bit general purpose registers (GPRs) named r0-r15
 - 3 64-bit stack related registers. See [Stack](#stack-info)
-- 1 64-bit state register that is read-only. named STS. See [Status Layout](#status-layout) for more info
+- 1 64-bit status register that is read-only. named STS. See [Status Layout](#status-layout) for more info
 - 4 64-bit control registers named CR0-CR8, see [Control Registers Layout](#control-registers-layout) for more info
 - 1 64-bit instruction register, named IP. It is read-only.
 
@@ -123,49 +123,231 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 
 ## Instructions
 
+### Size
+
+- Described as `SIZE` in the following instructions.
+- Can be one of the following:
+
+| Name | Description |
+| -----| ----------- |
+| BYTE | 8-bit integer |
+| WORD | 16-bit integer |
+| DWORD | 32-bit integer |
+| QWORD | 64-bit integer |
+
+### Flags
+
+- The flags (`STS` register) are set by the ALU instructions depending on the result of the operation.
+
 ### Stack
 
-- `push (address or register)` instruction to push 64-bit integers from a memory address or from a general purpose register to the stack
-- `pop (address or GPR)` instruction to pop 64-bit integers to a memory address or a  register from the stack
-- `pusha` instruction to push all general purpose registers to the stack starting with r15, and finishing with r0
-- `popa` instruction to pop all general purpose registers to the stack starting with r0, and finishing with r15
+#### push
+
+- `push SIZE src` pushes the value of SIZE at `src` to the stack, incrementing `scp` by 8.
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### pop
+
+- `pop SIZE dst` pops the value of SIZE from the stack to `dst`, decrementing `scp` by 8.
+- `dst` can be a register or memory address (simple or complex).
+
+#### pusha
+
+- `pusha` pushes all general purpose registers to the stack starting with r15, and finishing with r0.
+
+#### popa
+
+- `popa` pops all general purpose registers to the stack starting with r0, and finishing with r15.
 
 ### ALU
 
-- `add`, `mul`, `sub`, `div`, `or`, `xor`, `nor`, `and`, `nand`, `not` instructions which support 2 arguments; dst and src, dst can be either a register or address. src can be the same types as dst as well as an immediate. The result of the arithmetic between the 2 values is put in the destination.
-- `cmp (address or register), (address, register or immediate)` instruction that compares the values of its to arguments. If its result is successful, the error flag is reset. If it fails, the error flag is set.
-- `inc (address or register)` instruction that increments the value in the address or register supplied.
-- `dec (address or register)` instruction that decrements the value in the address or register supplied.
-- `shl dst(address or register), n(address, register or immediate)` instruction that shifts dst to the left by n and then returns it in dst.
-- `shr dst(address or register), n(address, register or immediate)` instruction that shifts dst to the right by n and then returns it in dst.
+#### add
+
+- `add SIZE dst, src` adds the value of `src` to the value of `dst` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### mul
+
+- `mul SIZE dst, src` multiplies the value of `src` by the value of `dst` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### sub
+- `sub SIZE dst, src` subtracts the value of `src` from the value of `dst` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### div
+
+- `div SIZE dst, src` divides the value of `dst` by the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+- If the value of `src` is 0, a divide by zero exception is thrown.
+
+#### or
+
+- `or SIZE dst, src` performs a bitwise OR operation on the value of `dst` and the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### xor
+
+- `xor SIZE dst, src` performs a bitwise XOR operation on the value of `dst` and the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### nor
+
+- `nor SIZE dst, src` performs a bitwise NOR operation on the value of `dst` and the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### and
+
+- `and SIZE dst, src` performs a bitwise AND operation on the value of `dst` and the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### nand
+
+- `nand SIZE dst, src` performs a bitwise NAND operation on the value of `dst` and the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### not
+
+- `not SIZE dst` performs a bitwise NOT operation on the value of `dst` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+
+#### cmp
+
+- `cmp SIZE src1, src2` compares the value of `src2` with the value of `src1`.
+- `src2` can be a register or memory address (simple or complex).
+- `src1` can be a register, memory address (simple or complex), or an immediate.
+- It is equivalent to `sub SIZE src2, src1` without storing the result.
+
+#### inc
+
+- `inc SIZE dst` increments the value of `dst` by 1 and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- Equivalent to `add SIZE dst, 1`.
+
+#### dec
+
+- `dec SIZE dst` decrements the value of `dst` by 1 and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- Equivalent to `sub SIZE dst, 1`.
+
+#### shl
+
+- `shl SIZE dst, src` shifts the value of `dst` to the left by the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### shr
+
+- `shr SIZE dst, src` shifts the value of `dst` to the right by the value of `src` and stores the result in `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
 
 ### Program flow
 
-- `ret` return from a function
-- `call (address or register)` call a function by saving I1 to stack, saving return address in I1 and calling the given address or address in the register
-- `jmp (address or register)` jump to address provided or address in register
-- `jc (address or register)` jump to address provided or address in register if carry flag is set, otherwise `nop`
-- `jnc (address or register)` jump to address provided or address in register if carry flag is not set, otherwise `nop`
-- `jz (address or register)` jump to address provided or address in register if zero flag is set, otherwise `nop`
-- `jnz (address or register)` jump to address provided or address in register if zero flag is not set, otherwise `nop`
+#### ret
+
+- `ret` returns from a function.
+- It pops the return address from the stack and jumps to it.
+
+#### call
+
+- `call SIZE address` calls the function at `address`.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- It pushes the return address to the stack and jumps to the function.
+
+#### jmp
+
+- `jmp SIZE address` jumps to the function at `address`.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+
+#### jc
+
+- `jc SIZE address` jumps to the function at `address` if the carry flag is set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the carry flag is not set.
+
+#### jnc
+
+- `jnc SIZE address` jumps to the function at `address` if the carry flag is not set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the carry flag is set.
+
+#### jz
+
+- `jz SIZE address` jumps to the function at `address` if the zero flag is set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the zero flag is not set.
+
+#### jnz
+
+- `jnz SIZE address` jumps to the function at `address` if the zero flag is not set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the zero flag is set.
 
 ### Interrupts
 
-- `int (number)` send interrupt (number)
-- `lidt (address or register)` loads Interrupt Descriptor Table
-- `iret` instruction which cleans up after interrupt and then calls `ret`
+#### int
+
+- `int number` raises an interrupt with the number `number`.
+- `number` can be a register, memory address (simple or complex), or an immediate.
+- More info can be found at [Interrupts info](#interrupts-info).
+
+#### lidt
+
+- `lidt address` loads the Interrupt Descriptor Table (IDT) from `address`.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- More info can be found at [Interrupts info](#interrupts-info).
+
+#### iret
+
+- `iret` returns from an interrupt.
+- More info can be found at [Interrupts info](#interrupts-info).
 
 ### Other
 
-- `mov dst(address or register), src(address, register or immediate)` instruction to move values between registers and memory addresses
-- `nop` does nothing for that instruction cycle
-- `hlt` freeze CPU in its current state
+#### mov
+
+- `mov SIZE dst, src` moves the value of `src` to `dst`.
+- `dst` can be a register or memory address (simple or complex).
+- `src` can be a register, memory address (simple or complex), or an immediate.
+
+#### nop
+
+- `nop` does nothing for that instruction cycle.
+- Any arguments are ignored.
+
+#### hlt
+
+- `hlt` freezes the CPU in its current state.
 
 ### Protected mode Instructions
 
-- `syscall` to enter supervisor mode
-- `sysret` to return to supervisor mode
-- `enteruser (address, register or immediate)` to enter user mode
+#### syscall
+
+- `syscall` enters supervisor mode.
+- More info can be found at [Switching privilege levels](#switching-privilege-levels).
+
+#### sysret
+
+- `sysret` returns to user mode.
+- This instruction is not intended to enter user mode the first time.
+- More info can be found at [Switching privilege levels](#switching-privilege-levels).
+
+#### enteruser
+
+- `enteruser SIZE address` enters user mode at `address`.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- This instruction is intended to be for entering user mode the first time.
+- More info can be found at [Switching privilege levels](#switching-privilege-levels).
 
 ## Interrupts info
 
@@ -198,11 +380,25 @@ Has a register called IDTR which contains the address of a table called the Inte
 ### Labels
 
 - Labels are defined by a string followed by a colon
+- Example:
+
+```asm
+foo:
+    nop
+```
 
 ### Sub-labels
 
 - Sub-labels are defined by a period followed by a string followed by a colon
 - Sub-labels are only accessible within the scope of the label they are defined in
+- Example:
+  
+```asm
+foo:
+    nop
+.bar:
+    nop
+```
 
 ### Comments
 
@@ -219,18 +415,18 @@ Has a register called IDTR which contains the address of a table called the Inte
 - `dw` to define a word (2 bytes)
 - `dd` to define a double-word (4 bytes)
 - `dq` to define a quad-word (8 bytes)
+- `org` to set the origin of the program counter. Can only be set once. Regardless of where the in the program it is specified in, it will be set to the first instruction.
 
-### Operands
-
-- Operands are separated by commas
-- Operands can be registers, memory addresses, or immediates
-
-#### Memory addresses
+### Memory addresses
 
 - 2 forms
 - form 1: `[literal]` where literal is a 64-bit integer (also known as `MEMORY`).
-- form 2: `[base*index+offset]`, where any of the 3 can be a register or a literal of any size (also known as `COMPLEX`).
+- form 2: `[base*index+offset]`, where any of the 3 can be a register or a immediate of any size (also known as `COMPLEX`).
 - In form 2, index or offset can be excluded. If the offset is a register, it can be positive or negative.
+
+### Labels
+
+- Labels in an operand are equivalent to an immediate value of the address of the label.
 
 ## Devices
 
@@ -242,3 +438,8 @@ Has a register called IDTR which contains the address of a table called the Inte
 - There is a console I/O device on ports 0-15
 - A raw read/write of a byte will read/write to the console via stdin/stderr respectively
 - Any other sized read/write will be ignored
+
+## The BIOS
+
+- The BIOS has a dedicated memory region from 0xF000'0000 to 0xFFFF'FFFF.
+- The IP register is set to 0xF000'0000 on boot.
