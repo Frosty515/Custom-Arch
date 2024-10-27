@@ -12,6 +12,9 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Authors
+#   - fwpirate <alavik@disroot.org>
 
 if(BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
