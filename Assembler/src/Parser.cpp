@@ -17,12 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Parser.hpp"
 
+#include <cstdint>
+#include <cstdlib>
 #include <string.h>
 
 #include <libarch/Instruction.hpp>
 #include <libarch/Operand.hpp>
 
-Parser::Parser() {
+Parser::Parser() : m_base_address(0) {
 
 }
 
@@ -41,6 +43,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
     bool in_directive = false;
     bool in_instruction = true;
     bool in_operand = false;
+
+    m_base_address = 0;
+    bool base_address_set = false;
+    bool base_address_parsed = false;
 
     // First scan for labels
     tokens.Enumerate([&](Token* token) -> void {
@@ -78,28 +84,33 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
         if (in_directive) {
             switch (token->type) {
             case TokenType::NUMBER:
+                if (base_address_parsed && !base_address_set) {
+                    m_base_address = strtoull((const char*)(token->data), nullptr, 0);
+                    base_address_set = true;
+                    break;
+                }
                 switch (((RawData*)current_data->data)->data_size) {
                 case 1: { // byte
                     uint8_t* data = new uint8_t;
-                    *data = atoi((const char*)(token->data)) & 0xFF;
+                    *data = strtol((const char*)(token->data), nullptr, 0) & 0xFF;
                     ((RawData*)current_data->data)->data = data;
                     break;
                 }
                 case 2: { // word
                     uint16_t* data = new uint16_t;
-                    *data = atoi((const char*)(token->data)) & 0xFFFF;
+                    *data = strtol((const char*)(token->data), nullptr, 0) & 0xFFFF;
                     ((RawData*)current_data->data)->data = data;
                     break;
                 }
                 case 4: { // dword
                     uint32_t* data = new uint32_t;
-                    *data = (uint32_t)atoi((const char*)(token->data));
+                    *data = strtoul((const char*)(token->data), nullptr, 0) & 0xFFFFFFFF;
                     ((RawData*)current_data->data)->data = data;
                     break;
                 }
                 case 8: { // qword
                     uint64_t* data = new uint64_t;
-                    *data = (uint64_t)atol((const char*)(token->data));
+                    *data = strtoull((const char*)(token->data), nullptr, 0);
                     ((RawData*)current_data->data)->data = data;
                     break;
                 }
@@ -121,7 +132,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     Label* i_label = m_labels.get(j);
                     if (i_label == nullptr)
                         assert(nullptr == "Invalid label name in list"); // quick way to escape
-                    if (i_label->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length. -1 to remove the colon
+                    if (i_label->name_size < token->data_size) // strncmp can only properly handle strings of equal or greater length.
                         continue;
                     if (strncmp(i_label->name, name, i_label->name_size) == 0) {
                         label = i_label;
@@ -181,6 +192,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
         else if (token->type == TokenType::DIRECTIVE) {
             if (in_operand)
                 error("Directive inside operand");
+            if (strncmp((char*)(token->data), "org", token->data_size) == 0) {
+                if (base_address_set)
+                    error("Multiple base addresses");
+                base_address_set = false;
+                base_address_parsed = true;
+                in_directive = true;
+                in_instruction = false;
+                return true;
+            }
             Data* data = new Data;
             RawData* raw_data = new RawData;
             data->data = raw_data;
@@ -327,7 +347,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         ((Instruction*)current_data->data)->operands.insert(operand);
                         current_operand = operand;
                         current_operand->type = OperandType::IMMEDIATE;
-                        long imm = atol((const char*)(token->data));
+                        long imm = (long)strtoull((const char*)(token->data), nullptr, 0);
                         if (imm >= INT8_MIN && imm <= INT8_MAX) {
                             current_operand->size = OperandSize::BYTE;
                             uint8_t* imm8 = new uint8_t;
@@ -359,7 +379,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     else if (current_operand->type == OperandType::POTENTIAL_MEMORY) { // must be memory
                         // current_operand->size = OperandSize::QWORD;
                         uint64_t* addr = new uint64_t;
-                        *addr = (uint64_t)atol((const char*)(token->data));
+                        *addr = (uint64_t)strtoull((const char*)(token->data), nullptr, 0);
                         current_operand->data = addr;
                         current_operand->type = OperandType::MEMORY;
                         current_operand->complete = true;
@@ -378,7 +398,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             current_operand->data = data;
                         }
                         ComplexData* data = (ComplexData*)(current_operand->data);
-                        long imm = atol((const char*)(token->data));
+                        long imm = strtoll((const char*)(token->data), nullptr, 0);
                         void* i_data;
                         OperandSize data_size;
                         bool negative = imm < 0;
@@ -752,11 +772,11 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         error("Invalid operator");
                 }
                 else
-                    error("Invalid Token");
+                    error("Invalid Token0");
             }
         }
         else {
-            error("Invalid Token");
+            error("Invalid Token1");
         }
         return true;
     });
@@ -1178,9 +1198,20 @@ void Parser::PrintSections(FILE* fd) const {
                     RawData* raw_data = (RawData*)(data->data);
                     if (raw_data == nullptr || raw_data->data == nullptr)
                         return;
-                    fprintf(fd, "Raw data: size = %lu:\n", raw_data->data_size);
-                    for (uint64_t l = 0; l < raw_data->data_size; l++)
-                        fprintf(fd, "%#02hhx%c", ((uint8_t*)(raw_data->data))[l], (l % 8) == 0 ? '\n' : ' ');
+                    fputs("Raw data: ", fd);
+                    switch (raw_data->type) {
+                    case RawDataType::RAW:
+                        fprintf(fd, "size = %lu:\n", raw_data->data_size);
+                        for (uint64_t l = 0; l < raw_data->data_size; l++)
+                            fprintf(fd, "%#02hhx%c", ((uint8_t*)(raw_data->data))[l], (l % 8) == 7 ? '\n' : ' ');
+                        break;
+                    case RawDataType::LABEL:
+                        fprintf(fd, "Label: \"%s\"\n", ((Label*)(raw_data->data))->name);
+                        break;
+                    case RawDataType::SUBLABEL:
+                        fprintf(fd, "Sublabel: \"%s\"\n", ((Block*)(raw_data->data))->name);
+                        break;
+                    }
                     fputc('\n', fd);
                 }
             }

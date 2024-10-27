@@ -39,6 +39,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define FLAG_SET(x, flag) (x |= flag)
 #define FLAG_UNSET(x, flag) (x &= ~flag)
 
+#define MAX(a, b) ((a > b) ? a : b)
+#define MIN(a, b) ((a < b) ? a : b)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

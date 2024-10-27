@@ -30,8 +30,6 @@ public:
     MMU();
     ~MMU();
 
-    void init(size_t RAMSize);
-
     void ReadBuffer(uint64_t address, uint8_t* data, size_t size);
     void WriteBuffer(uint64_t address, const uint8_t* data, size_t size);
 

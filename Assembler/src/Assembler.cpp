@@ -52,7 +52,7 @@ Assembler::~Assembler() {
 }
 
 
-void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Label>& labels) {
+void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Label>& labels, uint64_t base_address) {
     using namespace InsEncoding;
     labels.Enumerate([&](Label* label) {
         label->blocks.Enumerate([&](Block* block) {
@@ -111,7 +111,7 @@ void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Lab
     labels.Enumerate([&](Label* label) {
         label->blocks.Enumerate([&](Block* block) {
             Section* section = m_sections.get(section_index);
-            uint64_t real_offset = section->GetOffset();
+            uint64_t real_offset = section->GetOffset() + base_address;
             block->jumps_to_here.Enumerate([&](uint64_t* offset) {
                 m_buffer.Write(*offset, (uint8_t*)&real_offset, 8);
             });

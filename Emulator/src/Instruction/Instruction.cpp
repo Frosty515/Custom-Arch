@@ -32,6 +32,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 bool deleted[2] = {true, true};
 
+InsEncoding::Instruction* g_current_instruction = nullptr;
+
+Operand* g_currentOperands[2] = {nullptr, nullptr};
+
+void CleanupCurrentInstruction() {
+    const uint64_t count = g_current_instruction->operands.getCount();
+    for (uint8_t i = 0; i < count; i++) {
+        if (g_currentOperands[i]->GetType() == OperandType::Complex) {
+            ComplexData* complex = (ComplexData*)g_currentOperands[i]->GetComplexData();
+            ComplexItem* items[3] = { &complex->base, &complex->index, &complex->offset };
+            for (uint8_t j = 0; j < 3; j++) {
+                if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
+                    if (items[j]->data.imm.size == OperandSize::BYTE)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                    else if (items[j]->data.imm.size == OperandSize::WORD)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                    else if (items[j]->data.imm.size == OperandSize::DWORD)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                    else if (items[j]->data.imm.size == OperandSize::QWORD)
+                        delete[] (uint8_t*)items[j]->data.imm.data;
+                }
+            }
+            delete complex;
+        }
+        // printf("Deleting operand %d\n", i);
+        delete g_currentOperands[i];
+        deleted[i] = true;
+        InsEncoding::Operand* op = g_current_instruction->operands.get(0);
+        g_current_instruction->operands.remove(op);
+        delete op;
+    }
+    delete g_current_instruction;
+}
+
 void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, char const*& last_error) {
     assert(deleted[0] && deleted[1]);
     (void)CurrentState;
@@ -41,6 +75,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
     InsEncoding::Instruction* instruction = InsEncoding::DecodeInstruction(buffer, current_offset);
     if (instruction == nullptr)
         g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
+    g_current_instruction = instruction;
     uint8_t Opcode = (uint8_t)instruction->GetOpcode();
     Operand* operands[2];
     for (uint8_t i = 0; i < instruction->operands.getCount(); i++) {
@@ -154,6 +189,9 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
         }
     }
 
+    g_currentOperands[0] = operands[0];
+    g_currentOperands[1] = operands[1];
+
 
     // Get the instruction
     uint8_t argument_count = 0;
@@ -173,33 +211,34 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
         ((void(*)(Operand*, Operand*))ins)(operands[0], operands[1]);
 
     // perform cleanup
-    const uint64_t count = instruction->operands.getCount();
-    for (uint8_t i = 0; i < count; i++) {
-        if (operands[i]->GetType() == OperandType::Complex) {
-            ComplexData* complex = (ComplexData*)operands[i]->GetComplexData();
-            ComplexItem* items[3] = { &complex->base, &complex->index, &complex->offset };
-            for (uint8_t j = 0; j < 3; j++) {
-                if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
-                    if (items[j]->data.imm.size == OperandSize::BYTE)
-                        delete[] (uint8_t*)items[j]->data.imm.data;
-                    else if (items[j]->data.imm.size == OperandSize::WORD)
-                        delete[] (uint8_t*)items[j]->data.imm.data;
-                    else if (items[j]->data.imm.size == OperandSize::DWORD)
-                        delete[] (uint8_t*)items[j]->data.imm.data;
-                    else if (items[j]->data.imm.size == OperandSize::QWORD)
-                        delete[] (uint8_t*)items[j]->data.imm.data;
-                }
-            }
-            delete complex;
-        }
-        // printf("Deleting operand %d\n", i);
-        delete operands[i];
-        deleted[i] = true;
-        InsEncoding::Operand* op = instruction->operands.get(0);
-        instruction->operands.remove(op);
-        delete op;
-    }
-    delete instruction;
+    // const uint64_t count = instruction->operands.getCount();
+    // for (uint8_t i = 0; i < count; i++) {
+    //     if (operands[i]->GetType() == OperandType::Complex) {
+    //         ComplexData* complex = (ComplexData*)operands[i]->GetComplexData();
+    //         ComplexItem* items[3] = { &complex->base, &complex->index, &complex->offset };
+    //         for (uint8_t j = 0; j < 3; j++) {
+    //             if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
+    //                 if (items[j]->data.imm.size == OperandSize::BYTE)
+    //                     delete[] (uint8_t*)items[j]->data.imm.data;
+    //                 else if (items[j]->data.imm.size == OperandSize::WORD)
+    //                     delete[] (uint8_t*)items[j]->data.imm.data;
+    //                 else if (items[j]->data.imm.size == OperandSize::DWORD)
+    //                     delete[] (uint8_t*)items[j]->data.imm.data;
+    //                 else if (items[j]->data.imm.size == OperandSize::QWORD)
+    //                     delete[] (uint8_t*)items[j]->data.imm.data;
+    //             }
+    //         }
+    //         delete complex;
+    //     }
+    //     // printf("Deleting operand %d\n", i);
+    //     delete operands[i];
+    //     deleted[i] = true;
+    //     InsEncoding::Operand* op = instruction->operands.get(0);
+    //     instruction->operands.remove(op);
+    //     delete op;
+    // }
+    // delete instruction;
+    CleanupCurrentInstruction();
     
 
     Emulator::SyncRegisters();
@@ -738,7 +777,9 @@ void ins_int(Operand* number) {
     PRINT_INS_INFO1(number);
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
-    g_InterruptHandler->RaiseInterrupt(number->GetValue(), Emulator::GetNextIP());
+    uint64_t interrupt = number->GetValue();
+    CleanupCurrentInstruction();
+    g_InterruptHandler->RaiseInterrupt(interrupt, Emulator::GetNextIP());
 }
 
 void ins_lidt(Operand* src) {
@@ -752,6 +793,7 @@ void ins_iret() {
     PRINT_INS_INFO0();
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
+    CleanupCurrentInstruction();
     g_InterruptHandler->ReturnFromInterrupt();
 }
 

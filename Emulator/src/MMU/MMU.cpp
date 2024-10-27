@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "MMU.hpp"
 #include "Exceptions.hpp"
-#include "MMU/StandardMemoryRegion.hpp"
 
 
 MMU::MMU() {
@@ -26,10 +25,6 @@ MMU::MMU() {
 
 MMU::~MMU() {
 
-}
-
-void MMU::init(size_t RAMSize) {
-    m_regions.insert(new StandardMemoryRegion(0, RAMSize));
 }
 
 void MMU::ReadBuffer(uint64_t address, uint8_t* data, size_t size) {

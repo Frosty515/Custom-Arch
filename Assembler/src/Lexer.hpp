@@ -18,8 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LEXER_HPP
 #define _LEXER_HPP
 
-/* A simple nasm-style custom assembly language. Mostly created without c++ things like strings */
-
 #include <stddef.h>
 
 #include <LinkedList.hpp>
@@ -34,8 +32,8 @@ enum class TokenType {
     LBRACKET,
     RBRACKET,
     DIRECTIVE,
-    BLABEL, // Label used to mark the start of a block
-    BSUBLABEL, // Label used to mark the start of a sub-block
+    BLABEL,
+    BSUBLABEL,
     LABEL,
     SUBLABEL,
     COMMA,

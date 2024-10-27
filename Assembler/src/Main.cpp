@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 #endif
 
     Assembler assembler;
-    assembler.assemble(parser.GetLabels());
+    assembler.assemble(parser.GetLabels(), parser.GetBaseAddress());
 
     const Buffer& buffer = assembler.GetBuffer();
     size_t buffer_size = buffer.GetSize();

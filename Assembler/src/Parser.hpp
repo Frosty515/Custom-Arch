@@ -39,6 +39,7 @@ public:
     void Clear();
 
     const LinkedList::RearInsertLinkedList<InsEncoding::Label>& GetLabels() const;
+    uint64_t GetBaseAddress() const { return m_base_address; }
 
 private:
     InsEncoding::Opcode GetOpcode(const char* name, size_t name_size) const;
@@ -50,6 +51,7 @@ private:
 
 private:
     LinkedList::RearInsertLinkedList<InsEncoding::Label> m_labels;
+    uint64_t m_base_address;
 };
 
 #endif /* _PARSER_HPP */

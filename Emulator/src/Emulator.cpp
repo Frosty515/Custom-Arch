@@ -30,12 +30,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <IO/devices/ConsoleDevice.hpp>
 
+#include <MMU/BIOSMemoryRegion.hpp>
 #include <MMU/MMU.hpp>
+#include <MMU/StandardMemoryRegion.hpp>
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <thread>
+
+#include <util.h>
 
 namespace Emulator {
 
@@ -77,6 +81,7 @@ namespace Emulator {
     std::thread* EmulatorThread;
 
     IOMemoryRegion* g_IOMemoryRegion;
+    BIOSMemoryRegion* g_BIOSMemoryRegion;
 
     void HandleMemoryOperation(uint64_t address, void* data, uint64_t size, uint64_t count, bool write) {
         if (write) {
@@ -136,6 +141,7 @@ namespace Emulator {
                 switch (event->type) {
                 case EventType::SwitchToIP: {
                     SetCPU_IP(event->data);
+                    assert(ExecutionThread != nullptr);
                     ExecutionThread->detach();
                     delete ExecutionThread;
                     ExecutionThread = new std::thread(ExecutionLoop, std::ref(g_MMU), std::ref(g_CurrentState), std::ref(last_error));
@@ -147,18 +153,16 @@ namespace Emulator {
                 g_events.remove(g_events.getHead());
                 delete event;
             }
+            g_events.unlock();
         }
     }
 
     int Start(uint8_t* program, size_t size, const size_t RAMSize) {
-        // Run some checks
-        /*if (size > RAMSize)
-            return SE_TOO_LITTLE_RAM;*/
+
+        if (size > 0x1000'0000)
+            return 1; // program too large
 
         g_RAMSize = RAMSize;
-        
-        // Prepare RAM
-        g_MMU.init(RAMSize);
 
         // Configure the exception handler
         g_ExceptionHandler = new ExceptionHandler();
@@ -174,6 +178,15 @@ namespace Emulator {
         g_IOMemoryRegion = new IOMemoryRegion(0xE000'0000, 0xF000'0000, g_IOBus);
         g_MMU.AddMemoryRegion(g_IOMemoryRegion);
 
+        // Add a BIOSMemoryRegion
+        g_BIOSMemoryRegion = new BIOSMemoryRegion(0xF000'0000, 0x1'0000'0000, size);
+        g_MMU.AddMemoryRegion(g_BIOSMemoryRegion);
+
+        // Split the RAM into two regions
+        g_MMU.AddMemoryRegion(new StandardMemoryRegion(0, MAX(RAMSize, 0xE000'0000)));
+        if (RAMSize > 0xE000'0000)
+            g_MMU.AddMemoryRegion(new StandardMemoryRegion(0x1'0000'0000, RAMSize + 0x2000'0000));
+
         // Configure the console device
         g_ConsoleDevice = new ConsoleDevice(0, 0xF);
         g_IOBus->AddDevice(g_ConsoleDevice);
@@ -182,32 +195,15 @@ namespace Emulator {
         g_stack = new Stack(&g_MMU, 0, 0, 0);
 
         // Load program into RAM
-        g_MMU.WriteBuffer(0, program, size < RAMSize ? size : RAMSize); // temp copy size for debugging
+        g_MMU.WriteBuffer(0xF000'0000, program, size); // temp copy size for debugging
 
-        g_IP = new Register(RegisterType::Instruction, 0, false, 0); // explicitly initialise instruction pointer to 0
+        g_IP = new Register(RegisterType::Instruction, 0, false, 0xF000'0000); // explicitly initialise instruction pointer to 0
         g_NextIP = 0;
 
         g_EmulatorRunning = true;
 
         EmulatorMain();
-        return SE_SUCCESS;
-    }
-
-    /*bool joinMain() {
-        if (Emulator_Thread.joinable()) {
-            Emulator_Thread.join();
-            return true;
-        }
-        return false;
-    }*/
-
-    int RequestEmulatorStop() {
-        return -1;
-    }
-
-    int SendInstruction(uint64_t instruction) {
-        (void)instruction;
-        return -1;
+        return 0;
     }
 
     void DumpRegisters(FILE* fp) {
@@ -304,13 +300,6 @@ namespace Emulator {
 
         g_STS = new Register(RegisterType::Status, 0, false);
 
-
-        // run some checks
-        if (g_IP->GetValue() % 8 != 0) {
-            last_error = "Instruction Pointer is not 64-bit aligned";
-            return;
-        }
-
         SyncRegisters();
 
         // setup instruction switch handling
@@ -397,7 +386,7 @@ namespace Emulator {
         g_EmulatorRunning = false;
         printf("Crash: %s\n", message);
         DumpRegisters(stdout);
-        // DumpRAM(stdout);
+        DumpRAM(stdout);
         exit(0);
     }
 

@@ -17,16 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <util.h>
 
 #include <Emulator.hpp>
-#include <FileUtil.hpp>
 
-#define MAX_PROGRAM_FILE_SIZE MiB(25)
-#define MIN_PROGRAM_FILE_SIZE 8
+#define MAX_PROGRAM_FILE_SIZE 0x1000'0000
+#define MIN_PROGRAM_FILE_SIZE 1
 
-#define DEFAULT_RAM KiB(4)
+#define DEFAULT_RAM MiB(1)
 
 /* Argument layout: <file name> [RAM size]*/
 
@@ -37,42 +38,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // check if file exists
-    if (!FileUtil::isPathExist(argv[1])) {
-        printf("File doesn't exist.\n");
-        return 1;
-    }
-
-    // check if file is actually a file
-    if (!FileUtil::isFile(argv[1])) {
-        printf("Item isn't a file.\n");
-        return 1;
-    }
-
     size_t RAM_Size;
 
     if (argc == 3)
-        RAM_Size = atoi(argv[2]);
+        RAM_Size = strtoull(argv[2], nullptr, 0); // automatically detects base
     else
         RAM_Size = DEFAULT_RAM;
-
-    // Check File size
-    const size_t fileSize = FileUtil::fileSizeInBytes(argv[1]);
-
-    if (fileSize > MAX_PROGRAM_FILE_SIZE) {
-        printf("Max file size is 25MiB.\n");
-        return 1;
-    }
-
-    if (fileSize < MIN_PROGRAM_FILE_SIZE) {
-        printf("Min file size is 8B.\n");
-        return 1;
-    }
-
-    /*if (fileSize % 8 != 0) {
-        printf("Invalid file. Each instruction must be 8B.\n");
-        return 1;
-    }*/
 
     // open and read file
     FILE* fp = fopen(argv[1], "r");
@@ -81,9 +52,35 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    uint8_t* data = (uint8_t*)malloc(fileSize);
+    size_t fileSize;
+
+    int rc = fseek(fp, 0, SEEK_END);
+    if (rc != 0) {
+        perror("fseek");
+        return 1;
+    }
+
+    fileSize = ftell(fp);
+
+    if (fileSize < MIN_PROGRAM_FILE_SIZE) {
+        printf("File is too small to be a valid program.\n");
+        return 1;
+    }
+
+    if (fileSize > MAX_PROGRAM_FILE_SIZE) {
+        printf("File is too large to be a valid program.\n");
+        return 1;
+    }
+
+    rc = fseek(fp, 0, SEEK_SET);
+    if (rc != 0) {
+        perror("fseek");
+        return 1;
+    }
+
+    uint8_t* data = new uint8_t[fileSize];
     if (data == nullptr) {
-        perror("malloc");
+        perror("new[]");
         return 1;
     }
 
@@ -94,30 +91,19 @@ int main(int argc, char** argv) {
         data[i] = (uint8_t)c;
     }
 
-    fclose(fp); // done with file, so we can close it.
+    fclose(fp);
 
     // Actually start emulator
 
     int status = Emulator::Start(data, fileSize, RAM_Size);
-
-    switch (status) {
-        case Emulator::SE_SUCCESS:
-            printf("Emulator has successfully started!\n");
-            break;
-        case Emulator::SE_MALLOC_FAIL:
-            printf("malloc failed while starting emulator.\n");
-            break;
-        case Emulator::SE_TOO_LITTLE_RAM:
-            printf("Too little RAM allocated to Emulator.\n");
-            break;
-        default:
-            printf("Error %d occurred while starting emulator.\n", status);
-            break;
+    if (status != 0) {
+        printf("Emulator failed to start: %d\n", status);
+        return 1;
     }
 
     // Cleanup
 
-    free(data);
+    delete[] data;
     
 
     return 0;

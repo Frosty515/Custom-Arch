@@ -187,7 +187,7 @@ void Lexer::AddToken(const std::string& g_token) {
         new_token->type = TokenType::RBRACKET;
     else if (token == ",")
         new_token->type = TokenType::COMMA;
-    else if (token == "db" || token == "dw" || token == "dd" || token == "dq")
+    else if (token == "db" || token == "dw" || token == "dd" || token == "dq" || token == "org")
         new_token->type = TokenType::DIRECTIVE;
     else if (token == "byte" || token == "word" || token == "dword" || token == "qword")
         new_token->type = TokenType::SIZE;
@@ -225,15 +225,59 @@ void Lexer::AddToken(const std::string& g_token) {
             }
             else {
                 bool is_number = true;
+                uint8_t base = 10;
                 uint64_t i = 0;
-                if (token[0] == '+')
+                if (token[0] == '+' || token[0] == '-') {
                     i++;
-                for (; i < token.size(); i++) {
-                    if (token[i] < '0' || token[i] > '9') {
-                        if (i == 0 && token[i] == '-')
-                            continue;
+                    if (i >= token.size()) {
                         is_number = false;
+                    }
+                }
+                else if (token[0] == '0') {
+                    i += 2;
+                    switch (token[1]) {
+                    case 'x':
+                        base = 16;
                         break;
+                    case 'b':
+                        base = 2;
+                        break;
+                    case 'o':
+                        base = 8;
+                        break;
+                    default:
+                        base = 10;
+                        i-=2;
+                        break;
+                    }
+                    if (i >= token.size())
+                        is_number = false;
+                }
+
+                for (; i < token.size(); i++) {
+                    if (base == 16) {
+                        if (!((token[i] >= '0' && token[i] <= '9') || (token[i] >= 'a' && token[i] <= 'f'))) {
+                            is_number = false;
+                            break;
+                        }
+                    }
+                    else if (base == 2) {
+                        if (token[i] != '0' && token[i] != '1') {
+                            is_number = false;
+                            break;
+                        }
+                    }
+                    else if (base == 8) {
+                        if (token[i] < '0' || token[i] > '7') {
+                            is_number = false;
+                            break;
+                        }
+                    }
+                    else {
+                        if (token[i] < '0' || token[i] > '9') {
+                            is_number = false;
+                            break;
+                        }
                     }
                 }
                 if (is_number)

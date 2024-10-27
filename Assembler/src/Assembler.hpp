@@ -47,7 +47,7 @@ public:
     Assembler();
     ~Assembler();
 
-    void assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Label>& data);
+    void assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Label>& data, uint64_t base_address);
 
     const Buffer& GetBuffer() const;
 
