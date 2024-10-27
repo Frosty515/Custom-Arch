@@ -58,7 +58,7 @@ namespace LinkedList {
 		SimpleLinkedList() : m_count(0), m_start(nullptr) {}
 		~SimpleLinkedList() {
 			for (uint64_t i = 0; i < m_count; i++)
-				remove(i);
+				remove((uint64_t)0);
 		}
 
 		void insert(const T* obj) {
