@@ -45,8 +45,20 @@ extern "C" {
 
 #define PAGE_SIZE 4096
 
+#ifdef __APPLE__
+
 void* fast_memset(void* dst, const uint8_t value, const size_t n);
 void* fast_memcpy(void* dst, const void* src, const size_t n);
+
+#else /* __APPLE__ */
+
+#define fast_memset(dst, value, n) _fast_memset(dst, value, n)
+#define fast_memcpy(dst, src, n) _fast_memcpy(dst, src, n)
+
+void* _fast_memset(void* dst, const uint8_t value, const size_t n);
+void* _fast_memcpy(void* dst, const void* src, const size_t n);
+
+#endif /* __APPLE__ */
 
 #define FLAG_SET(x, flag) x |= (flag)
 #define FLAG_UNSET(x, flag) x &= ~(flag)

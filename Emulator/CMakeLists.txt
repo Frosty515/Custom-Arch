@@ -12,6 +12,9 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# Authors
+#   - fwpirate <alavik@disroot.org>
 
 if(BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
@@ -25,6 +28,11 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
     set(emulator_sources
         ${emulator_sources}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Linux/Memory.cpp
+    )
+else (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+    set(emulator_sources
+        ${emulator_sources}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Darwin/Memory.cpp
     )
 endif()
 
@@ -42,6 +50,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/StandardMemoryRegion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ArgsParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Emulator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Interrupts.cpp
@@ -75,7 +84,7 @@ target_compile_options(Emulator
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wpedantic>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-Wno-packed-bitfield-compat>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fstack-protector>
-    PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-O3>
+    PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-O1>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fno-omit-frame-pointer>
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     # PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-fsanitize=undefined,address>
@@ -84,3 +93,5 @@ target_compile_options(Emulator
 # target_link_options(Emulator
 #     PRIVATE $<$<LINK_LANGUAGE:CXX,C>:-fsanitize=undefined,address>
 # )
+
+install(TARGETS Emulator DESTINATION ${CMAKE_SOURCE_DIR}/bin)

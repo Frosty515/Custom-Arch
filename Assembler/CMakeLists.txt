@@ -21,6 +21,7 @@ endif()
 
 set(assembler_sources
     ${assembler_sources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ArgsParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Assembler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Lexer.cpp
@@ -65,3 +66,5 @@ add_custom_target(RunAssembler
     DEPENDS Assembler
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+install(TARGETS Assembler DESTINATION ${CMAKE_SOURCE_DIR}/bin)

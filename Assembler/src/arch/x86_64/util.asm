@@ -15,8 +15,8 @@
 
 [bits 64]
 
-global fast_memset
-fast_memset:
+global _fast_memset
+_fast_memset:
     push rbp
     mov rbp, rsp
 
@@ -66,8 +66,8 @@ fast_memset:
     pop rbp
     ret
 
-global fast_memcpy
-fast_memcpy:
+global _fast_memcpy
+_fast_memcpy:
     push rbp
     mov rbp, rsp
 
