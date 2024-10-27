@@ -15,6 +15,8 @@
 | Bit | Name | Description |
 | --- | ---- | ----------- |
 | 0   | PE   | Protected mode enabled |
+| 1   | PG   | Paging enabled |
+| 2-4 | PGM  | Paging mode |
 | 1-63| RESERVED | Reserved |
 
 #### CR1
@@ -33,7 +35,15 @@
 | --- | ---- | ----------- |
 | 0-63| SENTRY | Supervisor `I0` on supervisor mode entry |
 
-#### CR3-CR8
+#### CR3
+
+- Note: CR3 is reserved in 64-bit real mode
+
+| Bit | Name | Description |
+| --- | ---- | ----------- |
+| 0-63 | PT | Page table address (must be page aligned) |
+
+#### CR4-CR7
 
 | Bit | Name | Description |
 | --- | ---- | ----------- |
@@ -112,6 +122,7 @@
 - bit 0 of CR0 is set to 1 to enable protected mode.
 - defaults to supervisor mode.
 - Interrupts behave differently. See [Protected mode interrupts](#protected-mode-interrupts) for more info.
+- Paging support. See [Paging](#paging) for more info.
 
 #### Switching privilege levels
 
@@ -120,6 +131,53 @@ On supervisor mode entry, the contents of `STS` is swapped with the contents of 
 On supervisor mode exit, the contents of `CR1` is swapped with the contents of `STS`, and `I0` will be set to `r14`. `scp` will be set to `r15`. The old value of `IP` is not saved. Supervisor mode is responsible for restoring `sbp`, `stp`, and `r0`-`r13` if they were saved.
 
 On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP` will be set to the first argument of the instruction. All other registers are untouched.
+
+## Paging
+
+- Total of 5 modes across 3 different numbers of levels
+- Paging is only supported in protected mode
+
+### 3 level paging
+
+- 3 levels of page tables
+- There are 2 different modes:
+    - 16 bits per level, 64KiB pages (PGM = 0)
+    - 17 bits per level, 8KiB pages (PGM = 1)
+
+### 4 level paging
+
+- 4 levels of page tables
+- There are 2 different modes:
+    - 12 bits per level, 64KiB pages (PGM = 2)
+    - 13 bits per level, 4KiB pages (PGM = 3)
+
+### 5 level paging
+
+- 5 levels of page tables
+- There is only the one mode:
+    - 10 bits per level, 16KiB pages (PGM = 4)
+
+### Enabling paging
+
+- Bit 1 of CR0 is set to 1 to enable paging
+- Bit 2-4 of CR0 is set to the desired paging mode. This must be set before or at the same time as enabling paging.
+- CR3 must be set to the page aligned physical address of the highest page table level
+
+### Page table entries
+
+- 64-bit entries
+- Follows the following format:
+
+| Bit | Name | Description |
+| -------- | ---- | ----------- |
+| 0        | Present | Is this entry present |
+| 1        | Read | Is this entry readable |
+| 2        | Write | Is this entry writable |
+| 3        | Execute | Is this entry executable |
+| 4        | User | Is this entry accessible in user mode |
+| 5        | Lowest | Is this the lowest level of the page table |
+| 6-(PS-1) | Reserved | Must be 0, PS is Page Size |
+| PS-63    | Address | Physical address of the next page table or the physical address of the page shifted to the right by PS bits |
 
 ## Instructions
 
