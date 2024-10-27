@@ -59,11 +59,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## Running the Assembler
 
-- In the build directory, run `./Assembler/Assembler <path/to/assembly> <path/to/binary>` to assemble the assembly file.
+- In the build directory, run `./Assembler/Assembler <-p path/to/assembly> <-o path/to/binary>` to assemble the assembly file.
 
 ## Running the Emulator
 
-- In the build directory, run `./Emulator/Emulator <path/to/binary> [RAM size]` to run the emulator.
+- In the build directory, run `./Emulator/Emulator <-p path/to/binary> [ -m RAM size]` to run the emulator.
 - The RAM size is optional and defaults to 1 MiB.
 
 ## Notes
