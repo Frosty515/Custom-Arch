@@ -66,3 +66,5 @@ add_custom_target(RunAssembler
     DEPENDS Assembler
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+install(TARGETS Assembler DESTINATION ${CMAKE_SOURCE_DIR}/bin)

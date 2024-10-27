@@ -55,15 +55,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 1. run `mkdir build && cd build` to create a build directory and enter it
 2. run `cmake -GNinja ..` to generate the build files. `-DBUILD_CONFIG=<config>` can be added to the cmake command to specify the build type. `<config>` can be `Debug` or `Release`. It defaults to `Release`. `-DBUILD_ARCHITECTURE=<arch>` can be added to the cmake command to specify the architecture. Currently, the only supported architecture is `x86_64`. It defaults to `x86_64`.
-3. run `ninja` to build
+3. run `ninja install` to build and install to the src directory. The binaries will be in the `bin` directory in the src directory.
 
 ## Running the Assembler
 
-- In the build directory, run `./Assembler/Assembler <-p path/to/assembly> <-o path/to/binary>` to assemble the assembly file.
+- In the source directory, run `./bin/Assembler < -p path/to/assembly > < -o path/to/binary >` to assemble the assembly file.
 
 ## Running the Emulator
 
-- In the build directory, run `./Emulator/Emulator <-p path/to/binary> [ -m RAM size]` to run the emulator.
+- In the source directory, run `./bin/Emulator < -p path/to/binary > [ -m RAM size ]` to run the emulator.
 - The RAM size is optional and defaults to 1 MiB.
 
 ## Notes
