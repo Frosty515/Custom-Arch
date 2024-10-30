@@ -213,7 +213,25 @@ void Operand::PrintInfo() const {
                 offset_type = true;
             }
         }
-        printf("Complex:");
+        char const* size;
+        switch (m_size) {
+        case OperandSize::BYTE:
+            size = "BYTE";
+            break;
+        case OperandSize::WORD:
+            size = "WORD";
+            break;
+        case OperandSize::DWORD:
+            size = "DWORD";
+            break;
+        case OperandSize::QWORD:
+            size = "QWORD";
+            break;
+        default:
+            size = "Unknown";
+            break;
+        }
+        printf("Complex: size = %s", size);
         if (base_present) {
             if (base_type)
                 printf(" Base=%#016lx", base);

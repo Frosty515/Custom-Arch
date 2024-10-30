@@ -15,25 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _STANDARD_MEMORY_REGION_HPP
-#define _STANDARD_MEMORY_REGION_HPP
+#include "util.h"
 
-#include <stdint.h>
+uint64_t _util_max(uint64_t a, uint64_t b) {
+    return a > b ? a : b;
+}
 
-#include "MemoryRegion.hpp"
-
-class StandardMemoryRegion : public MemoryRegion {
-public:
-    StandardMemoryRegion(uint64_t start, uint64_t end);
-    ~StandardMemoryRegion();
-
-    virtual void read(uint64_t address, uint8_t* buffer, size_t size) override;
-    virtual void write(uint64_t address, const uint8_t* buffer, size_t size) override;
-
-    virtual bool canSplit() override { return true; }
-
-private:
-    uint8_t* m_data;
-};
-
-#endif /* _STANDARD_MEMORY_REGION_HPP */
+uint64_t _util_min(uint64_t a, uint64_t b) {
+    return a < b ? a : b;
+}

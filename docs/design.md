@@ -439,6 +439,78 @@ foo:
 - A raw read/write of a byte will read/write to the console via stdin/stderr respectively
 - Any other sized read/write will be ignored
 
+### Video device
+
+- There is a video I/O device on ports 16-18
+
+#### Video device registers
+
+| Port | Name | Description |
+| ---- | ---- | ----------- |
+| 16   | COMMAND | Command register |
+| 17   | DATA | Data register |
+| 18   | STATUS | Status register |
+
+#### Video device commands
+
+| Command | Description |
+| ------- | ----------- |
+| 0 | Initialise |
+| 1 | Get screen info |
+| 2 | Get mode |
+| 3 | Set mode |
+
+##### Initialise
+
+- 0 arguments
+- STATUS register is set to 0 if there is no error.
+
+##### Get screen info
+
+- 1 argument: address to store the screen info.
+- Returns a non-zero value in the STATUS register if there is an error. The buffer is as follows:
+
+| Offset | Width | Name | Description |
+| ------ | ----- | ---- | ----------- |
+| 0 | 4 | WIDTH | Native width of the screen in pixels |
+| 4 | 4 | HEIGHT | Native height of the screen in pixels |
+| 8 | 2 | HZ | Refresh rate of the screen in Hz |
+| 10 | 2 | BPP | Maximum bits per pixel |
+| 12 | 2 | MODES | Number of modes available |
+| 14 | 2 | CURMODE | Current mode |
+
+##### Get mode
+
+- 1 argument: address of the input data. The buffer is as follows:
+  
+| Offset | Width | Name | Description |
+| ------ | ----- | ---- | ----------- |
+| 0 | 8 | ADDRESS | Address to store output data |
+| 8 | 2 | MODE | Mode to get |
+| 10 | 6 | RESERVED | Reserved |
+
+- Returns a non-zero value in the STATUS register if there is an error. The buffer is as follows:
+
+| Offset | Width | Name | Description |
+| ------ | ----- | ---- | ----------- |
+| 0 | 4 | WIDTH | Width of the screen in pixels |
+| 4 | 4 | HEIGHT | Height of the screen in pixels |
+| 8 | 2 | BPP | Bits per pixel |
+| 10 | 4 | PITCH | Pitch of the screen in bytes |
+| 14 | 2 | HZ | Refresh rate of the screen in Hz |
+
+##### Set mode
+
+- 1 argument: address of the mode info.
+- Returns a non-zero value in the STATUS register if there is an error. The buffer is as follows:
+
+| Offset | Width | Name | Description |
+| ------ | ----- | ---- | ----------- |
+| 0 | 8 | ADDRESS | Address of the framebuffer |
+| 8 | 2 | MODE | Mode to set |
+| 10 | 6 | RESERVED | Reserved |
+
+
 ## The BIOS
 
 - The BIOS has a dedicated memory region from 0xF000'0000 to 0xFFFF'FFFF.

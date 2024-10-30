@@ -39,8 +39,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define FLAG_SET(x, flag) (x |= flag)
 #define FLAG_UNSET(x, flag) (x &= ~flag)
 
-#define MAX(a, b) ((a > b) ? a : b)
-#define MIN(a, b) ((a < b) ? a : b)
+#define MAX(a, b) _util_max(a, b)
+#define MIN(a, b) _util_min(a, b)
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,6 +62,11 @@ void* _fast_memset(void* ptr, uint8_t c, size_t n);
 void* _fast_memcpy(void* dst, void* src, size_t n);
 
 #endif /* __APPLE__ */
+
+/* Implemented in C */
+
+uint64_t _util_max(uint64_t a, uint64_t b);
+uint64_t _util_min(uint64_t a, uint64_t b);
 
 #ifdef __cplusplus
 }

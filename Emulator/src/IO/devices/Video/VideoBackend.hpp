@@ -15,25 +15,40 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _STANDARD_MEMORY_REGION_HPP
-#define _STANDARD_MEMORY_REGION_HPP
+#ifndef _VIDEO_DEVICE_BACKEND_HPP
+#define _VIDEO_DEVICE_BACKEND_HPP
 
 #include <stdint.h>
 
-#include "MemoryRegion.hpp"
+#include "VideoDevice.hpp"
 
-class StandardMemoryRegion : public MemoryRegion {
-public:
-    StandardMemoryRegion(uint64_t start, uint64_t end);
-    ~StandardMemoryRegion();
-
-    virtual void read(uint64_t address, uint8_t* buffer, size_t size) override;
-    virtual void write(uint64_t address, const uint8_t* buffer, size_t size) override;
-
-    virtual bool canSplit() override { return true; }
-
-private:
-    uint8_t* m_data;
+enum class VideoBackendType {
+    NONE,
+    SDL
 };
 
-#endif /* _STANDARD_MEMORY_REGION_HPP */
+
+
+
+
+class VideoBackend {
+public:
+    VideoBackend(VideoMode mode = NATIVE_VIDEO_MODE);
+    ~VideoBackend();
+
+    virtual void Init() = 0;
+    virtual void SetMode(VideoMode mode) = 0;
+    virtual VideoMode GetMode() = 0;
+
+    virtual void Write(uint64_t offset, uint8_t* data, uint64_t size) = 0;
+    virtual void Read(uint64_t offset, uint8_t* data, uint64_t size) = 0;
+
+protected:
+    VideoMode GetRawMode();
+    void SetRawMode(VideoMode mode);
+
+private:
+    VideoMode m_mode;
+};
+
+#endif /* _VIDEO_DEVICE_BACKEND_HPP */
