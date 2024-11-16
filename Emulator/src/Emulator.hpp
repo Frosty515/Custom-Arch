@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _EMULATOR_HPP
 #define _EMULATOR_HPP
 
+#include "IO/devices/Video/VideoBackend.hpp"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -42,7 +43,7 @@ namespace Emulator {
 
     void HandleMemoryOperation(uint64_t address, void* data, uint64_t size, uint64_t count, bool write);
 
-    int Start(uint8_t* data, size_t size, size_t RAM);
+    int Start(uint8_t* data, size_t size, size_t RAM, bool has_display = false, VideoBackendType displayType = VideoBackendType::NONE);
     int RequestEmulatorStop();
     int SendInstruction(uint64_t instruction);
 

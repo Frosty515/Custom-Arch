@@ -46,6 +46,8 @@ public:
 
     virtual void dump();
 
+    virtual bool canSplit() { return false; }
+
 private:
     uint64_t m_start;
     uint64_t m_end;

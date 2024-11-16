@@ -333,10 +333,8 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 else if (token->type == TokenType::RBRACKET) {
                     if (current_operand == nullptr || !(current_operand->type == OperandType::COMPLEX || current_operand->type == OperandType::MEMORY))
                         error("Invalid operand");
-                    if (!(current_operand->complete)) {
-                        // TODO
+                    if (!(current_operand->complete) && current_operand->type != OperandType::COMPLEX)
                         error("Invalid operand");
-                    }
                     current_operand = nullptr;
                     in_operand = false;
                 }
@@ -560,7 +558,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         Label* i_label = m_labels.get(j);
                         if (i_label == nullptr)
                             assert(nullptr == "Invalid label name in list"); // quick way to escape
-                        if (i_label->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length. -1 to remove the colon
+                        if (i_label->name_size < token->data_size) // strncmp can only properly handle strings of equal or greater length.
                             continue;
                         if (strncmp(i_label->name, name, i_label->name_size) == 0) {
                             label = i_label;

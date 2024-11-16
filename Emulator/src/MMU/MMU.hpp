@@ -46,8 +46,12 @@ public:
     bool ValidateRead(uint64_t address, size_t size);
 
     void AddMemoryRegion(MemoryRegion* region);
+    void RemoveMemoryRegion(MemoryRegion* region);
 
     void DumpMemory() const;
+
+    bool RemoveRegionSegment(uint64_t start, uint64_t end);
+    bool ReaddRegionSegment(uint64_t start, uint64_t end);
 
 private:
     LinkedList::SimpleLinkedList<MemoryRegion> m_regions;

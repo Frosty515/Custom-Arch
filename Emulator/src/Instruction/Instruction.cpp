@@ -179,7 +179,7 @@ void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, c
             else
                 complex->offset.present = false;
             delete temp;
-            operands[i] = new Operand(OperandSize::QWORD, OperandType::Complex, complex, Emulator::HandleMemoryOperation);
+            operands[i] = new Operand((OperandSize)op->size, OperandType::Complex, complex, Emulator::HandleMemoryOperation);
             deleted[i] = false;
             break;
         }

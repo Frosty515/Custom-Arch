@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Emulator.hpp"
+#include "IO/devices/Video/VideoDevice.hpp"
 
 #include <Register.hpp>
 #include <Stack.hpp>
@@ -29,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <IO/IOMemoryRegion.hpp>
 
 #include <IO/devices/ConsoleDevice.hpp>
+
+#include <IO/devices/Video/backends/SDL/SDLVideoBackend.hpp>
 
 #include <MMU/BIOSMemoryRegion.hpp>
 #include <MMU/MMU.hpp>
@@ -54,6 +57,7 @@ namespace Emulator {
     Register* g_Control[8]; // control registers
 
     ConsoleDevice* g_ConsoleDevice;
+    VideoDevice* g_VideoDevice;
 
     uint64_t g_NextIP;
 
@@ -157,12 +161,14 @@ namespace Emulator {
         }
     }
 
-    int Start(uint8_t* program, size_t size, const size_t RAMSize) {
+    int Start(uint8_t* program, size_t size, const size_t RAMSize, bool has_display, VideoBackendType displayType) {
 
         if (size > 0x1000'0000)
             return 1; // program too large
 
         g_RAMSize = RAMSize;
+
+
 
         // Configure the exception handler
         g_ExceptionHandler = new ExceptionHandler();
@@ -190,6 +196,12 @@ namespace Emulator {
         // Configure the console device
         g_ConsoleDevice = new ConsoleDevice(0, 0xF);
         g_IOBus->AddDevice(g_ConsoleDevice);
+
+        // Configure the video device
+        if (has_display) {
+            g_VideoDevice = new VideoDevice(16, 3, displayType, g_MMU);
+            assert(g_IOBus->AddDevice(g_VideoDevice));
+        }
 
         // Configure the stack
         g_stack = new Stack(&g_MMU, 0, 0, 0);

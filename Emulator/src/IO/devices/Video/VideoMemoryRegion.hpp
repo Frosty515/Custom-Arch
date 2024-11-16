@@ -15,25 +15,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _STANDARD_MEMORY_REGION_HPP
-#define _STANDARD_MEMORY_REGION_HPP
+#ifndef _VIDEO_MEMORY_REGION_HPP
+#define _VIDEO_MEMORY_REGION_HPP
 
 #include <stdint.h>
 
-#include "MemoryRegion.hpp"
+#include <MMU/MemoryRegion.hpp>
 
-class StandardMemoryRegion : public MemoryRegion {
+class VideoMemoryRegion : public MemoryRegion {
 public:
-    StandardMemoryRegion(uint64_t start, uint64_t end);
-    ~StandardMemoryRegion();
+    VideoMemoryRegion(uint64_t start, uint64_t end, void (*operationCallback)(bool write, uint64_t address, uint8_t* buffer, size_t size, void* data), void* data);
+    virtual ~VideoMemoryRegion();
 
-    virtual void read(uint64_t address, uint8_t* buffer, size_t size) override;
-    virtual void write(uint64_t address, const uint8_t* buffer, size_t size) override;
+    void read(uint64_t address, uint8_t* buffer, size_t size) override;
+    void write(uint64_t address, const uint8_t* buffer, size_t size) override;
 
-    virtual bool canSplit() override { return true; }
+    void dump() override;
 
 private:
-    uint8_t* m_data;
+    void (*m_operationCallback)(bool write, uint64_t address, uint8_t* buffer, size_t size, void* data);
+    void* m_data;
 };
 
-#endif /* _STANDARD_MEMORY_REGION_HPP */
+#endif /* _VIDEO_MEMORY_REGION_HPP */

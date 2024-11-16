@@ -16,6 +16,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "ArgsParser.hpp"
+#include "IO/devices/Video/VideoBackend.hpp"
+#include <cctype>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +40,7 @@ int main(int argc, char** argv) {
 
     g_args->AddOption('p', "program", "Program file to run", true);
     g_args->AddOption('m', "ram", "RAM size in bytes", false);
+    g_args->AddOption('d', "display", "Display mode. Valid values are \"sdl\" or \"none\" (case insensitive).", false);
     g_args->AddOption('h', "help", "Print this help message", false);
 
     g_args->ParseArgs(argc, argv);
@@ -110,12 +113,38 @@ int main(int argc, char** argv) {
 
     fclose(fp);
 
+    // get the display type
+    VideoBackendType displayType = VideoBackendType::NONE;
+    bool has_display = g_args->HasOption('d');
+    if (has_display) {
+        std::string_view raw_display = g_args->GetOption('d');
+        std::string display;
+
+        // convert display to lowercase
+        for (char c : raw_display) {
+            if (isupper(c))
+                display += tolower(c);
+            else
+                display += c;
+        }
+
+        if (display == "sdl")
+            displayType = VideoBackendType::SDL;
+        else if (display == "none")
+            displayType = VideoBackendType::NONE;
+        else {
+            printf("Invalid display type: %s\n", display.c_str());
+            return 1;
+        }
+    }
+
+
     // delete the args parser
     delete g_args;
 
     // Actually start emulator
 
-    int status = Emulator::Start(data, fileSize, RAM_Size);
+    int status = Emulator::Start(data, fileSize, RAM_Size, has_display, displayType);
     if (status != 0) {
         printf("Emulator failed to start: %d\n", status);
         return 1;

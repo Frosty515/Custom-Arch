@@ -1,4 +1,4 @@
-# Copyright (©) 2024  Frosty515
+# Copyright (©) 2024  Frosty515 & contributors
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,7 +14,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # Authors
+#   - Frosty515 <frosty515yt@gmail.com>
 #   - fwpirate <alavik@disroot.org>
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL2 REQUIRED sdl2)
 
 if(BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
@@ -38,6 +42,7 @@ endif()
 
 set(emulator_sources
     ${emulator_sources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/AVLTree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/Buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/LinkedList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Instruction.cpp
@@ -46,6 +51,10 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOBus.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOMemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/ConsoleDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoBackend.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoMemoryRegion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/backends/SDL/SDLVideoBackend.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/BIOSMemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp
@@ -57,6 +66,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Register.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Stack.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
 )
 
 add_executable(Emulator ${emulator_sources})
@@ -70,8 +80,9 @@ set_target_properties(Emulator PROPERTIES C_STANDARD_REQUIRED ON)
 
 target_include_directories(Emulator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(Emulator PUBLIC ${CMAKE_SOURCE_DIR}/LibArch/include)
+target_include_directories(Emulator PUBLIC ${SDL2_INCLUDE_DIRS})
 
-target_link_libraries(Emulator PRIVATE arch)
+target_link_libraries(Emulator PRIVATE arch ${SDL2_LIBRARIES})
 
 if (BUILD_CONFIG STREQUAL "Debug")
     target_compile_definitions(Emulator PRIVATE EMULATOR_DEBUG=1)

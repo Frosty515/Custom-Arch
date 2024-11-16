@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Emulator.hpp"
 #include "Interrupts.hpp"
 
+#include <Instruction/Instruction.hpp>
+
 ExceptionHandler::ExceptionHandler() : m_INTHandler(nullptr) {
 
 }
@@ -35,6 +37,7 @@ ExceptionHandler::~ExceptionHandler() {
     if (exception == Exception::TWICE_UNHANDLED_INTERRUPT || m_INTHandler == nullptr) {
         Emulator::Crash("ExceptionHandler::RaiseException(): unhandled exception");
     }
+    CleanupCurrentInstruction();
     printf("Exception: %d at IP=%016lx\n", (uint8_t)exception, Emulator::GetCPU_IP());
     m_INTHandler->RaiseInterrupt((uint8_t)exception, Emulator::GetCPU_IP());
 }

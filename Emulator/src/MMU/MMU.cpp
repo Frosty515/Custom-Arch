@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "MMU.hpp"
 #include "Exceptions.hpp"
+#include "MMU/MemoryRegion.hpp"
+#include "MMU/StandardMemoryRegion.hpp"
 
 
 MMU::MMU() {
@@ -255,8 +257,85 @@ void MMU::AddMemoryRegion(MemoryRegion* region) {
     m_regions.insert(region);
 }
 
+void MMU::RemoveMemoryRegion(MemoryRegion* region) {
+    m_regions.remove(region);
+}
+
 void MMU::DumpMemory() const {
     for (MemoryRegion* region = m_regions.get(0); region != nullptr; region = m_regions.getNext(region)) {
         region->dump();
     }
+}
+
+bool MMU::RemoveRegionSegment(uint64_t start, uint64_t end) {
+    for (uint64_t i = 0; i < m_regions.getCount(); i++) {
+        MemoryRegion* region = m_regions.get(i);
+        if (start >= region->getStart() && end <= region->getEnd()) {
+            if (start == region->getStart() && end == region->getEnd()) {
+                m_regions.remove(region);
+                return true;
+            }
+            if (!region->canSplit())
+                return false;
+            // check if the region starts at start
+            if (region->getStart() < start) {
+                m_regions.remove(region);
+
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(region->getStart(), start);
+                m_regions.insert(newRegion);
+
+                region = new StandardMemoryRegion(end, region->getEnd());
+            }
+
+            // check if the region ends at end
+            if (region->getEnd() > end) {
+                m_regions.remove(region);
+
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(end, region->getEnd());
+                m_regions.insert(newRegion);
+
+                region = newRegion;
+            }
+
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MMU::ReaddRegionSegment(uint64_t start, uint64_t end) {
+    MemoryRegion* region = nullptr;
+    MemoryRegion* previousRegion = nullptr;
+    for (uint64_t i = 0; i < m_regions.getCount(); i++) {
+        previousRegion = region;
+        region = m_regions.get(i);
+        if (start >= previousRegion->getEnd() && end <= region->getStart()) {
+            if (start == previousRegion->getEnd() && end == region->getStart()) {
+                uint64_t newStart = previousRegion->getStart();
+                uint64_t newEnd = region->getEnd();
+                m_regions.remove(previousRegion);
+                m_regions.remove(region);
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(newStart, newEnd);
+                m_regions.insert(newRegion);
+            }
+            else if (start == previousRegion->getEnd()) {
+                uint64_t newStart = previousRegion->getStart();
+                m_regions.remove(previousRegion);
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(newStart, end);
+                m_regions.insert(newRegion);
+            }
+            else if (end == region->getStart()) {
+                uint64_t newEnd = region->getEnd();
+                m_regions.remove(region);
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(start, newEnd);
+                m_regions.insert(newRegion);
+            }
+            else {
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(start, end);
+                m_regions.insert(newRegion);
+            }
+            return true;
+        }
+    }
+    return false;
 }

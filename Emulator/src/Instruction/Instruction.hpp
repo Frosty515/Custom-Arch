@@ -72,6 +72,7 @@ enum class InstructionState {
 
 void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, char const*& last_error);
 void ExecutionLoop(MMU& mmu, InstructionState& CurrentState, char const*& last_error);
+void CleanupCurrentInstruction();
 
 // return function pointer to instruction based on opcode, output argument count into argument_count if non-null.
 void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count);

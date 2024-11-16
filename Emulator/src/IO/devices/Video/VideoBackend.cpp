@@ -15,25 +15,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _STANDARD_MEMORY_REGION_HPP
-#define _STANDARD_MEMORY_REGION_HPP
+#include "VideoBackend.hpp"
 
-#include <stdint.h>
+VideoBackend::VideoBackend(VideoMode mode) : m_mode(mode) {
+}
 
-#include "MemoryRegion.hpp"
+VideoBackend::~VideoBackend() {
+}
 
-class StandardMemoryRegion : public MemoryRegion {
-public:
-    StandardMemoryRegion(uint64_t start, uint64_t end);
-    ~StandardMemoryRegion();
+VideoMode VideoBackend::GetRawMode() {
+    return m_mode;
+}
 
-    virtual void read(uint64_t address, uint8_t* buffer, size_t size) override;
-    virtual void write(uint64_t address, const uint8_t* buffer, size_t size) override;
-
-    virtual bool canSplit() override { return true; }
-
-private:
-    uint8_t* m_data;
-};
-
-#endif /* _STANDARD_MEMORY_REGION_HPP */
+void VideoBackend::SetRawMode(VideoMode mode) {
+    m_mode = mode;
+}
