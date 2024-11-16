@@ -16,7 +16,8 @@
 | --- | ---- | ----------- |
 | 0   | PE   | Protected mode enabled |
 | 1   | PG   | Paging enabled |
-| 2-4 | PGM  | Paging mode |
+| 2-3 | PGS  | Base page size |
+| 4-5 | PTL  | Page table levels |
 | 1-63| RESERVED | Reserved |
 
 #### CR1
@@ -134,28 +135,12 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 
 ## Paging
 
-- Total of 5 modes across 3 different numbers of levels
-- Paging is only supported in protected mode
-
-### 3 level paging
-
-- 3 levels of page tables
-- There are 2 different modes:
-    - 16 bits per level, 64KiB pages (PGM = 0)
-    - 17 bits per level, 8KiB pages (PGM = 1)
-
-### 4 level paging
-
-- 4 levels of page tables
-- There are 2 different modes:
-    - 12 bits per level, 64KiB pages (PGM = 2)
-    - 13 bits per level, 4KiB pages (PGM = 3)
-
-### 5 level paging
-
-- 5 levels of page tables
-- There is only the one mode:
-    - 10 bits per level, 16KiB pages (PGM = 4)
+- Total of 9 possible modes.
+- There are 3 different page size options set in PGS: 4KiB (0), 16KiB (1), 64KiB (2).
+- Each page table level takes up 10 bits of the address space.
+- There can be 3-5 page table levels. This is set in PTL: 3 levels is 0, 4 levels is 1, 5 levels is 2.
+- A page size of 64KiB is not an option for 5 levels of page tables.
+- At each level, there is the option to specify if the page table is the lowest level. This allows for larger pages to save space in the page tables.
 
 ### Enabling paging
 
