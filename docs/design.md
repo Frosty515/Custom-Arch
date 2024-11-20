@@ -18,7 +18,7 @@
 | 1   | PG   | Paging enabled |
 | 2-3 | PGS  | Base page size |
 | 4-5 | PTL  | Page table levels |
-| 1-63| RESERVED | Reserved |
+| 6-63| RESERVED | Reserved |
 
 #### CR1
 
@@ -66,6 +66,64 @@
 - register `sbp` for base of the stack address (index 0)
 - register `scp` for current stack address (index 1)
 - register `stp` for top of the stack address (index 2)
+
+## Exceptions
+
+- The first 32 interrupts are reserved for exceptions.
+- Currently there are 8 exceptions defined as follows:
+
+| Number | Name | Error Code Size in QWORDs | Description |
+| ------ | ---- | ------------------------- | ----------- |
+| 0 | Divide by zero | 0 | Thrown when a divide by zero is attempted |
+| 1 | Phys Mem Violation | 1 | Thrown when an invalid physical memory address is accessed |
+| 2 | Unhandled Interrupt | 1 | Thrown when an interrupt is raised but not handled |
+| 3 | Invalid Instruction | 0 | Thrown when an invalid instruction is executed |
+| 4 | Stack Violation | 1 | Thrown when the stack is out of bounds or unaligned |
+| 5 | User Mode Violation | 0 | Thrown when a supervisor mode instruction is executed in user mode |
+| 6 | Supervisor Mode Violation | 0 | Thrown when a user mode instruction is executed in supervisor mode |
+| 7 | Paging Violation | 2 | Thrown when a paging violation occurs |
+
+### Error Info
+
+- The error code is pushed to the stack after the other arguments.
+- It must be popped off the stack before the `iret` instruction is called.
+- The error code can be 0-2 QWORDs in size.
+
+#### Phys Mem Violation
+
+- The error code is the physical address that was attempted to be accessed.
+
+#### Unhandled Interrupt
+
+- The error code is the interrupt number that was unable to be handled.
+
+#### Stack Violation
+
+- The error code is in the following format:
+
+| Offset in bits | Name | Description |
+| ------ | ---- | ----------- |
+| 0 | UNDER | Did the current pointer go under the bottom pointer |
+| 1 | OVER | Did the current pointer go over the top pointer |
+| 2 | ALIGN | Was the stack pointer not 8-byte aligned |
+| 3-63 | RESERVED | Reserved |
+
+#### Paging Violation
+
+- The error code is broken up into 2 QWORDs.
+- First QWORD is the virtual address that was attempted to be accessed.
+- Second QWORD is the error code in the following format:
+
+| Offset in bits | Name | Description |
+| ------ | ---- | ----------- |
+| 0 | PRESENT | Was the page present |
+| 1 | READ | Was the page attempted to be read |
+| 2 | WRITE | Was the page attempted to be written |
+| 3 | EXECUTE | Was the page attempted to be executed |
+| 4 | USER | Was the page attempted to be accessed from user mode |
+| 5 | RSVD_WRITE | Was a reserved bit in the data structures set |
+| 6-63 | RESERVED | Reserved |
+
 
 ## Calling convention info
 
