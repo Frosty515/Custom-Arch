@@ -16,20 +16,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Register.hpp"
+
 #include "Emulator.hpp"
 #include "Exceptions.hpp"
-
 #include "Instruction/Operand.hpp"
 
-Register::Register() : m_index(0), m_ID(0xFF), m_value(0), m_type(RegisterType::Unknown), m_dirty(false) {
-
+Register::Register()
+    : m_index(0), m_ID(0xFF), m_value(0), m_type(RegisterType::Unknown), m_dirty(false), m_writable(false) {
 }
 
-Register::Register(uint8_t ID, bool writable, uint64_t value) : m_index(0), m_ID(ID), m_value(value), m_type(RegisterType::Unknown), m_dirty(false), m_writable(writable) {
+Register::Register(uint8_t ID, bool writable, uint64_t value)
+    : m_index(0), m_ID(ID), m_value(value), m_type(RegisterType::Unknown), m_dirty(false), m_writable(writable) {
     DecodeID(ID);
 }
 
-Register::Register(RegisterType type, uint8_t index, bool writable, uint64_t value) : m_index(index), m_ID(0xFF), m_value(value), m_type(type), m_dirty(false), m_writable(writable) {
+Register::Register(RegisterType type, uint8_t index, bool writable, uint64_t value)
+    : m_index(index), m_ID(0xFF), m_value(value), m_type(type), m_dirty(false), m_writable(writable) {
     switch (type) {
     case RegisterType::GeneralPurpose:
         m_ID = index;
@@ -53,7 +55,6 @@ Register::Register(RegisterType type, uint8_t index, bool writable, uint64_t val
 }
 
 Register::~Register() {
-
 }
 
 RegisterType Register::GetType() const {
@@ -87,7 +88,7 @@ uint64_t Register::GetValue(OperandSize size) const {
     case OperandSize::WORD:
         return m_value & 0xFFFF;
     case OperandSize::DWORD:
-        return m_value & 0xFFFFFFFF;
+        return m_value & 0xFFFF'FFFF;
     case OperandSize::QWORD:
         return m_value;
     default:
@@ -116,13 +117,13 @@ bool Register::SetValue(uint64_t value, OperandSize size) {
     }
     switch (size) {
     case OperandSize::BYTE:
-        m_value = (m_value & 0xFFFFFFFFFFFFFF00) | (value & 0xFF);
+        m_value = (m_value & 0xFFFF'FFFF'FFFF'FF00) | (value & 0xFF);
         break;
     case OperandSize::WORD:
-        m_value = (m_value & 0xFFFFFFFFFFFF0000) | (value & 0xFFFF);
+        m_value = (m_value & 0xFFFF'FFFF'FFFF'0000) | (value & 0xFFFF);
         break;
     case OperandSize::DWORD:
-        m_value = (m_value & 0xFFFFFFFF00000000) | (value & 0xFFFFFFFF);
+        m_value = (m_value & 0xFFFF'FFFF'0000'0000) | (value & 0xFFFF'FFFF);
         break;
     case OperandSize::QWORD:
         m_value = value;
@@ -255,15 +256,15 @@ void Register::DecodeID(uint8_t ID) {
         if (index < 8) {
             m_type = RegisterType::Control;
             m_index = index;
-        }
-        else if (index == 8) {
+        } else if (index == 8) {
             m_type = RegisterType::Status;
             m_index = 0;
-        }
-        else if (index == 9) {
+        } else if (index == 9) {
             m_type = RegisterType::Instruction;
             m_index = 0;
         }
+        break;
+    default:
         break;
     }
 }

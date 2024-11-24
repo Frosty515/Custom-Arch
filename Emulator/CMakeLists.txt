@@ -59,6 +59,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/StandardMemoryRegion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/VirtualMMU.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ArgsParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Emulator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp

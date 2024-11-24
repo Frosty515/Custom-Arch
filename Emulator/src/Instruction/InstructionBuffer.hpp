@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class InstructionBuffer : public InsEncoding::Buffer {
 public:
-    InstructionBuffer(MMU& mmu, uint64_t base_address);
+    InstructionBuffer(MMU* mmu, uint64_t base_address);
     ~InstructionBuffer();
 
     // Write size bytes from data to the buffer at offset
@@ -41,7 +41,7 @@ protected:
     void DeleteBlock(uint64_t index) override;
 
 private:
-    MMU& m_mmu;
+    MMU* m_mmu;
     uint64_t m_base_address;
 };
 

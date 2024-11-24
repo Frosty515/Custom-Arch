@@ -27,14 +27,11 @@ enum class VideoBackendType {
     SDL
 };
 
-
-
-
-
 class VideoBackend {
-public:
-    VideoBackend(VideoMode mode = NATIVE_VIDEO_MODE);
-    ~VideoBackend();
+   public:
+    explicit VideoBackend(const VideoMode& mode = NATIVE_VIDEO_MODE);
+
+    virtual ~VideoBackend();
 
     virtual void Init() = 0;
     virtual void SetMode(VideoMode mode) = 0;
@@ -43,11 +40,11 @@ public:
     virtual void Write(uint64_t offset, uint8_t* data, uint64_t size) = 0;
     virtual void Read(uint64_t offset, uint8_t* data, uint64_t size) = 0;
 
-protected:
+   protected:
     VideoMode GetRawMode();
-    void SetRawMode(VideoMode mode);
+    void SetRawMode(const VideoMode& mode);
 
-private:
+   private:
     VideoMode m_mode;
 };
 

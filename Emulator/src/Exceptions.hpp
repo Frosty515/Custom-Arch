@@ -30,20 +30,38 @@ enum class Exception {
     STACK_VIOLATION = 4,
     USER_MODE_VIOLATION = 5,
     SUPERVISOR_MODE_VIOLATION = 6,
+    PAGING_VIOLATION = 7,
     TWICE_UNHANDLED_INTERRUPT = -1 // not valid number
 };
 
+struct [[gnu::packed]] StackViolationErrorCode {
+    uint8_t under     : 1;
+    uint8_t over      : 1;
+    uint8_t align     : 1;
+    uint64_t reserved : 61;
+};
+
+struct [[gnu::packed]] PagingViolationErrorCode {
+    bool present      : 1;
+    bool read         : 1;
+    bool write        : 1;
+    bool execute      : 1;
+    bool user         : 1;
+    bool rsvd_write   : 1;
+    uint64_t reserved : 58;
+};
+
 class ExceptionHandler {
-public:
+   public:
     ExceptionHandler();
     ExceptionHandler(InterruptHandler* INTHandler);
     ~ExceptionHandler();
 
-    [[noreturn]] void RaiseException(Exception exception);
+    [[noreturn]] void RaiseException(Exception exception, ...);
 
     void SetINTHandler(InterruptHandler* INTHandler);
 
-private:
+   private:
     InterruptHandler* m_INTHandler;
 };
 

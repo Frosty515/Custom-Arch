@@ -18,16 +18,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _SDL_VIDEO_BACKEND_HPP
 #define _SDL_VIDEO_BACKEND_HPP
 
-#include "../../VideoBackend.hpp"
+#include <SDL2/SDL.h>
 
 #include <thread>
 
-#include <SDL2/SDL.h>
+#include "../../VideoBackend.hpp"
 
 class SDLVideoBackend : public VideoBackend {
-public:
-    SDLVideoBackend(VideoMode mode = NATIVE_VIDEO_MODE);
-    ~SDLVideoBackend();
+   public:
+    explicit SDLVideoBackend(const VideoMode& mode = NATIVE_VIDEO_MODE);
+    ~SDLVideoBackend() override;
 
     void Init() override;
     void SetMode(VideoMode mode) override;
@@ -38,10 +38,10 @@ public:
 
     void EnterEventLoop();
 
-private:
+   private:
     void Draw();
 
-private:
+   private:
     SDL_Window* m_window;
     SDL_Renderer* m_renderer;
     SDL_Texture* m_texture;

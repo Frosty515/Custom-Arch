@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "InstructionBuffer.hpp"
 
-InstructionBuffer::InstructionBuffer(MMU& mmu, uint64_t base_address) : Buffer(0), m_mmu(mmu), m_base_address(base_address) {
+InstructionBuffer::InstructionBuffer(MMU* mmu, uint64_t base_address) : Buffer(0), m_mmu(mmu), m_base_address(base_address) {
 
 }
 
@@ -26,11 +26,11 @@ InstructionBuffer::~InstructionBuffer() {
 }
 
 void InstructionBuffer::Write(uint64_t offset, const uint8_t* data, size_t size) {
-    m_mmu.WriteBuffer(m_base_address + offset, data, size);
+    m_mmu->WriteBuffer(m_base_address + offset, data, size);
 }
 
 void InstructionBuffer::Read(uint64_t offset, uint8_t* data, size_t size) const {
-    m_mmu.ReadBuffer(m_base_address + offset, data, size);
+    m_mmu->ReadBuffer(m_base_address + offset, data, size);
 }
 
 InsEncoding::Buffer::Block* InstructionBuffer::AddBlock(size_t size) {

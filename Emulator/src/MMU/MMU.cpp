@@ -16,17 +16,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "MMU.hpp"
+
 #include "Exceptions.hpp"
 #include "MMU/MemoryRegion.hpp"
 #include "MMU/StandardMemoryRegion.hpp"
 
-
 MMU::MMU() {
-
 }
 
 MMU::~MMU() {
-
 }
 
 void MMU::ReadBuffer(uint64_t address, uint8_t* data, size_t size) {
@@ -41,8 +39,7 @@ void MMU::ReadBuffer(uint64_t address, uint8_t* data, size_t size) {
     }
     if (startingRegion == nullptr) {
         // no region found
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
-        return;
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
     }
     size_t remainingSize = size;
     uint64_t currentAddress = address;
@@ -55,7 +52,7 @@ void MMU::ReadBuffer(uint64_t address, uint8_t* data, size_t size) {
         if (remainingSize == 0)
             break;
         currentAddress += currentSize;
-        data = (uint8_t*)((uint64_t)data + currentSize * sizeof(uint8_t));
+        data = reinterpret_cast<uint8_t*>(reinterpret_cast<uint64_t>(data) + currentSize * sizeof(uint8_t));
         startingRegion = nullptr;
         for (MemoryRegion* region = m_regions.get(regionIndex); region != nullptr; region = m_regions.getNext(region), regionIndex++) {
             if (region->isInside(currentAddress, 1)) {
@@ -65,8 +62,7 @@ void MMU::ReadBuffer(uint64_t address, uint8_t* data, size_t size) {
         }
         if (startingRegion == nullptr) {
             // no region found
-            g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
-            return;
+            g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, currentAddress);
         }
     }
 }
@@ -83,8 +79,7 @@ void MMU::WriteBuffer(uint64_t address, const uint8_t* data, size_t size) {
     }
     if (startingRegion == nullptr) {
         // no region found
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
-        return;
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
     }
     size_t remainingSize = size;
     uint64_t currentAddress = address;
@@ -97,7 +92,7 @@ void MMU::WriteBuffer(uint64_t address, const uint8_t* data, size_t size) {
         if (remainingSize == 0)
             break;
         currentAddress += currentSize;
-        data = (uint8_t*)((uint64_t)data + currentSize * sizeof(uint8_t));
+        data = reinterpret_cast<uint8_t*>(reinterpret_cast<uint64_t>(data) + currentSize * sizeof(uint8_t));
         startingRegion = nullptr;
         for (MemoryRegion* region = m_regions.get(regionIndex); region != nullptr; region = m_regions.getNext(region), regionIndex++) {
             if (region->isInside(currentAddress, 1)) {
@@ -107,8 +102,7 @@ void MMU::WriteBuffer(uint64_t address, const uint8_t* data, size_t size) {
         }
         if (startingRegion == nullptr) {
             // no region found
-            g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
-            return;
+            g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, currentAddress);
         }
     }
 }
@@ -124,7 +118,7 @@ uint8_t MMU::read8(uint64_t address) {
         }
     }
     if (!found)
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
     return data;
 }
 
@@ -139,7 +133,7 @@ uint16_t MMU::read16(uint64_t address) {
         }
     }
     if (!found)
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
     return data;
 }
 
@@ -154,7 +148,7 @@ uint32_t MMU::read32(uint64_t address) {
         }
     }
     if (!found)
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
     return data;
 }
 
@@ -169,7 +163,7 @@ uint64_t MMU::read64(uint64_t address) {
         }
     }
     if (!found)
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
     return data;
 }
 
@@ -180,7 +174,7 @@ void MMU::write8(uint64_t address, uint8_t data) {
             return;
         }
     }
-    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
 }
 
 void MMU::write16(uint64_t address, uint16_t data) {
@@ -190,7 +184,7 @@ void MMU::write16(uint64_t address, uint16_t data) {
             return;
         }
     }
-    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
 }
 
 void MMU::write32(uint64_t address, uint32_t data) {
@@ -200,7 +194,7 @@ void MMU::write32(uint64_t address, uint32_t data) {
             return;
         }
     }
-    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
 }
 
 void MMU::write64(uint64_t address, uint64_t data) {
@@ -210,8 +204,7 @@ void MMU::write64(uint64_t address, uint64_t data) {
             return;
         }
     }
-    printf("Address: %lx\n", address);
-    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION);
+    g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, address);
 }
 
 bool MMU::ValidateRead(uint64_t address, size_t size) {
@@ -269,8 +262,7 @@ void MMU::DumpMemory() const {
 
 bool MMU::RemoveRegionSegment(uint64_t start, uint64_t end) {
     for (uint64_t i = 0; i < m_regions.getCount(); i++) {
-        MemoryRegion* region = m_regions.get(i);
-        if (start >= region->getStart() && end <= region->getEnd()) {
+        if (MemoryRegion* region = m_regions.get(i); start >= region->getStart() && end <= region->getEnd()) {
             if (start == region->getStart() && end == region->getEnd()) {
                 m_regions.remove(region);
                 return true;
@@ -309,6 +301,8 @@ bool MMU::ReaddRegionSegment(uint64_t start, uint64_t end) {
     for (uint64_t i = 0; i < m_regions.getCount(); i++) {
         previousRegion = region;
         region = m_regions.get(i);
+        if (previousRegion == nullptr)
+            continue;
         if (start >= previousRegion->getEnd() && end <= region->getStart()) {
             if (start == previousRegion->getEnd() && end == region->getStart()) {
                 uint64_t newStart = previousRegion->getStart();
@@ -317,20 +311,17 @@ bool MMU::ReaddRegionSegment(uint64_t start, uint64_t end) {
                 m_regions.remove(region);
                 StandardMemoryRegion* newRegion = new StandardMemoryRegion(newStart, newEnd);
                 m_regions.insert(newRegion);
-            }
-            else if (start == previousRegion->getEnd()) {
+            } else if (start == previousRegion->getEnd()) {
                 uint64_t newStart = previousRegion->getStart();
                 m_regions.remove(previousRegion);
                 StandardMemoryRegion* newRegion = new StandardMemoryRegion(newStart, end);
                 m_regions.insert(newRegion);
-            }
-            else if (end == region->getStart()) {
+            } else if (end == region->getStart()) {
                 uint64_t newEnd = region->getEnd();
                 m_regions.remove(region);
                 StandardMemoryRegion* newRegion = new StandardMemoryRegion(start, newEnd);
                 m_regions.insert(newRegion);
-            }
-            else {
+            } else {
                 StandardMemoryRegion* newRegion = new StandardMemoryRegion(start, end);
                 m_regions.insert(newRegion);
             }

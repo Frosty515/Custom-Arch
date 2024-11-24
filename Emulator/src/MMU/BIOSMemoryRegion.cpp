@@ -28,6 +28,7 @@ BIOSMemoryRegion::~BIOSMemoryRegion() {
 }
 
 void BIOSMemoryRegion::dump() {
+    return;
     printf("BIOSMemoryRegion: %lx - %lx, real_size = %lx", getStart(), getEnd(), m_real_size);
     uint8_t buffer[16];
     uint8_t buffer_index = 0;

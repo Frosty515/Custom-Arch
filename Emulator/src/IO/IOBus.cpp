@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "IOBus.hpp"
+
 #include "IO/IODevice.hpp"
 
 #ifdef EMULATOR_DEBUG
@@ -139,8 +140,7 @@ void IOBus::Validate() const {
 
 IODevice* IOBus::FindDevice(uint64_t address) {
     for (uint64_t i = 0; i < m_devices.getCount(); i++) {
-        IODevice* device = m_devices.get(i);
-        if (device->GetBaseAddress() <= address && (device->GetBaseAddress() + device->GetSize()) > address)
+        if (IODevice* device = m_devices.get(i); device->GetBaseAddress() <= address && (device->GetBaseAddress() + device->GetSize()) > address)
             return device;
     }
     return nullptr;
@@ -148,8 +148,7 @@ IODevice* IOBus::FindDevice(uint64_t address) {
 
 IODevice* IOBus::FindDevice(uint64_t address, uint64_t size) {
     for (uint64_t i = 0; i < m_devices.getCount(); i++) {
-        IODevice* device = m_devices.get(i);
-        if (device->GetBaseAddress() <= address && (device->GetBaseAddress() + device->GetSize()) >= (address + size))
+        if (IODevice* device = m_devices.get(i); device->GetBaseAddress() <= address && (device->GetBaseAddress() + device->GetSize()) >= (address + size))
             return device;
     }
     return nullptr;

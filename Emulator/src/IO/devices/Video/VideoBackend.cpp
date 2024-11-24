@@ -17,7 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "VideoBackend.hpp"
 
-VideoBackend::VideoBackend(VideoMode mode) : m_mode(mode) {
+VideoBackend::VideoBackend(const VideoMode& mode)
+    : m_mode(mode) {
 }
 
 VideoBackend::~VideoBackend() {
@@ -27,6 +28,6 @@ VideoMode VideoBackend::GetRawMode() {
     return m_mode;
 }
 
-void VideoBackend::SetRawMode(VideoMode mode) {
+void VideoBackend::SetRawMode(const VideoMode& mode) {
     m_mode = mode;
 }

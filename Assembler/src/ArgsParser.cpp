@@ -17,14 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "ArgsParser.hpp"
 
-#include <string>
 #include <string.h>
 
-ArgsParser::ArgsParser() : m_helpMessageInitialised(false), m_programName(nullptr) {
+#include <string>
+
+ArgsParser::ArgsParser()
+    : m_helpMessageInitialised(false), m_programName(nullptr) {
 }
 
 ArgsParser::~ArgsParser() {
-    
 }
 
 void ArgsParser::ParseArgs(int argc, char** argv) {
@@ -39,8 +40,7 @@ void ArgsParser::ParseArgs(int argc, char** argv) {
                         m_parsed_options[opt.short_name] = argv[i + 1];
                         i++;
                     }
-                }
-                else if (argv[i][1] == '-' && strcmp(opt.option, &argv[i][2]) == 0) {
+                } else if (argv[i][1] == '-' && strcmp(opt.option, &argv[i][2]) == 0) {
                     if (i + 1 < argc) {
                         m_parsed_options[opt.short_name] = argv[i + 1];
                         i++;
@@ -61,7 +61,7 @@ std::string_view ArgsParser::GetOption(char short_name) {
 }
 
 bool ArgsParser::HasOption(char short_name) const {
-    return m_parsed_options.find(short_name) != m_parsed_options.end();
+    return m_parsed_options.contains(short_name);
 }
 
 const std::string& ArgsParser::GetHelpMessage() const {

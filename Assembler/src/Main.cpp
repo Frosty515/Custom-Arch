@@ -15,15 +15,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
 #include <stdint.h>
-#include <string.h>
+#include <stdio.h>
 
 #include "ArgsParser.hpp"
+#include "Assembler.hpp"
 #include "Buffer.hpp"
 #include "Lexer.hpp"
 #include "Parser.hpp"
-#include "Assembler.hpp"
 #include "PreProcessor.hpp"
 
 ArgsParser* g_args = nullptr;
@@ -71,13 +70,13 @@ int main(int argc, char** argv) {
     fclose(file);
 
     PreProcessor pre_processor;
-    pre_processor.process((const char*)file_contents, file_size);
+    pre_processor.process(reinterpret_cast<const char*>(file_contents), file_size);
     size_t processed_buffer_size = pre_processor.GetProcessedBufferSize();
     uint8_t* processed_buffer_data = new uint8_t[processed_buffer_size];
     pre_processor.ExportProcessedBuffer(processed_buffer_data);
 
     Lexer* lexer = new Lexer();
-    lexer->tokenize((const char*)processed_buffer_data, processed_buffer_size);
+    lexer->tokenize(reinterpret_cast<const char*>(processed_buffer_data), processed_buffer_size);
     // lexer->tokenize((const char*)file_contents, file_size);
 
     Parser parser;

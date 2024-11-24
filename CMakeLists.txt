@@ -15,7 +15,7 @@
 
 cmake_minimum_required(VERSION 3.20)
 
-project(Custom-Arch C CXX ASM_NASM)
+project(Frost64 C CXX ASM_NASM)
 
 if (NOT DEFINED BUILD_CONFIG)
     set(BUILD_CONFIG "Release")

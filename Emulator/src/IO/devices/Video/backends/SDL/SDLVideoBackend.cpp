@@ -16,19 +16,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "SDLVideoBackend.hpp"
+
 #include "IO/devices/Video/VideoBackend.hpp"
 
 void EventHandler(void* data) {
-    SDLVideoBackend* backend = (SDLVideoBackend*)data;
+    SDLVideoBackend* backend = static_cast<SDLVideoBackend*>(data);
     backend->EnterEventLoop();
 }
 
-SDLVideoBackend::SDLVideoBackend(VideoMode mode) : VideoBackend(mode), m_window(nullptr), m_renderer(nullptr), m_texture(nullptr), m_framebuffer(nullptr), m_eventThread(nullptr) {
-    
+SDLVideoBackend::SDLVideoBackend(const VideoMode& mode)
+    : VideoBackend(mode), m_window(nullptr), m_renderer(nullptr), m_texture(nullptr), m_framebuffer(nullptr), m_eventThread(nullptr) {
 }
 
 SDLVideoBackend::~SDLVideoBackend() {
-
 }
 
 void SDLVideoBackend::Init() {
@@ -77,7 +77,6 @@ void SDLVideoBackend::SetMode(VideoMode mode) {
         exit(1);
     }
 
-
     delete[] m_framebuffer;
     m_framebuffer = new uint8_t[mode.width * mode.height * 4];
 
@@ -106,11 +105,10 @@ void SDLVideoBackend::EnterEventLoop() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
-                case SDL_QUIT:
-                    exit(0);
-                    break;
-                default:
-                    break;
+            case SDL_QUIT:
+                exit(0);
+            default:
+                break;
             }
         }
     }

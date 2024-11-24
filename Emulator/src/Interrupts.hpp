@@ -51,6 +51,9 @@ public:
     [[noreturn]] void RaiseInterrupt(uint8_t interrupt, uint64_t IP);
     void ReturnFromInterrupt();
 
+    void ChangeMMU(MMU* mmu);
+    MMU* GetMMU() const { return m_MMU; }
+
 private:
     InterruptDescriptor ReadDescriptor(uint8_t interrupt);
     void HandleFailure(uint8_t interrupt);

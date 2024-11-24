@@ -29,7 +29,7 @@ namespace InsEncoding {
 
     // A dynamic buffer created from multiple blocks
     class Buffer {
-    public:
+       public:
         Buffer();
         Buffer(size_t size, size_t blockSize = DEFAULT_BUFFER_BLOCK_SIZE);
         ~Buffer();
@@ -55,17 +55,17 @@ namespace InsEncoding {
         // Get the size of the buffer
         size_t GetSize() const;
 
-    protected:
+       protected:
         struct Block {
             uint8_t* data;
             size_t size;
             bool empty;
         };
-        
+
         virtual Block* AddBlock(size_t size);
         virtual void DeleteBlock(uint64_t index);
 
-    private:
+       private:
         size_t m_size;
         size_t m_blockSize;
         LinkedList::RearInsertLinkedList<Block> m_blocks;

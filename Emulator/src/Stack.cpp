@@ -16,36 +16,42 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Stack.hpp"
-#include "Exceptions.hpp"
 
 #include <Emulator.hpp>
 
-Stack::Stack() {
+#include "Exceptions.hpp"
 
+Stack::Stack()
+    : m_MMU(nullptr), m_stackBase(0), m_stackPointer(0), m_stackTop(0) {
 }
 
-Stack::Stack(MMU* mmu, uint64_t base, uint64_t top, uint64_t pointer) : m_MMU(mmu), m_stackBase(base), m_stackPointer(pointer), m_stackTop(top) {
-
+Stack::Stack(MMU* mmu, uint64_t base, uint64_t top, uint64_t pointer)
+    : m_MMU(mmu), m_stackBase(base), m_stackPointer(pointer), m_stackTop(top) {
 }
 
 Stack::~Stack() {
-
 }
 
 void Stack::push(uint64_t value) {
-    if (m_stackPointer < m_stackBase)
-        g_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION); // stack underflow
-    if (m_stackPointer >= m_stackTop)
-        g_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION); // stack overflow
+    if (m_stackPointer < m_stackBase || m_stackPointer >= m_stackTop || (m_stackPointer % 8) > 0) {
+        StackViolationErrorCode code = {0, 0, 0, 0};
+        code.under = m_stackPointer < m_stackBase ? 1 : 0;
+        code.over = m_stackPointer >= m_stackTop ? 1 : 0;
+        code.align = (m_stackPointer % 8) > 0 ? 1 : 0;
+        g_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION, code);
+    }
     m_stackPointer += 8;
     m_MMU->write64(m_stackPointer, value);
 }
 
 uint64_t Stack::pop() {
-    if (m_stackPointer >= m_stackTop)
-        g_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION); // stack overflow
-    if (m_stackPointer < m_stackBase)
-        g_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION); // stack underflow
+    if (m_stackPointer < m_stackBase || m_stackPointer >= m_stackTop || (m_stackPointer % 8) > 0) {
+        StackViolationErrorCode code = {0, 0, 0, 0};
+        code.under = m_stackPointer < m_stackBase ? 1 : 0;
+        code.over = m_stackPointer >= m_stackTop ? 1 : 0;
+        code.align = (m_stackPointer % 8) > 0 ? 1 : 0;
+        g_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION, code);
+    }
     uint64_t value = m_MMU->read64(m_stackPointer);
     m_stackPointer -= 8;
     return value;

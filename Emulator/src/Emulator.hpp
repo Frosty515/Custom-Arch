@@ -18,22 +18,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _EMULATOR_HPP
 #define _EMULATOR_HPP
 
-#include "IO/devices/Video/VideoBackend.hpp"
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <Register.hpp>
+
+#include "IO/devices/Video/VideoBackend.hpp"
 
 namespace Emulator {
 
     enum StartErrors {
-        SE_SUCCESS        = 0,
-        SE_MALLOC_FAIL    = 1,
+        SE_SUCCESS = 0,
+        SE_MALLOC_FAIL = 1,
         SE_TOO_LITTLE_RAM = 2
     };
 
     enum class EventType {
-        SwitchToIP
+        SwitchToIP,
+        NewMMU
     };
 
     struct Event {
@@ -63,7 +65,7 @@ namespace Emulator {
 
     Register* GetRegisterPointer(uint8_t ID);
 
-    __attribute__((noreturn)) void Crash(const char* message);
+    [[noreturn]] void Crash(const char* message);
     void HandleHalt();
 
     bool isInProtectedMode();
@@ -75,6 +77,6 @@ namespace Emulator {
 
     void WriteCharToConsole(char c);
     char ReadCharFromConsole();
-}
+} // namespace Emulator
 
 #endif /* _EMULATOR_HPP */

@@ -17,15 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Buffer.hpp"
 
-#include "util.h"
-
 #include <string.h>
 
-Buffer::Buffer() : m_size(0), m_blockSize(DEFAULT_BUFFER_BLOCK_SIZE) {
+#include "util.h"
 
+Buffer::Buffer()
+    : m_size(0), m_blockSize(DEFAULT_BUFFER_BLOCK_SIZE) {
 }
 
-Buffer::Buffer(size_t size, size_t blockSize) : m_size(0), m_blockSize(blockSize), m_blocks() {
+Buffer::Buffer(size_t size, size_t blockSize)
+    : m_size(0), m_blockSize(blockSize), m_blocks() {
     AddBlock(ALIGN_UP(size, m_blockSize));
 }
 
@@ -62,26 +63,23 @@ void Buffer::Write(uint64_t offset, const uint8_t* data, size_t size) {
         offset_within_block = 0;
     }
     if ((starting_block->size - offset_within_block) >= size) {
-        memcpy((void*)((uint64_t)starting_block->data + offset_within_block), i_data, size);
+        memcpy(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(starting_block->data) + offset_within_block), i_data, size);
         starting_block->empty = false;
         return;
-    }
-    else {
-        memcpy((void*)((uint64_t)starting_block->data + offset_within_block), i_data, starting_block->size - offset_within_block);
+    } else {
+        memcpy(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(starting_block->data) + offset_within_block), i_data, starting_block->size - offset_within_block);
         size -= starting_block->size - offset_within_block;
-        i_data = (uint8_t const*)((uint64_t)i_data + (starting_block->size - offset_within_block));
+        i_data = reinterpret_cast<uint8_t const*>(reinterpret_cast<uint64_t>(i_data) + (starting_block->size - offset_within_block));
         for (i = starting_block_index + 1; i < m_blocks.getCount(); i++) {
-            Block* block = m_blocks.get(i);
-            if (size <= block->size) {
+            if (Block* block = m_blocks.get(i); size <= block->size) {
                 memcpy(block->data, i_data, size);
                 block->empty = false;
                 return;
-            }
-            else {
+            } else {
                 memcpy(block->data, i_data, block->size);
                 block->empty = false;
                 size -= block->size;
-                i_data = (uint8_t const*)((uint64_t)i_data + block->size);
+                i_data = reinterpret_cast<uint8_t const*>(reinterpret_cast<uint64_t>(i_data) + block->size);
             }
         }
         Block* block = AddBlock(ALIGN_UP(size, m_blockSize));
@@ -110,23 +108,20 @@ void Buffer::Read(uint64_t offset, uint8_t* data, size_t size) const {
     if (starting_block == nullptr)
         return;
     if ((starting_block->size - offset_within_block) >= size) {
-        memcpy(i_data, (void*)((uint64_t)starting_block->data + offset_within_block), size);
+        memcpy(i_data, reinterpret_cast<void*>(reinterpret_cast<uint64_t>(starting_block->data) + offset_within_block), size);
         return;
-    }
-    else {
-        memcpy(i_data, (void*)((uint64_t)starting_block->data + offset_within_block), starting_block->size - offset_within_block);
+    } else {
+        memcpy(i_data, reinterpret_cast<void*>(reinterpret_cast<uint64_t>(starting_block->data) + offset_within_block), starting_block->size - offset_within_block);
         size -= starting_block->size - offset_within_block;
-        i_data = (uint8_t*)((uint64_t)i_data + (starting_block->size - offset_within_block));
+        i_data = reinterpret_cast<uint8_t*>(reinterpret_cast<uint64_t>(i_data) + (starting_block->size - offset_within_block));
         for (uint64_t i = starting_block_index + 1; i < m_blocks.getCount(); i++) {
-            Block* block = m_blocks.get(i);
-            if (size <= block->size) {
+            if (Block* block = m_blocks.get(i); size <= block->size) {
                 memcpy(i_data, block->data, size);
                 return;
-            }
-            else {
+            } else {
                 memcpy(i_data, block->data, block->size);
                 size -= block->size;
-                i_data = (uint8_t*)((uint64_t)i_data + block->size);
+                i_data = reinterpret_cast<uint8_t*>(reinterpret_cast<uint64_t>(i_data) + block->size);
             }
         }
     }
@@ -150,27 +145,24 @@ void Buffer::Clear(uint64_t offset, size_t size) {
     if (starting_block == nullptr)
         return;
     if ((starting_block->size - offset_within_block) <= size) {
-        memset((void*)((uint64_t)starting_block->data + offset_within_block), 0, size);
+        memset(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(starting_block->data) + offset_within_block), 0, size);
         if (offset_within_block == 0) {
             starting_block->empty = true;
             AutoShrink();
         }
         return;
-    }
-    else {
-        memset((void*)((uint64_t)starting_block->data + offset_within_block), 0, starting_block->size - offset_within_block);
+    } else {
+        memset(reinterpret_cast<void*>(reinterpret_cast<uint64_t>(starting_block->data) + offset_within_block), 0, starting_block->size - offset_within_block);
         size -= starting_block->size - offset_within_block;
         for (uint64_t i = starting_block_index + 1; i < m_blocks.getCount(); i++) {
-            Block* block = m_blocks.get(i);
-            if (size <= block->size) {
+            if (Block* block = m_blocks.get(i); size <= block->size) {
                 memset(block->data, 0, size);
                 if (block->size == size) {
                     block->empty = true;
                     AutoShrink();
                 }
                 return;
-            }
-            else {
+            } else {
                 memset(block->data, 0, block->size);
                 block->empty = true;
                 size -= block->size;
@@ -181,14 +173,12 @@ void Buffer::Clear(uint64_t offset, size_t size) {
 
 void Buffer::AutoShrink() {
     for (uint64_t i = m_blocks.getCount(); i > 0; i--) {
-        Block* block = m_blocks.get(i - 1);
-        if (block->empty) {
+        if (Block* block = m_blocks.get(i - 1); block->empty) {
             delete[] block->data;
             m_blocks.remove(i - 1);
             m_size -= block->size;
             delete block;
-        }
-        else
+        } else
             return;
     }
 }
@@ -196,13 +186,11 @@ void Buffer::AutoShrink() {
 uint64_t Buffer::ClearUntil(uint64_t offset) {
     uint64_t blocksDeleted = 0;
     for (uint64_t i = 0; i < m_blocks.getCount() && offset > 0; i++) {
-        Block* block = m_blocks.get(0);
-        if (offset >= block->size) {
+        if (Block* block = m_blocks.get(0); offset >= block->size) {
             DeleteBlock(0);
             blocksDeleted++;
             offset -= block->size;
-        }
-        else {
+        } else {
             memset(block->data, 0, offset);
             block->empty = false;
             return blocksDeleted;

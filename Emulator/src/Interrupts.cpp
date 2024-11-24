@@ -16,11 +16,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Interrupts.hpp"
-#include "Exceptions.hpp"
+
 #include "Emulator.hpp"
+#include "Exceptions.hpp"
 #include "Stack.hpp"
 
-InterruptHandler::InterruptHandler(MMU* mmu, ExceptionHandler* exceptionHandler) : m_MMU(mmu), m_ExceptionHandler(exceptionHandler), m_IDTR(0) {
+InterruptHandler::InterruptHandler(MMU* mmu, ExceptionHandler* exceptionHandler)
+    : m_MMU(mmu), m_ExceptionHandler(exceptionHandler), m_IDTR(0) {
     for (int i = 0; i < 256; i++) {
         m_IDT[i].loaded = true;
         m_IDT[i].flags = 0;
@@ -29,7 +31,6 @@ InterruptHandler::InterruptHandler(MMU* mmu, ExceptionHandler* exceptionHandler)
 }
 
 InterruptHandler::~InterruptHandler() {
-
 }
 
 void InterruptHandler::SetIDTR(uint64_t base) {
@@ -55,19 +56,26 @@ void InterruptHandler::SetIDTR(uint64_t base) {
 }
 
 void InterruptHandler::ReturnFromInterrupt() {
+    StackViolationErrorCode code = {1, 0, 0, 0};
     if (g_stack->WillUnderflowOnPop())
-        m_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION);
+        m_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION, code);
     Emulator::SetCPUStatus(g_stack->pop());
     if (g_stack->WillUnderflowOnPop())
-        m_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION);
+        m_ExceptionHandler->RaiseException(Exception::STACK_VIOLATION, code);
     Emulator::JumpToIP(g_stack->pop());
+}
+
+void InterruptHandler::ChangeMMU(MMU* mmu) {
+    m_MMU = mmu;
+    for (int i = 0; i < 256; i++) // invalidate all descriptors
+        m_IDT[i].loaded = false;
 }
 
 InterruptDescriptor InterruptHandler::ReadDescriptor(uint8_t interrupt) {
     if (!m_MMU->ValidateRead(m_IDTR + sizeof(RawInterruptDescriptor) * interrupt, sizeof(RawInterruptDescriptor)))
         HandleFailure(interrupt);
     RawInterruptDescriptor rawDescriptor;
-    m_MMU->ReadBuffer(m_IDTR + sizeof(RawInterruptDescriptor) * interrupt, (uint8_t*)&rawDescriptor, sizeof(RawInterruptDescriptor));
+    m_MMU->ReadBuffer(m_IDTR + sizeof(RawInterruptDescriptor) * interrupt, reinterpret_cast<uint8_t*>(&rawDescriptor), sizeof(RawInterruptDescriptor));
     InterruptDescriptor descriptor;
     descriptor.loaded = true;
     descriptor.flags = rawDescriptor.Present;
@@ -76,10 +84,11 @@ InterruptDescriptor InterruptHandler::ReadDescriptor(uint8_t interrupt) {
 }
 
 void InterruptHandler::HandleFailure(uint8_t interrupt) {
-    if ((Exception)interrupt == Exception::UNHANDLED_INTERRUPT)
+    if (static_cast<Exception>(interrupt) == Exception::UNHANDLED_INTERRUPT)
         m_ExceptionHandler->RaiseException(Exception::TWICE_UNHANDLED_INTERRUPT);
     else
-        m_ExceptionHandler->RaiseException(Exception::UNHANDLED_INTERRUPT);
+        m_ExceptionHandler->RaiseException(Exception::UNHANDLED_INTERRUPT, interrupt);
 }
+
 
 InterruptHandler* g_InterruptHandler = nullptr;

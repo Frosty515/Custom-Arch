@@ -21,8 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <OSSpecific/Memory.hpp>
 
-StandardMemoryRegion::StandardMemoryRegion(uint64_t start, uint64_t end) : MemoryRegion(start, end) {
-    m_data = (uint8_t*)OSSpecific::AllocateCOWMemory(getSize());
+StandardMemoryRegion::StandardMemoryRegion(uint64_t start, uint64_t end)
+    : MemoryRegion(start, end) {
+    m_data = static_cast<uint8_t*>(OSSpecific::AllocateCOWMemory(MemoryRegion::getSize()));
 }
 
 StandardMemoryRegion::~StandardMemoryRegion() {

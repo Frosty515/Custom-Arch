@@ -18,42 +18,42 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _MMU_HPP
 #define _MMU_HPP
 
-#include "MemoryRegion.hpp"
-
 #include <stddef.h>
 #include <stdint.h>
 
 #include <Data-structures/LinkedList.hpp>
 
+#include "MemoryRegion.hpp"
+
 class MMU {
-public:
+   public:
     MMU();
-    ~MMU();
+    virtual ~MMU();
 
-    void ReadBuffer(uint64_t address, uint8_t* data, size_t size);
-    void WriteBuffer(uint64_t address, const uint8_t* data, size_t size);
+    virtual void ReadBuffer(uint64_t address, uint8_t* data, size_t size);
+    virtual void WriteBuffer(uint64_t address, const uint8_t* data, size_t size);
 
-    uint8_t read8(uint64_t address);
-    uint16_t read16(uint64_t address);
-    uint32_t read32(uint64_t address);
-    uint64_t read64(uint64_t address);
+    virtual uint8_t read8(uint64_t address);
+    virtual uint16_t read16(uint64_t address);
+    virtual uint32_t read32(uint64_t address);
+    virtual uint64_t read64(uint64_t address);
 
-    void write8(uint64_t address, uint8_t data);
-    void write16(uint64_t address, uint16_t data);
-    void write32(uint64_t address, uint32_t data);
-    void write64(uint64_t address, uint64_t data);
+    virtual void write8(uint64_t address, uint8_t data);
+    virtual void write16(uint64_t address, uint16_t data);
+    virtual void write32(uint64_t address, uint32_t data);
+    virtual void write64(uint64_t address, uint64_t data);
 
-    bool ValidateRead(uint64_t address, size_t size);
+    virtual bool ValidateRead(uint64_t address, size_t size);
 
-    void AddMemoryRegion(MemoryRegion* region);
-    void RemoveMemoryRegion(MemoryRegion* region);
+    virtual void AddMemoryRegion(MemoryRegion* region);
+    virtual void RemoveMemoryRegion(MemoryRegion* region);
 
-    void DumpMemory() const;
+    virtual void DumpMemory() const;
 
-    bool RemoveRegionSegment(uint64_t start, uint64_t end);
-    bool ReaddRegionSegment(uint64_t start, uint64_t end);
+    virtual bool RemoveRegionSegment(uint64_t start, uint64_t end);
+    virtual bool ReaddRegionSegment(uint64_t start, uint64_t end);
 
-private:
+   private:
     LinkedList::SimpleLinkedList<MemoryRegion> m_regions;
 };
 

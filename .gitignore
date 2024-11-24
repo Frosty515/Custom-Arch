@@ -3,6 +3,8 @@ bin-int/
 build/
 .cache/
 .vscode/
+cmake-build*/
+.idea/
 
 compile_commands.json
 .DS_Store

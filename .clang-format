@@ -1,0 +1,87 @@
+#---
+BasedOnStyle: Google
+IndentWidth: 4
+UseTab: Never
+LineEnding: LF
+#---
+#Language: Cpp
+DerivePointerAlignment: false
+PointerAlignment: Left
+ColumnLimit: 0
+AlignConsecutiveBitFields: true
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: Left
+AlignTrailingComments: Leave
+AllowShortBlocksOnASingleLine: Never
+#AllowShortCaseExpressionOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: false
+BitFieldColonSpacing: Both
+#BreakAdjacentStringLiterals: false
+BreakAfterAttributes: Never
+BreakBeforeBraces: Attach
+BreakBeforeInlineASMColon: Never
+BreakBeforeTernaryOperators: false
+#BreakBinaryOperators: Never
+#BreakFunctionDefinitionParameters: false
+BreakInheritanceList: AfterComma
+BreakStringLiterals: false
+#BreakTemplateDeclarations: No
+CompactNamespaces: false
+ContinuationIndentWidth: 4
+EmptyLineBeforeAccessModifier: Always
+IncludeBlocks: Regroup
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentExternBlock: NoIndent
+IndentGotoLabels: false
+IndentPPDirectives: None
+InsertBraces: false
+InsertNewlineAtEOF: true
+InsertTrailingCommas: None
+IntegerLiteralSeparator:
+    Binary: 0
+    Decimal: 3
+    Hex: 4
+    HexMinDigits: 8
+#KeepEmptyLines:
+#    AtEndOfFile: true
+#    AtStartOfBlock: false
+#    AtStartOfFile: false
+#MainIncludeChar: AngleBracket
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: All
+QualifierAlignment: Leave
+#QualifierOrder: [inline, static, const, volatile, type]
+ReferenceAlignment: Left
+#ReflowComments: IndentOnly
+#RemoveEmptyLinesInUnwrappedLines: true
+RemoveParentheses: Leave
+RemoveSemicolon: false
+SeparateDefinitionBlocks: Leave
+SortIncludes: CaseInsensitive
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInParens: Never
+SpacesInSquareBrackets: false
+Standard: c++20

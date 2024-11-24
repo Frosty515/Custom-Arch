@@ -61,7 +61,7 @@ std::string_view ArgsParser::GetOption(char short_name) {
 }
 
 bool ArgsParser::HasOption(char short_name) const {
-    return m_parsed_options.find(short_name) != m_parsed_options.end();
+    return m_parsed_options.contains(short_name);
 }
 
 const std::string& ArgsParser::GetHelpMessage() const {

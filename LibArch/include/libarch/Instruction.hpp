@@ -18,10 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LIBARCH_INSTRUCTION_HPP
 #define _LIBARCH_INSTRUCTION_HPP
 
-#include "Operand.hpp"
-
 #include "Data-structures/Buffer.hpp"
 #include "Data-structures/LinkedList.hpp"
+#include "Operand.hpp"
 
 namespace InsEncoding {
     enum class Opcode {
@@ -110,7 +109,6 @@ namespace InsEncoding {
         LinkedList::RearInsertLinkedList<uint64_t> jumps_to_here;
     };
 
-
     struct Label {
         char* name;
         size_t name_size;
@@ -152,26 +150,26 @@ namespace InsEncoding {
 
     struct RegisterID {
         uint8_t number : 4;
-        uint8_t type : 4;
+        uint8_t type   : 4;
     } __attribute__((packed));
 
     struct ComplexOperandInfo {
-        uint8_t type : 2;
-        uint8_t size : 2;
-        uint8_t base_type : 1;
-        uint8_t base_size : 2;
-        uint8_t base_present : 1;
-        uint8_t index_type : 1;
-        uint8_t index_size : 2;
-        uint8_t index_present : 1;
-        uint8_t offset_type : 1;
-        uint8_t offset_size : 2;
+        uint8_t type           : 2;
+        uint8_t size           : 2;
+        uint8_t base_type      : 1;
+        uint8_t base_size      : 2;
+        uint8_t base_present   : 1;
+        uint8_t index_type     : 1;
+        uint8_t index_size     : 2;
+        uint8_t index_present  : 1;
+        uint8_t offset_type    : 1;
+        uint8_t offset_size    : 2;
         uint8_t offset_present : 1;
     } __attribute__((packed));
 
     struct StandardOperandInfo {
-        uint8_t type : 2;
-        uint8_t size : 2;
+        uint8_t type     : 2;
+        uint8_t size     : 2;
         uint8_t _padding : 4;
     } __attribute__((packed));
 
@@ -186,8 +184,8 @@ namespace InsEncoding {
     } __attribute__((packed));
 
     struct StandardStandardOperandInfo {
-        uint8_t first_type : 2;
-        uint8_t first_size : 2;
+        uint8_t first_type  : 2;
+        uint8_t first_size  : 2;
         uint8_t second_type : 2;
         uint8_t second_size : 2;
     } __attribute__((packed));
@@ -210,21 +208,21 @@ namespace InsEncoding {
     };
 
     class Instruction {
-    public:
+       public:
         Instruction(Opcode opcode);
         ~Instruction();
 
-        Opcode GetOpcode();
+        Opcode GetOpcode() const;
 
         LinkedList::RearInsertLinkedList<Operand> operands;
-    private:
-        Opcode m_opcode;
 
+       private:
+        Opcode m_opcode;
     };
 
     Instruction* DecodeInstruction(const uint8_t* data, size_t data_size);
     Instruction* DecodeInstruction(Buffer& buffer, uint64_t& current_offset);
     size_t EncodeInstruction(Instruction* instruction, uint8_t* data, size_t data_size, uint64_t global_offset);
-}
+} // namespace InsEncoding
 
 #endif /* _LIBARCH_INSTRUCTION_HPP */

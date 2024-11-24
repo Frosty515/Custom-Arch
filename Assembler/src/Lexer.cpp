@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 #include <string.h>
-
 #include <util.h>
 
 Lexer::Lexer() {
@@ -31,7 +30,7 @@ Lexer::~Lexer() {
 void Lexer::tokenize(const char* source, size_t source_size) {
     if (source == nullptr || source_size == 0)
         return;
-    
+
     bool start_of_token = true;
     std::string token = "";
     uint64_t current_offset_in_token = 0;
@@ -45,27 +44,23 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 AddToken(token);
                 token = "";
                 current_offset_in_token = 0;
-            }
-            else if ((source[i] == '+' || source[i] == '*') || (source[i] == '-' && ((i + 1) >= source_size || !(source[i + 1] >= '0' && source[i + 1] <= '9')))) {
+            } else if ((source[i] == '+' || source[i] == '*') || (source[i] == '-' && ((i + 1) >= source_size || !(source[i + 1] >= '0' && source[i + 1] <= '9')))) {
                 token += source[i];
                 AddToken(token);
                 token = "";
                 current_offset_in_token = 0;
-            }
-            else {
+            } else {
                 start_of_token = false;
                 token += source[i];
                 current_offset_in_token++;
             }
-        }
-        else {
+        } else {
             if (source[i] == ' ' || source[i] == '\n' || source[i] == '\t') {
                 start_of_token = true;
                 AddToken(token);
                 token = "";
                 current_offset_in_token = 0;
-            }
-            else if (source[i] == '[' || source[i] == ']' || source[i] == ',') {
+            } else if (source[i] == '[' || source[i] == ']' || source[i] == ',') {
                 start_of_token = true;
                 AddToken(token);
                 token = "";
@@ -73,8 +68,7 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 token += source[i];
                 AddToken(token);
                 token = "";
-            }
-            else if (source[i] == '+' || source[i] == '*' || source[i] == '-') {
+            } else if (source[i] == '+' || source[i] == '*' || source[i] == '-') {
                 if (source[i] == '-' && (i + 1) < source_size) {
                     if (source[i + 1] >= '0' && source[i + 1] <= '9') { // do not read outside of bounds
                         start_of_token = true;
@@ -92,8 +86,7 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 token += source[i];
                 AddToken(token);
                 token = "";
-            }
-            else {
+            } else {
                 token += source[i];
                 current_offset_in_token++;
             }
@@ -108,7 +101,6 @@ void Lexer::tokenize(const char* source, size_t source_size) {
             break;
         }
     }
-
 }
 
 const LinkedList::RearInsertLinkedList<Token>& Lexer::GetTokens() const {
@@ -152,16 +144,16 @@ const char* Lexer::TokenTypeToString(TokenType type) {
 
 void Lexer::Clear() {
     m_tokens.EnumerateReverse([&](Token* token) -> bool {
-        delete[] (char*)token->data;
+        delete[] static_cast<char*>(token->data);
         delete token;
         return true;
     });
     m_tokens.clear();
 }
 
-void Lexer::AddToken(const std::string& g_token) {
+void Lexer::AddToken(const std::string& str_token) {
     std::string token = "";
-    for (char c : g_token) { // convert the token to lowercase
+    for (char c : str_token) { // convert the token to lowercase
         if (c >= 'A' && c <= 'Z')
             c = c - 'A' + 'a';
         token += c;
@@ -169,17 +161,17 @@ void Lexer::AddToken(const std::string& g_token) {
     Token* new_token = new Token;
     new_token->data = new char[token.size() + 1];
     memcpy(new_token->data, token.c_str(), token.size());
-    ((char*)new_token->data)[token.size()] = 0;
+    static_cast<char*>(new_token->data)[token.size()] = 0;
     new_token->data_size = token.size();
-    
+
     /* now we identify the token type */
 #define IS_REGISTER(token) (token == "r0" || token == "r1" || token == "r2" || token == "r3" || token == "r4" || token == "r5" || token == "r6" || token == "r7" || token == "r8" || token == "r9" || token == "r10" || token == "r11" || token == "r12" || token == "r13" || token == "r14" || token == "r15" || token == "scp" || token == "sbp" || token == "stp" || token == "cr0" || token == "cr1" || token == "cr2" || token == "cr3" || token == "cr4" || token == "cr5" || token == "cr6" || token == "cr7" || token == "sts" || token == "ip")
 #define IS_INSTRUCTION(token) (token == "push" || token == "pop" || token == "pusha" || token == "popa" || token == "add" || token == "mul" || token == "sub" || token == "div" || token == "or" || token == "xor" || token == "nor" || token == "and" || token == "nand" || token == "not" || token == "cmp" || token == "inc" || token == "dec" || token == "shl" || token == "shr" || token == "ret" || token == "call" || token == "jmp" || token == "jc" || token == "jnc" || token == "jz" || token == "jnz" || token == "int" || token == "lidt" || token == "iret" || token == "mov" || token == "nop" || token == "hlt" || token == "syscall" || token == "sysret" || token == "enteruser")
-    if IS_REGISTER(token)
+    if IS_REGISTER (token)
         new_token->type = TokenType::REGISTER;
     /*else if (token == "byte" || token == "word" || token == "dword" || token == "qword")
         new_token->type = TokenType::SIZE;*/
-    else if IS_INSTRUCTION(token)
+    else if IS_INSTRUCTION (token)
         new_token->type = TokenType::INSTRUCTION;
     else if (token == "[")
         new_token->type = TokenType::LBRACKET;
@@ -194,18 +186,17 @@ void Lexer::AddToken(const std::string& g_token) {
     else if (token == "+" || token == "-" || token == "*")
         new_token->type = TokenType::OPERATOR;
     else {
-        uint64_t offset = 0;
-        uint64_t size = token.size();
-        if (size == 0)
+        if (uint64_t size = token.size(); size == 0)
             new_token->type = TokenType::UNKNOWN;
         else {
+            uint64_t offset = 0;
             if (token[0] == '.')
                 offset++;
             if (token[size - 1] == ':')
                 size--;
 
             bool is_label = true;
-            
+
             for (uint64_t i = 0; (i + offset) < size; i++) {
                 if (!((token[i + offset] >= 'a' && token[i + offset] <= 'z') || (i > 0 && token[i + offset] >= '0' && token[i + offset] <= '9') || ((i + offset + 1) < size && token[i + offset] == '_'))) {
                     is_label = false;
@@ -222,8 +213,7 @@ void Lexer::AddToken(const std::string& g_token) {
                     new_token->type = TokenType::BLABEL;
                 else if (offset == 1 && size < token.size())
                     new_token->type = TokenType::BSUBLABEL;
-            }
-            else {
+            } else {
                 bool is_number = true;
                 uint8_t base = 10;
                 uint64_t i = 0;
@@ -232,8 +222,7 @@ void Lexer::AddToken(const std::string& g_token) {
                     if (i >= token.size()) {
                         is_number = false;
                     }
-                }
-                else if (token[0] == '0') {
+                } else if (token[0] == '0') {
                     i += 2;
                     switch (token[1]) {
                     case 'x':
@@ -247,7 +236,7 @@ void Lexer::AddToken(const std::string& g_token) {
                         break;
                     default:
                         base = 10;
-                        i-=2;
+                        i -= 2;
                         break;
                     }
                     if (i >= token.size())
@@ -260,20 +249,17 @@ void Lexer::AddToken(const std::string& g_token) {
                             is_number = false;
                             break;
                         }
-                    }
-                    else if (base == 2) {
+                    } else if (base == 2) {
                         if (token[i] != '0' && token[i] != '1') {
                             is_number = false;
                             break;
                         }
-                    }
-                    else if (base == 8) {
+                    } else if (base == 8) {
                         if (token[i] < '0' || token[i] > '7') {
                             is_number = false;
                             break;
                         }
-                    }
-                    else {
+                    } else {
                         if (token[i] < '0' || token[i] > '9') {
                             is_number = false;
                             break;

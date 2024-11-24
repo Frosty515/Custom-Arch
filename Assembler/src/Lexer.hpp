@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 
 #include <LinkedList.hpp>
-
 #include <string>
 
 enum class TokenType {
@@ -48,7 +47,7 @@ struct Token {
 };
 
 class Lexer {
-public:
+   public:
     Lexer();
     ~Lexer();
 
@@ -60,11 +59,10 @@ public:
 
     void Clear();
 
-private:
+   private:
+    void AddToken(const std::string& str_token);
 
-    void AddToken(const std::string& token);
-
-private:
+   private:
     LinkedList::RearInsertLinkedList<Token> m_tokens;
 };
 

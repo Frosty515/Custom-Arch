@@ -22,91 +22,83 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "backends/SDL/SDLVideoBackend.hpp"
 
 void HandleVideoMemoryOperation(bool write, uint64_t address, uint8_t* buffer, size_t size, void* data) {
-    VideoDevice* device = (VideoDevice*)data;
+    VideoDevice* device = static_cast<VideoDevice*>(data);
     device->HandleMemoryOperation(write, address, buffer, size);
 }
 
-VideoDevice::VideoDevice(uint64_t base_address, uint64_t size, VideoBackendType backendType, MMU& mmu) : IODevice(base_address, size), m_memoryRegion(nullptr), m_backendType(backendType), m_backend(nullptr), m_mmu(mmu), m_command(0), m_data(0), m_status(0), m_initialised(false), m_currentMode({ 0, 0, 0, 0, 0 }), m_currentModeIndex(0), m_modes({}) {
-    
+VideoDevice::VideoDevice(uint64_t base_address, uint64_t size, VideoBackendType backendType, MMU& mmu)
+    : IODevice(base_address, size), m_memoryRegion(nullptr), m_backendType(backendType), m_backend(nullptr), m_mmu(mmu), m_command(0), m_data(0), m_status(0), m_initialised(false), m_currentMode({0, 0, 0, 0, 0}), m_currentModeIndex(0), m_modes({}) {
 }
 
 VideoDevice::~VideoDevice() {
-
 }
 
 void VideoDevice::Init() {
-
 }
 
 uint8_t VideoDevice::ReadByte(uint64_t address) {
-    if (address == (uint64_t)VideoDevicePorts::DATA)
+    if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         return m_data & 0xFF;
-    else if (address == (uint64_t)VideoDevicePorts::STATUS)
+    if (address == static_cast<uint64_t>(VideoDevicePorts::STATUS))
         return m_status & 0xFF;
-    else
-        return 0;
+    return 0;
 }
 
 uint16_t VideoDevice::ReadWord(uint64_t address) {
-    if (address == (uint64_t)VideoDevicePorts::DATA)
+    if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         return m_data & 0xFFFF;
-    else if (address == (uint64_t)VideoDevicePorts::STATUS)
+    if (address == static_cast<uint64_t>(VideoDevicePorts::STATUS))
         return m_status & 0xFFFF;
-    else
-        return 0;
+    return 0;
 }
 
 uint32_t VideoDevice::ReadDWord(uint64_t address) {
-    if (address == (uint64_t)VideoDevicePorts::DATA)
-        return m_data & 0xFFFFFFFF;
-    else if (address == (uint64_t)VideoDevicePorts::STATUS)
-        return m_status & 0xFFFFFFFF;
+    if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
+        return m_data & 0xFFFF'FFFF;
+    else if (address == static_cast<uint64_t>(VideoDevicePorts::STATUS))
+        return m_status & 0xFFFF'FFFF;
     else
         return 0;
 }
 
 uint64_t VideoDevice::ReadQWord(uint64_t address) {
-    if (address == (uint64_t)VideoDevicePorts::DATA)
+    if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         return m_data;
-    else if (address == (uint64_t)VideoDevicePorts::STATUS)
+    else if (address == static_cast<uint64_t>(VideoDevicePorts::STATUS))
         return m_status;
     else
         return 0;
 }
 
 void VideoDevice::WriteByte(uint64_t address, uint8_t data) {
-    if (address == (uint64_t)VideoDevicePorts::COMMAND) {
+    if (address == static_cast<uint64_t>(VideoDevicePorts::COMMAND)) {
         m_command = data;
         HandleCommand();
-    }
-    else if (address == (uint64_t)VideoDevicePorts::DATA)
+    } else if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         m_data = data;
 }
 
 void VideoDevice::WriteWord(uint64_t address, uint16_t data) {
-    if (address == (uint64_t)VideoDevicePorts::COMMAND) {
+    if (address == static_cast<uint64_t>(VideoDevicePorts::COMMAND)) {
         m_command = data;
         HandleCommand();
-    }
-    else if (address == (uint64_t)VideoDevicePorts::DATA)
+    } else if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         m_data = data;
 }
 
 void VideoDevice::WriteDWord(uint64_t address, uint32_t data) {
-    if (address == (uint64_t)VideoDevicePorts::COMMAND) {
+    if (address == static_cast<uint64_t>(VideoDevicePorts::COMMAND)) {
         m_command = data;
         HandleCommand();
-    }
-    else if (address == (uint64_t)VideoDevicePorts::DATA)
+    } else if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         m_data = data;
 }
 
 void VideoDevice::WriteQWord(uint64_t address, uint64_t data) {
-    if (address == (uint64_t)VideoDevicePorts::COMMAND) {
+    if (address == static_cast<uint64_t>(VideoDevicePorts::COMMAND)) {
         m_command = data;
         HandleCommand();
-    }
-    else if (address == (uint64_t)VideoDevicePorts::DATA)
+    } else if (address == static_cast<uint64_t>(VideoDevicePorts::DATA))
         m_data = data;
 }
 
@@ -121,7 +113,7 @@ void VideoDevice::HandleMemoryOperation(bool write, uint64_t address, uint8_t* b
 }
 
 void VideoDevice::HandleCommand() {
-    switch ((VideoDeviceCommands)m_command) {
+    switch (static_cast<VideoDeviceCommands>(m_command)) {
     case VideoDeviceCommands::INITIALISE: {
         if (m_initialised)
             return;
@@ -134,10 +126,10 @@ void VideoDevice::HandleCommand() {
 
             // fill the modes list
             m_modes.push_back(NATIVE_VIDEO_MODE);
-            m_modes.push_back({ 640, 480, 60, 32, 640*4 });
-            m_modes.push_back({ 800, 600, 60, 32, 800*4 });
-            m_modes.push_back({1280, 720, 60, 32, 1280*4 });
-            m_modes.push_back({1920, 1080, 60, 32, 1920*4 });
+            m_modes.push_back({640, 480, 60, 32, 640 * 4});
+            m_modes.push_back({800, 600, 60, 32, 800 * 4});
+            m_modes.push_back({1'280, 720, 60, 32, 1'280 * 4});
+            m_modes.push_back({1'920, 1'080, 60, 32, 1'920 * 4});
 
             // set the current mode. no need to set the backend mode as it's already set
             m_currentMode = NATIVE_VIDEO_MODE;
@@ -162,9 +154,9 @@ void VideoDevice::HandleCommand() {
 
         VideoMode mode = NATIVE_VIDEO_MODE;
 
-        VideoCommand::GetScreenInfoResponse response = { (uint32_t)mode.width, (uint32_t)mode.height, (uint16_t)mode.refreshRate, (uint16_t)mode.bpp, (uint16_t)m_modes.size(), (uint16_t)m_currentModeIndex};
+        VideoCommand::GetScreenInfoResponse response = {static_cast<uint32_t>(mode.width), static_cast<uint32_t>(mode.height), static_cast<uint16_t>(mode.refreshRate), static_cast<uint16_t>(mode.bpp), static_cast<uint16_t>(m_modes.size()), static_cast<uint16_t>(m_currentModeIndex)};
 
-        uint64_t* ptr = (uint64_t*)&response;
+        uint64_t* ptr = reinterpret_cast<uint64_t*>(&response);
 
         m_mmu.write64(m_data, ptr[0]);
         m_mmu.write64(m_data + 8, ptr[1]);
@@ -180,16 +172,16 @@ void VideoDevice::HandleCommand() {
 
         VideoCommand::GetModeRequest request;
 
-        uint64_t* ptr = (uint64_t*)&request;
+        uint64_t* ptr = reinterpret_cast<uint64_t*>(&request);
 
         ptr[0] = m_mmu.read64(m_data);
         ptr[1] = m_mmu.read64(m_data + 8);
 
         VideoMode mode = m_modes[request.index];
 
-        VideoCommand::GetModeResponse response = { (uint32_t)mode.width, (uint32_t)mode.height, (uint16_t)mode.bpp, (uint32_t)mode.pitch, (uint16_t)mode.refreshRate };
+        VideoCommand::GetModeResponse response = {static_cast<uint32_t>(mode.width), static_cast<uint32_t>(mode.height), static_cast<uint16_t>(mode.bpp), static_cast<uint32_t>(mode.pitch), static_cast<uint16_t>(mode.refreshRate)};
 
-        ptr = (uint64_t*)&response;
+        ptr = reinterpret_cast<uint64_t*>(&response);
 
         m_mmu.write64(request.address, ptr[0]);
         m_mmu.write64(request.address + 8, ptr[1]);
@@ -205,7 +197,7 @@ void VideoDevice::HandleCommand() {
 
         VideoCommand::SetModeRequest request;
 
-        uint64_t* ptr = (uint64_t*)&request;
+        uint64_t* ptr = reinterpret_cast<uint64_t*>(&request);
 
         ptr[0] = m_mmu.read64(m_data);
         ptr[1] = m_mmu.read64(m_data + 8);
@@ -242,7 +234,7 @@ void VideoDevice::HandleCommand() {
 
         m_currentMode = mode;
         m_currentModeIndex = request.mode;
-        
+
         m_status = 0;
 
         break;

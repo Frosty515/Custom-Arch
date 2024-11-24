@@ -16,16 +16,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Operand.hpp"
-#include "Exceptions.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
 
-Operand::Operand() : m_register(nullptr), m_type(OperandType::Register), m_size(OperandSize::Unknown), m_offset(0), m_address(0), m_memoryOperation(nullptr) {
+#include "Exceptions.hpp"
 
+Operand::Operand()
+    : m_register(nullptr), m_type(OperandType::Register), m_size(OperandSize::Unknown), m_offset(0), m_address(0), m_complexData(nullptr), m_memoryOperation(nullptr) {
 }
 
-Operand::Operand(OperandSize size, OperandType type, ...) : m_register(nullptr), m_type(type), m_size(size), m_offset(0), m_address(0), m_memoryOperation(nullptr) {
+Operand::Operand(OperandSize size, OperandType type, ...)
+    : m_register(nullptr), m_type(type), m_size(size), m_offset(0), m_address(0), m_memoryOperation(nullptr) {
     va_list args;
     va_start(args, type);
     switch (type) {
@@ -48,7 +50,6 @@ Operand::Operand(OperandSize size, OperandType type, ...) : m_register(nullptr),
 }
 
 Operand::~Operand() {
-
 }
 
 Register* Operand::GetRegister() {
@@ -121,7 +122,7 @@ void Operand::PrintInfo() const {
             size = "Unknown";
             break;
         }
-        printf("Memory: %#016lx, size = %s", m_address, size);
+        printf("Memory: %#16lx, size = %s", m_address, size);
         break;
     }
     case OperandType::Complex: {
@@ -133,20 +134,19 @@ void Operand::PrintInfo() const {
             if (m_complexData->base.type == ComplexItem::Type::REGISTER) {
                 base_type = false;
                 base_reg = m_complexData->base.data.reg;
-            }
-            else {
+            } else {
                 switch (m_complexData->base.data.imm.size) {
                 case OperandSize::BYTE:
-                    base = *(uint8_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint8_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    base = *(uint16_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint16_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    base = *(uint32_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint32_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    base = *(uint64_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint64_t*>(m_complexData->base.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
@@ -162,20 +162,19 @@ void Operand::PrintInfo() const {
             if (m_complexData->index.type == ComplexItem::Type::REGISTER) {
                 index_type = false;
                 index_reg = m_complexData->index.data.reg;
-            }
-            else {
+            } else {
                 switch (m_complexData->index.data.imm.size) {
                 case OperandSize::BYTE:
-                    index = *(uint8_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint8_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    index = *(uint16_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint16_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    index = *(uint32_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint32_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    index = *(uint64_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint64_t*>(m_complexData->index.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
@@ -192,20 +191,19 @@ void Operand::PrintInfo() const {
             if (m_complexData->offset.type == ComplexItem::Type::REGISTER) {
                 offset_type = false;
                 offset_reg = m_complexData->offset.data.reg;
-            }
-            else {
+            } else {
                 switch (m_complexData->offset.data.imm.size) {
                 case OperandSize::BYTE:
-                    offset = *(uint8_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint8_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    offset = *(uint16_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint16_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    offset = *(uint32_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint32_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    offset = *(uint64_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint64_t*>(m_complexData->offset.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
@@ -234,19 +232,19 @@ void Operand::PrintInfo() const {
         printf("Complex: size = %s", size);
         if (base_present) {
             if (base_type)
-                printf(" Base=%#016lx", base);
+                printf(" Base=%#16lx", base);
             else
                 printf(" Base=%s", base_reg->GetName());
         }
         if (index_present) {
             if (index_type)
-                printf(" Index=%#016lx", index);
+                printf(" Index=%#16lx", index);
             else
                 printf(" Index=%s", index_reg->GetName());
         }
         if (offset_present) {
             if (offset_type)
-                printf(" Offset=%#016lx", offset);
+                printf(" Offset=%#16lx", offset);
             else
                 printf(" Offset=%c%s", offset_sign ? '+' : '-', offset_reg->GetName());
         }
@@ -263,7 +261,7 @@ uint64_t Operand::GetValue() const {
         return m_offset;
     case OperandType::Memory: {
         uint64_t value = 0;
-        m_memoryOperation(m_address, &value, 1 << (uint8_t)m_size, 1, false);
+        m_memoryOperation(m_address, &value, 1 << static_cast<uint8_t>(m_size), 1, false);
         return value;
     }
     case OperandType::Complex: {
@@ -274,16 +272,16 @@ uint64_t Operand::GetValue() const {
             else {
                 switch (m_complexData->base.data.imm.size) {
                 case OperandSize::BYTE:
-                    base = *(uint8_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint8_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    base = *(uint16_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint16_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    base = *(uint32_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint32_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    base = *(uint64_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint64_t*>(m_complexData->base.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
@@ -299,23 +297,22 @@ uint64_t Operand::GetValue() const {
             else {
                 switch (m_complexData->index.data.imm.size) {
                 case OperandSize::BYTE:
-                    index = *(uint8_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint8_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    index = *(uint16_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint16_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    index = *(uint32_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint32_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    index = *(uint64_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint64_t*>(m_complexData->index.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
                 }
             }
-        }
-        else if (m_complexData->base.present)
+        } else if (m_complexData->base.present)
             index = 1;
         uint64_t offset = 0;
         if (m_complexData->offset.present) {
@@ -323,20 +320,19 @@ uint64_t Operand::GetValue() const {
                 offset = m_complexData->offset.data.reg->GetValue();
                 if (!m_complexData->offset.sign)
                     offset = -offset;
-            }
-            else {
+            } else {
                 switch (m_complexData->offset.data.imm.size) {
                 case OperandSize::BYTE:
-                    offset = *(uint8_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint8_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    offset = *(uint16_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint16_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    offset = *(uint32_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint32_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    offset = *(uint64_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint64_t*>(m_complexData->offset.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
@@ -344,7 +340,7 @@ uint64_t Operand::GetValue() const {
             }
         }
         uint64_t value = 0;
-        m_memoryOperation(base * index + offset, &value, 1 << (uint8_t)m_size, 1, false);
+        m_memoryOperation(base * index + offset, &value, 1 << static_cast<uint8_t>(m_size), 1, false);
         return value;
     }
     default:
@@ -360,9 +356,8 @@ void Operand::SetValue(uint64_t value) {
         break;
     case OperandType::Immediate:
         g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
-        break;
     case OperandType::Memory:
-        m_memoryOperation(m_address, &value, 1 << (uint8_t)m_size, 1, true);
+        m_memoryOperation(m_address, &value, 1 << static_cast<uint8_t>(m_size), 1, true);
         break;
     case OperandType::Complex: {
         uint64_t base = 0;
@@ -372,16 +367,16 @@ void Operand::SetValue(uint64_t value) {
             else {
                 switch (m_complexData->base.data.imm.size) {
                 case OperandSize::BYTE:
-                    base = *(uint8_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint8_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    base = *(uint16_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint16_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    base = *(uint32_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint32_t*>(m_complexData->base.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    base = *(uint64_t*)m_complexData->base.data.imm.data;
+                    base = *static_cast<uint64_t*>(m_complexData->base.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
@@ -397,23 +392,22 @@ void Operand::SetValue(uint64_t value) {
             else {
                 switch (m_complexData->index.data.imm.size) {
                 case OperandSize::BYTE:
-                    index = *(uint8_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint8_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    index = *(uint16_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint16_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    index = *(uint32_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint32_t*>(m_complexData->index.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    index = *(uint64_t*)m_complexData->index.data.imm.data;
+                    index = *static_cast<uint64_t*>(m_complexData->index.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
                 }
             }
-        }
-        else if (m_complexData->base.present)
+        } else if (m_complexData->base.present)
             index = 1;
         uint64_t offset = 0;
         if (m_complexData->offset.present) {
@@ -421,27 +415,26 @@ void Operand::SetValue(uint64_t value) {
                 offset = m_complexData->offset.data.reg->GetValue();
                 if (!m_complexData->offset.sign)
                     offset = -offset;
-            }
-            else {
+            } else {
                 switch (m_complexData->offset.data.imm.size) {
                 case OperandSize::BYTE:
-                    offset = *(uint8_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint8_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::WORD:
-                    offset = *(uint16_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint16_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::DWORD:
-                    offset = *(uint32_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint32_t*>(m_complexData->offset.data.imm.data);
                     break;
                 case OperandSize::QWORD:
-                    offset = *(uint64_t*)m_complexData->offset.data.imm.data;
+                    offset = *static_cast<uint64_t*>(m_complexData->offset.data.imm.data);
                     break;
                 default:
                     g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
                 }
             }
         }
-        m_memoryOperation(base * index + offset, &value, 1 << (uint8_t)m_size, 1, true);
+        m_memoryOperation(base * index + offset, &value, 1 << static_cast<uint8_t>(m_size), 1, true);
         break;
     }
     }

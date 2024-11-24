@@ -25,14 +25,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MiB(x) (KiB(x) * 1024)
 #define GiB(x) (MiB(x) * 1024)
 
-#define DIV_ROUNDUP(VALUE, DIV) ((VALUE + (DIV - 1)) / DIV)
-#define DIV_ROUNDUP_ADDRESS(ADDR, DIV) ((void*)DIV_ROUNDUP(((unsigned long)ADDR), DIV) * DIV)
+#define DIV_ROUNDUP(VALUE, DIV) (((VALUE) + ((DIV) - 1)) / (DIV))
+#define DIV_ROUNDUP_ADDRESS(ADDR, DIV) ((void*)DIV_ROUNDUP(((unsigned long)(ADDR)), DIV))
 
-#define ALIGN_UP(VALUE, ALIGN) (DIV_ROUNDUP(VALUE, ALIGN) * ALIGN)
-#define ALIGN_UP_ADDRESS(ADDR, ALIGN) ((void*)ALIGN_UP(((unsigned long)ADDR), ALIGN))
+#define ALIGN_UP(VALUE, ALIGN) (DIV_ROUNDUP(VALUE, ALIGN) * (ALIGN))
+#define ALIGN_UP_BASE2(VALUE, ALIGN) (((VALUE) + ((ALIGN) - 1)) & ~((ALIGN) - 1))
 
-#define ALIGN_DOWN(VALUE, ALIGN) ((VALUE / ALIGN) * ALIGN)
+#define ALIGN_UP_ADDRESS(ADDR, ALIGN) ((void*)ALIGN_UP(((unsigned long)(ADDR)), ALIGN))
+#define ALIGN_UP_ADDRESS_BASE2(ADDR, ALIGN) ((void*)ALIGN_UP_BASE2(((unsigned long)(ADDR)), ALIGN))
+
+#define ALIGN_DOWN(VALUE, ALIGN) (((VALUE) / (ALIGN)) * (ALIGN))
+#define ALIGN_DOWN_BASE2(VALUE, ALIGN) ((VALUE) & ~((ALIGN) - 1))
+
 #define ALIGN_DOWN_ADDRESS(ADDR, ALIGN) ((void*)ALIGN_DOWN(((unsigned long)ADDR), ALIGN))
+#define ALIGN_DOWN_ADDRESS_BASE2(ADDR, ALIGN) ((void*)ALIGN_DOWN_BASE2(((unsigned long)ADDR), ALIGN))
 
 #define IN_BOUNDS(VALUE, MIN, MAX) ((VALUE >= MIN) && (VALUE <= MAX))
 

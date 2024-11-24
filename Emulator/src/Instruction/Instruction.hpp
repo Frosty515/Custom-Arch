@@ -18,9 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _INSTRUCTION_HPP
 #define _INSTRUCTION_HPP
 
-#include "Operand.hpp"
-
 #include <MMU/MMU.hpp>
+
+#include "Operand.hpp"
 
 /*
 ### Stack
@@ -62,7 +62,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 */
 
-
 enum class InstructionState {
     OPCODE,
     OPERAND_INFO,
@@ -70,8 +69,8 @@ enum class InstructionState {
     OPERAND1
 };
 
-void ExecuteInstruction(uint64_t IP, MMU& mmu, InstructionState& CurrentState, char const*& last_error);
-void ExecutionLoop(MMU& mmu, InstructionState& CurrentState, char const*& last_error);
+void ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, char const*& last_error);
+[[noreturn]] void ExecutionLoop(MMU* mmu, InstructionState& CurrentState, char const*& last_error);
 void CleanupCurrentInstruction();
 
 // return function pointer to instruction based on opcode, output argument count into argument_count if non-null.

@@ -16,11 +16,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "../Memory.hpp"
-#include "Emulator.hpp"
 
 #include <stdlib.h>
-
 #include <sys/mman.h>
+
+#include "Emulator.hpp"
 
 namespace OSSpecific {
 
@@ -46,8 +46,7 @@ namespace OSSpecific {
     }
 
     void* AllocateZeroedCOWMemory(size_t size) {
-        void* mem = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (mem == MAP_FAILED)
+        if (void* mem = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); mem == MAP_FAILED)
             Emulator::Crash("Failed to allocate COW memory");
         else
             return mem;

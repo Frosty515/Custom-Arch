@@ -16,33 +16,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "Emulator.hpp"
-#include "IO/devices/Video/VideoDevice.hpp"
 
-#include <Register.hpp>
-#include <Stack.hpp>
-#include <Interrupts.hpp>
+#include <stdint.h>
+#include <stdio.h>
+#include <util.h>
+
 #include <Exceptions.hpp>
-
 #include <Instruction/Instruction.hpp>
 #include <Instruction/Operand.hpp>
-
+#include <Interrupts.hpp>
+#include <IO/devices/ConsoleDevice.hpp>
+#include <IO/devices/Video/backends/SDL/SDLVideoBackend.hpp>
 #include <IO/IOBus.hpp>
 #include <IO/IOMemoryRegion.hpp>
-
-#include <IO/devices/ConsoleDevice.hpp>
-
-#include <IO/devices/Video/backends/SDL/SDLVideoBackend.hpp>
-
 #include <MMU/BIOSMemoryRegion.hpp>
 #include <MMU/MMU.hpp>
 #include <MMU/StandardMemoryRegion.hpp>
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <Register.hpp>
+#include <Stack.hpp>
 #include <thread>
 
-#include <util.h>
+#include "IO/devices/Video/VideoDevice.hpp"
+#include "MMU/VirtualMMU.hpp"
 
 namespace Emulator {
 
@@ -61,12 +56,14 @@ namespace Emulator {
 
     uint64_t g_NextIP;
 
-    MMU g_MMU;
-    
+    MMU g_PhysicalMMU;
+    VirtualMMU* g_VirtualMMU;
+    MMU* g_CurrentMMU = &g_PhysicalMMU;
+
     uint64_t g_RAMSize = 0;
 
     bool g_InstructionInProgress = false;
-    
+
     uint64_t g_CurrentInstruction = 0;
 
     InstructionState g_CurrentState = InstructionState::OPCODE;
@@ -78,6 +75,7 @@ namespace Emulator {
 
     bool g_isInProtectedMode = false;
     bool g_isInUserMode = false;
+    bool g_isPagingEnabled = false;
 
     LinkedList::LockableLinkedList<Event> g_events;
 
@@ -92,37 +90,36 @@ namespace Emulator {
             for (uint64_t i = 0; i < count; i++) {
                 switch (size) {
                 case 1:
-                    g_MMU.write8(address + i, ((uint8_t*)data)[i]);
+                    g_CurrentMMU->write8(address + i, static_cast<uint8_t*>(data)[i]);
                     break;
                 case 2:
-                    g_MMU.write16(address + i * 2, ((uint16_t*)data)[i]);
+                    g_CurrentMMU->write16(address + i * 2, static_cast<uint16_t*>(data)[i]);
                     break;
                 case 4:
-                    g_MMU.write32(address + i * 4, ((uint32_t*)data)[i]);
+                    g_CurrentMMU->write32(address + i * 4, static_cast<uint32_t*>(data)[i]);
                     break;
                 case 8:
-                    g_MMU.write64(address + i * 8, ((uint64_t*)data)[i]);
+                    g_CurrentMMU->write64(address + i * 8, static_cast<uint64_t*>(data)[i]);
                     break;
                 default:
                     printf("Invalid size: %lu\n", size);
                     abort();
                 }
             }
-        }
-        else {
+        } else {
             for (uint64_t i = 0; i < count; i++) {
                 switch (size) {
                 case 1:
-                    ((uint8_t*)data)[i] = g_MMU.read8(address + i);
+                    static_cast<uint8_t*>(data)[i] = g_CurrentMMU->read8(address + i);
                     break;
                 case 2:
-                    ((uint16_t*)data)[i] = g_MMU.read16(address + i * 2);
+                    static_cast<uint16_t*>(data)[i] = g_CurrentMMU->read16(address + i * 2);
                     break;
                 case 4:
-                    ((uint32_t*)data)[i] = g_MMU.read32(address + i * 4);
+                    static_cast<uint32_t*>(data)[i] = g_CurrentMMU->read32(address + i * 4);
                     break;
                 case 8:
-                    ((uint64_t*)data)[i] = g_MMU.read64(address + i * 8);
+                    static_cast<uint64_t*>(data)[i] = g_CurrentMMU->read64(address + i * 8);
                     break;
                 default:
                     printf("Invalid size: %lu\n", size);
@@ -143,14 +140,20 @@ namespace Emulator {
             for (uint64_t i = 0; i < g_events.getCount(); i++) {
                 Event* event = g_events.getHead();
                 switch (event->type) {
-                case EventType::SwitchToIP: {
+                case EventType::SwitchToIP:
                     SetCPU_IP(event->data);
                     assert(ExecutionThread != nullptr);
                     ExecutionThread->detach();
                     delete ExecutionThread;
-                    ExecutionThread = new std::thread(ExecutionLoop, std::ref(g_MMU), std::ref(g_CurrentState), std::ref(last_error));
+                    ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
                     break;
-                }
+                case EventType::NewMMU:
+                    g_InterruptHandler->ChangeMMU(g_CurrentMMU);
+                    assert(ExecutionThread != nullptr);
+                    ExecutionThread->detach();
+                    delete ExecutionThread;
+                    ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
+                    break;
                 default:
                     break;
                 }
@@ -162,19 +165,18 @@ namespace Emulator {
     }
 
     int Start(uint8_t* program, size_t size, const size_t RAMSize, bool has_display, VideoBackendType displayType) {
+        // TestVMMU(); // test the virtual MMU. won't return
 
         if (size > 0x1000'0000)
             return 1; // program too large
 
         g_RAMSize = RAMSize;
 
-
-
         // Configure the exception handler
         g_ExceptionHandler = new ExceptionHandler();
 
         // Configure the interrupt handler
-        g_InterruptHandler = new InterruptHandler(&g_MMU, g_ExceptionHandler);
+        g_InterruptHandler = new InterruptHandler(&g_PhysicalMMU, g_ExceptionHandler);
         g_ExceptionHandler->SetINTHandler(g_InterruptHandler);
 
         // Configure the IO bus
@@ -182,16 +184,16 @@ namespace Emulator {
 
         // Add an IOMemoryRegion
         g_IOMemoryRegion = new IOMemoryRegion(0xE000'0000, 0xF000'0000, g_IOBus);
-        g_MMU.AddMemoryRegion(g_IOMemoryRegion);
+        g_PhysicalMMU.AddMemoryRegion(g_IOMemoryRegion);
 
         // Add a BIOSMemoryRegion
         g_BIOSMemoryRegion = new BIOSMemoryRegion(0xF000'0000, 0x1'0000'0000, size);
-        g_MMU.AddMemoryRegion(g_BIOSMemoryRegion);
+        g_PhysicalMMU.AddMemoryRegion(g_BIOSMemoryRegion);
 
         // Split the RAM into two regions
-        g_MMU.AddMemoryRegion(new StandardMemoryRegion(0, MAX(RAMSize, 0xE000'0000)));
+        g_PhysicalMMU.AddMemoryRegion(new StandardMemoryRegion(0, MAX(RAMSize, 0xE000'0000)));
         if (RAMSize > 0xE000'0000)
-            g_MMU.AddMemoryRegion(new StandardMemoryRegion(0x1'0000'0000, RAMSize + 0x2000'0000));
+            g_PhysicalMMU.AddMemoryRegion(new StandardMemoryRegion(0x1'0000'0000, RAMSize + 0x2000'0000));
 
         // Configure the console device
         g_ConsoleDevice = new ConsoleDevice(0, 0xF);
@@ -199,15 +201,15 @@ namespace Emulator {
 
         // Configure the video device
         if (has_display) {
-            g_VideoDevice = new VideoDevice(16, 3, displayType, g_MMU);
+            g_VideoDevice = new VideoDevice(16, 3, displayType, g_PhysicalMMU);
             assert(g_IOBus->AddDevice(g_VideoDevice));
         }
 
         // Configure the stack
-        g_stack = new Stack(&g_MMU, 0, 0, 0);
+        g_stack = new Stack(&g_PhysicalMMU, 0, 0, 0);
 
         // Load program into RAM
-        g_MMU.WriteBuffer(0xF000'0000, program, size); // temp copy size for debugging
+        g_PhysicalMMU.WriteBuffer(0xF000'0000, program, size); // temp copy size for debugging
 
         g_IP = new Register(RegisterType::Instruction, 0, false, 0xF000'0000); // explicitly initialise instruction pointer to 0
         g_NextIP = 0;
@@ -233,7 +235,7 @@ namespace Emulator {
 
     void DumpRAM(FILE* fp) {
         fprintf(fp, "RAM:\n");
-        g_MMU.DumpMemory();
+        g_PhysicalMMU.DumpMemory();
         fprintf(fp, "\n");
     }
 
@@ -242,43 +244,43 @@ namespace Emulator {
         uint8_t index = ID & 0xF;
         Register* returnVal = nullptr;
         switch (type) {
-            case 0: // GPR
-                returnVal = g_GPR[index];
+        case 0: // GPR
+            returnVal = g_GPR[index];
+            break;
+        case 1: // stack
+            switch (index) {
+            case 0:
+                returnVal = g_SCP;
                 break;
-            case 1: // stack
-                switch (index) {
-                    case 0:
-                        returnVal = g_SCP;
-                        break;
-                    case 1:
-                        returnVal = g_SBP;
-                        break;
-                    case 2:
-                        returnVal = g_STP;
-                        break;
-                    default:
-                        break;
-                }
+            case 1:
+                returnVal = g_SBP;
                 break;
             case 2:
-                if (index < 8)
-                    returnVal = g_Control[index];
-                else {
-                    index -= 8;
-                    switch (index) {
-                        case 0: // STS
-                            returnVal = g_STS;
-                            break;
-                        case 1: // IP
-                            returnVal = g_IP;
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                returnVal = g_STP;
                 break;
             default:
                 break;
+            }
+            break;
+        case 2:
+            if (index < 8)
+                returnVal = g_Control[index];
+            else {
+                index -= 8;
+                switch (index) {
+                case 0: // STS
+                    returnVal = g_STS;
+                    break;
+                case 1: // IP
+                    returnVal = g_IP;
+                    break;
+                default:
+                    break;
+                }
+            }
+            break;
+        default:
+            break;
         }
         return returnVal;
     }
@@ -301,14 +303,12 @@ namespace Emulator {
         for (int i = 0; i < 16; i++)
             g_GPR[i] = new Register(RegisterType::GeneralPurpose, i, true);
 
-
         g_SCP = new Register(RegisterType::Stack, 0, true);
         g_SBP = new Register(RegisterType::Stack, 1, true);
         g_STP = new Register(RegisterType::Stack, 2, true);
 
         for (int i = 0; i < 8; i++)
             g_Control[i] = new Register(RegisterType::Control, i, true);
-
 
         g_STS = new Register(RegisterType::Status, 0, false);
 
@@ -321,7 +321,7 @@ namespace Emulator {
         g_InstructionInProgress = false;
 
         // begin instruction loop.
-        ExecutionThread = new std::thread(ExecutionLoop, std::ref(g_MMU), std::ref(g_CurrentState), std::ref(last_error));
+        ExecutionThread = new std::thread(ExecutionLoop, &g_PhysicalMMU, std::ref(g_CurrentState), std::ref(last_error));
 
         // join with the emulator thread
         EmulatorThread->join();
@@ -360,46 +360,71 @@ namespace Emulator {
         g_events.insert(new Event{EventType::SwitchToIP, value});
         g_events.unlock();
         EmulatorThread->join();
-        Emulator::Crash("Emulator thread exited unexpectedly"); // should be unreachable
+        Crash("Emulator thread exited unexpectedly"); // should be unreachable
     }
 
     void SyncRegisters() {
         if (g_SBP->IsDirty()) {
             g_stack->setStackBase(g_SBP->GetValue());
             g_SBP->SetDirty(false);
-        }
-        else {
+        } else {
             g_SBP->SetValue(g_stack->getStackBase());
             g_SBP->SetDirty(false);
         }
         if (g_STP->IsDirty()) {
             g_stack->setStackTop(g_STP->GetValue());
             g_STP->SetDirty(false);
-        }
-        else {
+        } else {
             g_STP->SetValue(g_stack->getStackTop());
             g_STP->SetDirty(false);
         }
         if (g_SCP->IsDirty()) {
             g_stack->setStackPointer(g_SCP->GetValue());
             g_SCP->SetDirty(false);
-        }
-        else {
+        } else {
             g_SCP->SetValue(g_stack->getStackPointer());
             g_SCP->SetDirty(false);
         }
         if (g_Control[0]->IsDirty()) {
-            g_isInProtectedMode = g_Control[0]->GetValue() & 1;
+            uint64_t control = g_Control[0]->GetValue();
+            g_isInProtectedMode = control & 1;
+            if (((control & 2) > 0) != g_isPagingEnabled) {
+                g_isPagingEnabled = (control & 2) > 0;
+                if (g_isPagingEnabled) {
+                    PageSize pageSize = static_cast<PageSize>((control & 0xC) >> 2);
+                    PageTableLevelCount pageTableLevelCount = static_cast<PageTableLevelCount>((control & 0x30) >> 4);
+                    uint64_t pageTableRoot = g_Control[3]->GetValue();
+                    g_Control[3]->SetDirty(false);
+                    g_VirtualMMU = new VirtualMMU(&g_PhysicalMMU, pageTableRoot, pageSize, pageTableLevelCount);
+                    g_CurrentMMU = g_VirtualMMU;
+                } else {
+                    g_CurrentMMU = &g_PhysicalMMU;
+                    delete g_VirtualMMU;
+                }
+                g_Control[0]->SetDirty(false);
+                g_IP->SetValue(g_NextIP);
+                g_events.lock();
+                g_events.insert(new Event{EventType::NewMMU, 0});
+                g_events.unlock();
+                EmulatorThread->join();
+                Crash("Emulator thread exited unexpectedly"); // should be unreachable
+            }
             g_Control[0]->SetDirty(false);
+        }
+        if (g_Control[3]->IsDirty() && g_isPagingEnabled) {
+            uint64_t pageTableRoot = g_Control[3]->GetValue();
+            g_Control[3]->SetDirty(false);
+            g_VirtualMMU->SetPageTableRoot(pageTableRoot);
         }
     }
 
-    __attribute__((noreturn)) void Crash(const char* message) {
+    [[noreturn]] void Crash(const char* message) {
         g_EmulatorRunning = false;
         printf("Crash: %s\n", message);
         DumpRegisters(stdout);
         // DumpRAM(stdout);
-        exit(0);
+        // exit(0);
+        while (true) {}
     }
 
     void HandleHalt() {
@@ -450,4 +475,4 @@ namespace Emulator {
         return fgetc(stdin);
     }
 
-}
+} // namespace Emulator

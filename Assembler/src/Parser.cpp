@@ -17,19 +17,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Parser.hpp"
 
-#include <cstdint>
-#include <cstdlib>
 #include <string.h>
 
+#include <cstdint>
+#include <cstdlib>
 #include <libarch/Instruction.hpp>
 #include <libarch/Operand.hpp>
 
-Parser::Parser() : m_base_address(0) {
-
+Parser::Parser()
+    : m_base_address(0) {
 }
 
 Parser::~Parser() {
-
 }
 
 #define EQUALS(str1, str2) (strlen(str2) == name_size && strncmp(str1, str2, name_size) == 0)
@@ -52,21 +51,20 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
     tokens.Enumerate([&](Token* token) -> void {
         if (token->type == TokenType::BLABEL) {
             Label* label = new Label;
-            label->name = (char*)(token->data);
+            label->name = static_cast<char*>(token->data);
             label->name_size = token->data_size - sizeof(char); // remove the colon at the end
             m_labels.insert(label);
             current_label = label;
 
             Block* block = new Block;
-            block->name = (char*)"";
+            block->name = const_cast<char*>("");
             block->name_size = 0;
             current_label->blocks.insert(block);
             current_block = block;
             in_instruction = false;
-        }
-        else if (token->type == TokenType::BSUBLABEL) {
+        } else if (token->type == TokenType::BSUBLABEL) {
             Block* block = new Block;
-            block->name = (char*)((uint64_t)(token->data) + sizeof(char)); // remove the dot at the start
+            block->name = reinterpret_cast<char*>(reinterpret_cast<uint64_t>(token->data) + sizeof(char)); // remove the dot at the start
             block->name_size = token->data_size - 2 * sizeof(char); // remove the dot at the start and colon at the end
             current_label->blocks.insert(block);
             current_block = block;
@@ -76,7 +74,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
 
     tokens.Enumerate([&](Token* token, uint64_t index) -> bool {
 #ifdef ASSEMBLER_DEBUG
-        printf("Token: \"%.*s\", index = %lu, type = %lu\n", (int)token->data_size, (char*)(token->data), index, (unsigned long int)token->type);
+        printf("Token: \"%.*s\", index = %lu, type = %lu\n", static_cast<int>(token->data_size), static_cast<char*>(token->data), index, static_cast<unsigned long int>(token->type));
 #else
         (void)index;
 #endif
@@ -85,40 +83,40 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             switch (token->type) {
             case TokenType::NUMBER:
                 if (base_address_parsed && !base_address_set) {
-                    m_base_address = strtoull((const char*)(token->data), nullptr, 0);
+                    m_base_address = strtoull(static_cast<const char*>(token->data), nullptr, 0);
                     base_address_set = true;
                     break;
                 }
-                switch (((RawData*)current_data->data)->data_size) {
+                switch (static_cast<RawData*>(current_data->data)->data_size) {
                 case 1: { // byte
                     uint8_t* data = new uint8_t;
-                    *data = strtol((const char*)(token->data), nullptr, 0) & 0xFF;
-                    ((RawData*)current_data->data)->data = data;
+                    *data = strtol(static_cast<const char*>(token->data), nullptr, 0) & 0xFF;
+                    static_cast<RawData*>(current_data->data)->data = data;
                     break;
                 }
                 case 2: { // word
                     uint16_t* data = new uint16_t;
-                    *data = strtol((const char*)(token->data), nullptr, 0) & 0xFFFF;
-                    ((RawData*)current_data->data)->data = data;
+                    *data = strtol(static_cast<const char*>(token->data), nullptr, 0) & 0xFFFF;
+                    static_cast<RawData*>(current_data->data)->data = data;
                     break;
                 }
                 case 4: { // dword
                     uint32_t* data = new uint32_t;
-                    *data = strtoul((const char*)(token->data), nullptr, 0) & 0xFFFFFFFF;
-                    ((RawData*)current_data->data)->data = data;
+                    *data = strtoul(static_cast<const char*>(token->data), nullptr, 0) & 0xFFFF'FFFF;
+                    static_cast<RawData*>(current_data->data)->data = data;
                     break;
                 }
                 case 8: { // qword
                     uint64_t* data = new uint64_t;
-                    *data = strtoull((const char*)(token->data), nullptr, 0);
-                    ((RawData*)current_data->data)->data = data;
+                    *data = strtoull(static_cast<const char*>(token->data), nullptr, 0);
+                    static_cast<RawData*>(current_data->data)->data = data;
                     break;
                 }
                 default:
                     error("Invalid data size for directive");
                     break;
                 }
-                ((RawData*)current_data->data)->type = RawDataType::RAW;
+                static_cast<RawData*>(current_data->data)->type = RawDataType::RAW;
                 break;
             case TokenType::LABEL: {
                 if (current_operand != nullptr)
@@ -126,7 +124,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 Label* label = nullptr;
                 // find the label
                 char* name = new char[token->data_size + 1];
-                strncpy(name, (const char*)(token->data), token->data_size);
+                strncpy(name, static_cast<const char*>(token->data), token->data_size);
                 name[token->data_size] = 0;
                 for (uint64_t j = 0; j < m_labels.getCount(); j++) {
                     Label* i_label = m_labels.get(j);
@@ -142,8 +140,8 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 delete[] name;
                 if (label == nullptr)
                     error("Invalid label");
-                ((RawData*)current_data->data)->type = RawDataType::LABEL;
-                ((RawData*)current_data->data)->data = label;
+                static_cast<RawData*>(current_data->data)->type = RawDataType::LABEL;
+                static_cast<RawData*>(current_data->data)->data = label;
                 break;
             }
             case TokenType::SUBLABEL: {
@@ -152,7 +150,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 Block* block = nullptr;
                 // find the block
                 char* name = new char[token->data_size + 1];
-                strncpy(name, (const char*)(token->data), token->data_size);
+                strncpy(name, static_cast<const char*>(token->data), token->data_size);
                 name[token->data_size] = 0;
                 if (name[0] == '.')
                     name = &(name[1]);
@@ -171,11 +169,11 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         break;
                     }
                 }
-                delete[] (char*)((uint64_t)name - sizeof(char));
+                delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
                 if (block == nullptr)
                     error("Invalid sublabel");
-                ((RawData*)current_data->data)->type = RawDataType::SUBLABEL;
-                ((RawData*)current_data->data)->data = block;
+                static_cast<RawData*>(current_data->data)->type = RawDataType::SUBLABEL;
+                static_cast<RawData*>(current_data->data)->data = block;
                 break;
             }
             default:
@@ -183,16 +181,14 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 break;
             }
             in_directive = false;
-        }
-        else if (token->type == TokenType::COMMA) {
+        } else if (token->type == TokenType::COMMA) {
             if (!in_instruction)
                 error("Comma (',') outside of instruction.");
             in_operand = true;
-        }
-        else if (token->type == TokenType::DIRECTIVE) {
+        } else if (token->type == TokenType::DIRECTIVE) {
             if (in_operand)
                 error("Directive inside operand");
-            if (strncmp((char*)(token->data), "org", token->data_size) == 0) {
+            if (strncmp(static_cast<char*>(token->data), "org", token->data_size) == 0) {
                 if (base_address_set)
                     error("Multiple base addresses");
                 base_address_set = false;
@@ -205,29 +201,28 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             RawData* raw_data = new RawData;
             data->data = raw_data;
             data->type = false;
-            if (strncmp((char*)(token->data), "db", token->data_size) == 0)
-                ((RawData*)data->data)->data_size = 1;
-            else if (strncmp((char*)(token->data), "dw", token->data_size) == 0)
-                ((RawData*)data->data)->data_size = 2;
-            else if (strncmp((char*)(token->data), "dd", token->data_size) == 0)
-                ((RawData*)data->data)->data_size = 4;
-            else if (strncmp((char*)(token->data), "dq", token->data_size) == 0)
-                ((RawData*)data->data)->data_size = 8;
+            if (strncmp(static_cast<char*>(token->data), "db", token->data_size) == 0)
+                static_cast<RawData*>(data->data)->data_size = 1;
+            else if (strncmp(static_cast<char*>(token->data), "dw", token->data_size) == 0)
+                static_cast<RawData*>(data->data)->data_size = 2;
+            else if (strncmp(static_cast<char*>(token->data), "dd", token->data_size) == 0)
+                static_cast<RawData*>(data->data)->data_size = 4;
+            else if (strncmp(static_cast<char*>(token->data), "dq", token->data_size) == 0)
+                static_cast<RawData*>(data->data)->data_size = 8;
             else
                 error("Invalid directive");
-            ((RawData*)data->data)->data = nullptr;
+            static_cast<RawData*>(data->data)->data = nullptr;
             current_block->data_blocks.insert(data);
             current_data = data;
             in_directive = true;
             in_instruction = false;
-        }
-        else if (token->type == TokenType::BLABEL) {
+        } else if (token->type == TokenType::BLABEL) {
             if (in_instruction && in_operand)
                 error("Label inside operand");
             // find the label
             Label* label = nullptr;
             char* name = new char[token->data_size + 1];
-            strncpy(name, (const char*)(token->data), token->data_size);
+            strncpy(name, static_cast<const char*>(token->data), token->data_size);
             name[token->data_size] = 0;
             for (uint64_t j = 0; j < m_labels.getCount(); j++) {
                 Label* i_label = m_labels.get(j);
@@ -247,14 +242,13 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             }
             current_block = current_label->blocks.get(0);
             in_instruction = false;
-        }
-        else if (token->type == TokenType::BSUBLABEL) {
+        } else if (token->type == TokenType::BSUBLABEL) {
             if (in_instruction && in_operand)
                 error("Sublabel inside operand");
             // find the block
             Block* block = nullptr;
             char* name = new char[token->data_size + 1];
-            strncpy(name, (const char*)(token->data), token->data_size);
+            strncpy(name, static_cast<const char*>(token->data), token->data_size);
             name[token->data_size] = 0;
             if (name[0] == '.')
                 name = &(name[1]);
@@ -273,32 +267,28 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     break;
                 }
             }
-            delete[] (char*)((uint64_t)name - sizeof(char));
+            delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
             current_block = block;
             if (current_block == nullptr)
                 error("Invalid sublabel");
             in_instruction = false;
-        }
-        else if (token->type == TokenType::INSTRUCTION) {
+        } else if (token->type == TokenType::INSTRUCTION) {
             if (in_operand)
                 error("Instruction inside operand");
             Data* data = new Data;
-            Instruction* instruction = new Instruction(GetOpcode((const char*)(token->data), token->data_size));
+            Instruction* instruction = new Instruction(GetOpcode(static_cast<const char*>(token->data), token->data_size));
             data->type = true;
             data->data = instruction;
             current_block->data_blocks.insert(data);
             current_data = data;
-            uint64_t name_size = token->data_size;
-            if (EQUALS((const char*)(token->data), "ret") || EQUALS((const char*)(token->data), "nop") || EQUALS((const char*)(token->data), "hlt") || EQUALS((const char*)(token->data), "pusha") || EQUALS((const char*)(token->data), "popa") || EQUALS((const char*)(token->data), "iret") || EQUALS((const char*)(token->data), "syscall") || EQUALS((const char*)(token->data), "sysret")) {
+            if (uint64_t name_size = token->data_size; EQUALS(static_cast<const char*>(token->data), "ret") || EQUALS(static_cast<const char*>(token->data), "nop") || EQUALS(static_cast<const char*>(token->data), "hlt") || EQUALS(static_cast<const char*>(token->data), "pusha") || EQUALS(static_cast<const char*>(token->data), "popa") || EQUALS(static_cast<const char*>(token->data), "iret") || EQUALS(static_cast<const char*>(token->data), "syscall") || EQUALS(static_cast<const char*>(token->data), "sysret")) {
                 in_instruction = false;
                 in_operand = false;
-            }
-            else {
+            } else {
                 in_instruction = true;
                 in_operand = true;
             }
-        }
-        else if (in_instruction) {
+        } else if (in_instruction) {
             if (in_operand) {
                 if (token->type == TokenType::SIZE) {
                     if (current_operand != nullptr)
@@ -306,83 +296,73 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     Operand* operand = new Operand;
                     operand->complete = false;
                     operand->type = OperandType::UNKNOWN;
-                    ((Instruction*)current_data->data)->operands.insert(operand);
+                    static_cast<Instruction*>(current_data->data)->operands.insert(operand);
                     current_operand = operand;
-                    size_t name_size = token->data_size;
-                    if (EQUALS((const char*)(token->data), "byte"))
+                    if (size_t name_size = token->data_size; EQUALS(static_cast<const char*>(token->data), "byte"))
                         current_operand->size = OperandSize::BYTE;
-                    else if (EQUALS((const char*)(token->data), "word"))
+                    else if (EQUALS(static_cast<const char*>(token->data), "word"))
                         current_operand->size = OperandSize::WORD;
-                    else if (EQUALS((const char*)(token->data), "dword"))
+                    else if (EQUALS(static_cast<const char*>(token->data), "dword"))
                         current_operand->size = OperandSize::DWORD;
-                    else if (EQUALS((const char*)(token->data), "qword"))
+                    else if (EQUALS(static_cast<const char*>(token->data), "qword"))
                         current_operand->size = OperandSize::QWORD;
                     else
                         error("Invalid size");
-                }
-                else if (token->type == TokenType::LBRACKET) {
+                } else if (token->type == TokenType::LBRACKET) {
                     if (current_operand == nullptr) {
                         Operand* operand = new Operand;
                         operand->size = OperandSize::QWORD;
                         operand->complete = false;
-                        ((Instruction*)current_data->data)->operands.insert(operand);
+                        static_cast<Instruction*>(current_data->data)->operands.insert(operand);
                         current_operand = operand;
                     }
                     current_operand->type = OperandType::POTENTIAL_MEMORY;
-                }
-                else if (token->type == TokenType::RBRACKET) {
+                } else if (token->type == TokenType::RBRACKET) {
                     if (current_operand == nullptr || !(current_operand->type == OperandType::COMPLEX || current_operand->type == OperandType::MEMORY))
                         error("Invalid operand");
                     if (!(current_operand->complete) && current_operand->type != OperandType::COMPLEX)
                         error("Invalid operand");
                     current_operand = nullptr;
                     in_operand = false;
-                }
-                else if (token->type == TokenType::NUMBER) {
+                } else if (token->type == TokenType::NUMBER) {
                     if (current_operand == nullptr) { // must be immediate
                         Operand* operand = new Operand;
                         operand->complete = false;
-                        ((Instruction*)current_data->data)->operands.insert(operand);
+                        static_cast<Instruction*>(current_data->data)->operands.insert(operand);
                         current_operand = operand;
                         current_operand->type = OperandType::IMMEDIATE;
-                        long imm = (long)strtoull((const char*)(token->data), nullptr, 0);
-                        if (imm >= INT8_MIN && imm <= INT8_MAX) {
+                        if (long imm = static_cast<long>(strtoull(static_cast<const char*>(token->data), nullptr, 0)); imm >= INT8_MIN && imm <= INT8_MAX) {
                             current_operand->size = OperandSize::BYTE;
                             uint8_t* imm8 = new uint8_t;
-                            *imm8 = (uint64_t)imm & 0xFF;
+                            *imm8 = static_cast<uint64_t>(imm) & 0xFF;
                             current_operand->data = imm8;
-                        }
-                        else if (imm >= INT16_MIN && imm <= INT16_MAX) {
+                        } else if (imm >= INT16_MIN && imm <= INT16_MAX) {
                             current_operand->size = OperandSize::WORD;
                             uint16_t* imm16 = new uint16_t;
-                            *imm16 = (uint64_t)imm & 0xFFFF;
+                            *imm16 = static_cast<uint64_t>(imm) & 0xFFFF;
                             current_operand->data = imm16;
-                        }
-                        else if (imm >= INT32_MIN && imm <= INT32_MAX) {
+                        } else if (imm >= INT32_MIN && imm <= INT32_MAX) {
                             current_operand->size = OperandSize::DWORD;
                             uint32_t* imm32 = new uint32_t;
-                            *imm32 = (uint64_t)imm & 0xFFFFFFFF;
+                            *imm32 = static_cast<uint64_t>(imm) & 0xFFFF'FFFF;
                             current_operand->data = imm32;
-                        }
-                        else {
+                        } else {
                             current_operand->size = OperandSize::QWORD;
                             uint64_t* imm64 = new uint64_t;
-                            *imm64 = (uint64_t)imm;
+                            *imm64 = static_cast<uint64_t>(imm);
                             current_operand->data = imm64;
                         }
                         current_operand->complete = true;
                         current_operand = nullptr;
                         in_operand = false;
-                    }
-                    else if (current_operand->type == OperandType::POTENTIAL_MEMORY) { // must be memory
+                    } else if (current_operand->type == OperandType::POTENTIAL_MEMORY) { // must be memory
                         // current_operand->size = OperandSize::QWORD;
                         uint64_t* addr = new uint64_t;
-                        *addr = (uint64_t)strtoull((const char*)(token->data), nullptr, 0);
+                        *addr = static_cast<uint64_t>(strtoull(static_cast<const char*>(token->data), nullptr, 0));
                         current_operand->data = addr;
                         current_operand->type = OperandType::MEMORY;
                         current_operand->complete = true;
-                    }
-                    else if (current_operand->type == OperandType::COMPLEX || current_operand->type == OperandType::MEMORY) { // only other option is complex
+                    } else if (current_operand->type == OperandType::COMPLEX || current_operand->type == OperandType::MEMORY) { // only other option is complex
                         if (current_operand->type == OperandType::MEMORY) {
                             current_operand->type = OperandType::COMPLEX;
                             ComplexData* data = new ComplexData;
@@ -395,33 +375,30 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             data->stage = ComplexData::Stage::BASE;
                             current_operand->data = data;
                         }
-                        ComplexData* data = (ComplexData*)(current_operand->data);
-                        long imm = strtoll((const char*)(token->data), nullptr, 0);
+                        ComplexData* data = static_cast<ComplexData*>(current_operand->data);
+                        long imm = strtoll(static_cast<const char*>(token->data), nullptr, 0);
                         void* i_data;
                         OperandSize data_size;
                         bool negative = imm < 0;
                         if (imm >= INT8_MIN && imm <= INT8_MAX) {
                             data_size = OperandSize::BYTE;
                             uint8_t* imm8 = new uint8_t;
-                            *imm8 = (uint64_t)imm & 0xFF;
+                            *imm8 = static_cast<uint64_t>(imm) & 0xFF;
                             i_data = imm8;
-                        }
-                        else if (imm >= INT16_MIN && imm <= INT16_MAX) {
+                        } else if (imm >= INT16_MIN && imm <= INT16_MAX) {
                             data_size = OperandSize::WORD;
                             uint16_t* imm16 = new uint16_t;
-                            *imm16 = (uint64_t)imm & 0xFFFF;
+                            *imm16 = static_cast<uint64_t>(imm) & 0xFFFF;
                             i_data = imm16;
-                        }
-                        else if (imm >= INT32_MIN && imm <= INT32_MAX) {
+                        } else if (imm >= INT32_MIN && imm <= INT32_MAX) {
                             data_size = OperandSize::DWORD;
                             uint32_t* imm32 = new uint32_t;
-                            *imm32 = (uint64_t)imm & 0xFFFFFFFF;
+                            *imm32 = static_cast<uint64_t>(imm) & 0xFFFF'FFFF;
                             i_data = imm32;
-                        }
-                        else {
+                        } else {
                             data_size = OperandSize::QWORD;
                             uint64_t* imm64 = new uint64_t;
-                            *imm64 = (uint64_t)imm;
+                            *imm64 = static_cast<uint64_t>(imm);
                             i_data = imm64;
                         }
                         switch (data->stage) {
@@ -434,8 +411,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                                 data->offset.data.imm.data = i_data;
                                 data->offset.type = ComplexItem::Type::IMMEDIATE;
                                 current_operand->complete = true;
-                            }
-                            else {
+                            } else {
                                 data->base.present = true;
                                 data->base.data.imm.size = data_size;
                                 data->base.data.imm.data = i_data;
@@ -452,8 +428,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                                 data->offset.data.imm.data = i_data;
                                 data->offset.type = ComplexItem::Type::IMMEDIATE;
                                 current_operand->complete = true;
-                            }
-                            else {
+                            } else {
                                 data->index.present = true;
                                 data->index.data.imm.size = data_size;
                                 data->index.data.imm.data = i_data;
@@ -474,31 +449,28 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         default:
                             error("Invalid immediate location");
                         }
-                    }
-                    else
+                    } else
                         error("Invalid immediate location");
-                }
-                else if (token->type == TokenType::REGISTER) {
+                } else if (token->type == TokenType::REGISTER) {
                     if (current_operand == nullptr || current_operand->type == OperandType::UNKNOWN) { // must be just a register
                         if (current_operand == nullptr) {
                             Operand* operand = new Operand;
                             operand->complete = false;
                             operand->size = OperandSize::QWORD;
-                            ((Instruction*)current_data->data)->operands.insert(operand);
+                            static_cast<Instruction*>(current_data->data)->operands.insert(operand);
                             current_operand = operand;
                         }
                         current_operand->type = OperandType::REGISTER;
-                        Register* reg = new Register(GetRegister((const char*)(token->data), token->data_size));
+                        Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                         current_operand->data = reg;
                         current_operand->complete = true;
                         current_operand = nullptr;
                         in_operand = false;
-                    }
-                    else if (current_operand->type == OperandType::POTENTIAL_MEMORY) {
+                    } else if (current_operand->type == OperandType::POTENTIAL_MEMORY) {
                         current_operand->type = OperandType::COMPLEX;
                         ComplexData* data = new ComplexData;
                         data->base.present = true;
-                        Register* reg = new Register(GetRegister((const char*)(token->data), token->data_size));
+                        Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                         data->base.data.reg = reg;
                         data->base.type = ComplexItem::Type::REGISTER;
                         data->index.present = false;
@@ -509,15 +481,13 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         data->offset.type = ComplexItem::Type::UNKNOWN;
                         data->stage = ComplexData::Stage::BASE;
                         current_operand->data = data;
-                    }
-                    else if (current_operand->type == OperandType::COMPLEX) {
-                        ComplexData* data = (ComplexData*)(current_operand->data);
-                        switch (data->stage) {
+                    } else if (current_operand->type == OperandType::COMPLEX) {
+                        switch (ComplexData* data = static_cast<ComplexData*>(current_operand->data); data->stage) {
                         case ComplexData::Stage::BASE: {
                             if (data->base.present)
                                 error("Invalid Register location");
                             data->base.present = true;
-                            Register* reg = new Register(GetRegister((const char*)(token->data), token->data_size));
+                            Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                             data->base.data.reg = reg;
                             data->base.type = ComplexItem::Type::REGISTER;
                             break;
@@ -526,7 +496,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             if (data->index.present)
                                 error("Invalid Register location");
                             data->index.present = true;
-                            Register* reg = new Register(GetRegister((const char*)(token->data), token->data_size));
+                            Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                             data->index.data.reg = reg;
                             data->index.type = ComplexItem::Type::REGISTER;
                             break;
@@ -535,24 +505,22 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             if (data->offset.present)
                                 error("Invalid Register location");
                             data->offset.present = true;
-                            Register* reg = new Register(GetRegister((const char*)(token->data), token->data_size));
+                            Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                             data->offset.data.reg = reg;
                             data->offset.type = ComplexItem::Type::REGISTER;
                             current_operand->complete = true;
                             break;
                         }
                         }
-                    }
-                    else
+                    } else
                         error("Invalid Register location");
-                }
-                else if (token->type == TokenType::LABEL) {
+                } else if (token->type == TokenType::LABEL) {
                     if (current_operand != nullptr && !(current_operand->type == OperandType::POTENTIAL_MEMORY || current_operand->type == OperandType::COMPLEX))
                         error("Invalid label location");
                     Label* label = nullptr;
                     // find the label
                     char* name = new char[token->data_size + 1];
-                    strncpy(name, (const char*)(token->data), token->data_size);
+                    strncpy(name, static_cast<const char*>(token->data), token->data_size);
                     name[token->data_size] = 0;
                     for (uint64_t j = 0; j < m_labels.getCount(); j++) {
                         Label* i_label = m_labels.get(j);
@@ -574,11 +542,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         operand->type = OperandType::LABEL;
                         operand->data = label;
                         operand->size = OperandSize::QWORD;
-                        ((Instruction*)current_data->data)->operands.insert(operand);
+                        static_cast<Instruction*>(current_data->data)->operands.insert(operand);
                         current_operand = nullptr;
                         in_operand = false;
-                    }
-                    else if (current_operand->type == OperandType::POTENTIAL_MEMORY || current_operand->type == OperandType::COMPLEX) {
+                    } else if (current_operand->type == OperandType::POTENTIAL_MEMORY || current_operand->type == OperandType::COMPLEX) {
                         if (current_operand->type == OperandType::POTENTIAL_MEMORY) {
                             current_operand->type = OperandType::COMPLEX;
                             ComplexData* data = new ComplexData;
@@ -589,10 +556,8 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             data->offset.present = false;
                             data->stage = ComplexData::Stage::BASE;
                             current_operand->data = data;
-                        }
-                        else {
-                            ComplexData* data = (ComplexData*)(current_operand->data);
-                            switch (data->stage) {
+                        } else {
+                            switch (ComplexData* data = static_cast<ComplexData*>(current_operand->data); data->stage) {
                             case ComplexData::Stage::BASE: {
                                 if (data->base.present)
                                     error("Invalid label location");
@@ -621,14 +586,13 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             }
                         }
                     }
-                }
-                else if (token->type == TokenType::SUBLABEL) {
+                } else if (token->type == TokenType::SUBLABEL) {
                     if (current_operand != nullptr && !(current_operand->type == OperandType::POTENTIAL_MEMORY || current_operand->type == OperandType::COMPLEX))
                         error("Invalid sublabel location");
                     Block* block = nullptr;
                     // find the block
                     char* name = new char[token->data_size + 1];
-                    strncpy(name, (const char*)(token->data), token->data_size);
+                    strncpy(name, static_cast<const char*>(token->data), token->data_size);
                     name[token->data_size] = 0;
                     if (name[0] == '.')
                         name = &(name[1]);
@@ -647,7 +611,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             break;
                         }
                     }
-                    delete[] (char*)((uint64_t)name - sizeof(char));
+                    delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
                     if (block == nullptr)
                         error("Invalid sublabel");
                     if (current_operand == nullptr) {
@@ -656,11 +620,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         operand->type = OperandType::SUBLABEL;
                         operand->data = block;
                         operand->size = OperandSize::QWORD;
-                        ((Instruction*)current_data->data)->operands.insert(operand);
+                        static_cast<Instruction*>(current_data->data)->operands.insert(operand);
                         current_operand = nullptr;
                         in_operand = false;
-                    }
-                    else if (current_operand->type == OperandType::POTENTIAL_MEMORY) {
+                    } else if (current_operand->type == OperandType::POTENTIAL_MEMORY) {
                         current_operand->type = OperandType::COMPLEX;
                         ComplexData* data = new ComplexData;
                         data->base.present = true;
@@ -670,10 +633,8 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         data->offset.present = false;
                         data->stage = ComplexData::Stage::BASE;
                         current_operand->data = data;
-                    }
-                    else if (current_operand->type == OperandType::COMPLEX) {
-                        ComplexData* data = (ComplexData*)(current_operand->data);
-                        switch (data->stage) {
+                    } else if (current_operand->type == OperandType::COMPLEX) {
+                        switch (ComplexData* data = static_cast<ComplexData*>(current_operand->data); data->stage) {
                         case ComplexData::Stage::BASE: {
                             if (data->base.present)
                                 error("Invalid sublabel location");
@@ -701,38 +662,34 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         }
                     }
-                }
-                else if (token->type == TokenType::OPERATOR) {
+                } else if (token->type == TokenType::OPERATOR) {
                     if (current_operand == nullptr || (current_operand->type != OperandType::COMPLEX && current_operand->type != OperandType::MEMORY))
                         error("Invalid operator location");
                     if (current_operand->type == OperandType::MEMORY) {
                         current_operand->type = OperandType::COMPLEX;
-                        int64_t* addr = (int64_t*)current_operand->data;
+                        int64_t* addr = static_cast<int64_t*>(current_operand->data);
                         int64_t imm = *addr;
                         ComplexData* data = new ComplexData;
                         data->base.present = true;
                         if (imm >= INT8_MIN && imm <= INT8_MAX) {
                             data->base.data.imm.size = OperandSize::BYTE;
                             uint8_t* imm8 = new uint8_t;
-                            *imm8 = (uint64_t)imm & 0xFF;
+                            *imm8 = static_cast<uint64_t>(imm) & 0xFF;
                             data->base.data.imm.data = imm8;
-                        }
-                        else if (imm >= INT16_MIN && imm <= INT16_MAX) {
+                        } else if (imm >= INT16_MIN && imm <= INT16_MAX) {
                             data->base.data.imm.size = OperandSize::WORD;
                             uint16_t* imm16 = new uint16_t;
-                            *imm16 = (uint64_t)imm & 0xFFFF;
+                            *imm16 = static_cast<uint64_t>(imm) & 0xFFFF;
                             data->base.data.imm.data = imm16;
-                        }
-                        else if (imm >= INT32_MIN && imm <= INT32_MAX) {
+                        } else if (imm >= INT32_MIN && imm <= INT32_MAX) {
                             data->base.data.imm.size = OperandSize::DWORD;
                             uint32_t* imm32 = new uint32_t;
-                            *imm32 = (uint64_t)imm & 0xFFFFFFFF;
+                            *imm32 = static_cast<uint64_t>(imm) & 0xFFFF'FFFF;
                             data->base.data.imm.data = imm32;
-                        }
-                        else {
+                        } else {
                             data->base.data.imm.size = OperandSize::QWORD;
                             uint64_t* imm64 = new uint64_t;
-                            *imm64 = (uint64_t)imm;
+                            *imm64 = static_cast<uint64_t>(imm);
                             data->base.data.imm.data = imm64;
                         }
                         delete addr;
@@ -742,38 +699,32 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         data->stage = ComplexData::Stage::BASE;
                         current_operand->data = data;
                     }
-                    ComplexData* data = (ComplexData*)(current_operand->data);
-                    size_t name_size = token->data_size;
-                    if (EQUALS((const char*)(token->data), "+")) {
+                    ComplexData* data = static_cast<ComplexData*>(current_operand->data);
+                    if (size_t name_size = token->data_size; EQUALS(static_cast<const char*>(token->data), "+")) {
                         if (data->stage == ComplexData::Stage::BASE)
                             data->index.present = false;
                         else if (data->stage != ComplexData::Stage::INDEX)
                             error("Invalid operator location");
                         data->stage = ComplexData::Stage::OFFSET;
                         data->offset.sign = true;
-                    }
-                    else if (EQUALS((const char*)(token->data), "-")) {
+                    } else if (EQUALS(static_cast<const char*>(token->data), "-")) {
                         if (data->stage == ComplexData::Stage::BASE)
                             data->index.present = false;
                         else if (data->stage != ComplexData::Stage::INDEX)
                             error("Invalid operator location");
                         data->stage = ComplexData::Stage::OFFSET;
                         data->offset.sign = false;
-                    }
-                    else if (EQUALS((const char*)(token->data), "*")) {
+                    } else if (EQUALS(static_cast<const char*>(token->data), "*")) {
                         if (data->stage != ComplexData::Stage::BASE) {
                             error("Invalid operator location");
                         }
                         data->stage = ComplexData::Stage::INDEX;
-                    }
-                    else
+                    } else
                         error("Invalid operator");
-                }
-                else
+                } else
                     error("Invalid Token0");
             }
-        }
-        else {
+        } else {
             error("Invalid Token1");
         }
         return true;
@@ -792,144 +743,134 @@ void Parser::Clear() {
                 if (data == nullptr)
                     return false;
                 if (data->type) { // instruction
-                    Instruction* ins = (Instruction*)(data->data);
+                    Instruction* ins = static_cast<Instruction*>(data->data);
                     if (ins == nullptr)
                         return false;
                     ins->operands.EnumerateReverse([&](Operand* operand) -> bool {
                         if (operand == nullptr)
                             return false;
                         if (operand->type == OperandType::COMPLEX) {
-                            ComplexData* data = (ComplexData*)(operand->data);
-                            if (data == nullptr)
+                            ComplexData* complex_data = static_cast<ComplexData*>(operand->data);
+                            if (complex_data == nullptr)
                                 return false;
-                            if (data->base.present) {
-                                if (data->base.type == ComplexItem::Type::IMMEDIATE) {
-                                    switch (data->base.data.imm.size) {
+                            if (complex_data->base.present) {
+                                if (complex_data->base.type == ComplexItem::Type::IMMEDIATE) {
+                                    switch (complex_data->base.data.imm.size) {
                                     case OperandSize::BYTE:
-                                        delete (uint8_t*)(data->base.data.imm.data);
+                                        delete static_cast<uint8_t*>(complex_data->base.data.imm.data);
                                         break;
                                     case OperandSize::WORD:
-                                        delete (uint16_t*)(data->base.data.imm.data);
+                                        delete static_cast<uint16_t*>(complex_data->base.data.imm.data);
                                         break;
                                     case OperandSize::DWORD:
-                                        delete (uint32_t*)(data->base.data.imm.data);
+                                        delete static_cast<uint32_t*>(complex_data->base.data.imm.data);
                                         break;
                                     case OperandSize::QWORD:
-                                        delete (uint64_t*)(data->base.data.imm.data);
+                                        delete static_cast<uint64_t*>(complex_data->base.data.imm.data);
                                         break;
                                     }
-                                }
-                                else if (data->base.type == ComplexItem::Type::REGISTER) {
-                                    delete data->base.data.reg;
-                                }
-                                else if (data->base.type == ComplexItem::Type::LABEL) {
+                                } else if (complex_data->base.type == ComplexItem::Type::REGISTER) {
+                                    delete complex_data->base.data.reg;
+                                } else if (complex_data->base.type == ComplexItem::Type::LABEL) {
                                     // do nothing
-                                }
-                                else if (data->base.type == ComplexItem::Type::SUBLABEL) {
+                                } else if (complex_data->base.type == ComplexItem::Type::SUBLABEL) {
                                     // do nothing
                                 }
                             }
-                            if (data->index.present) {
-                                if (data->index.type == ComplexItem::Type::IMMEDIATE) {
-                                    switch (data->index.data.imm.size) {
+                            if (complex_data->index.present) {
+                                if (complex_data->index.type == ComplexItem::Type::IMMEDIATE) {
+                                    switch (complex_data->index.data.imm.size) {
                                     case OperandSize::BYTE:
-                                        delete (uint8_t*)(data->index.data.imm.data);
+                                        delete static_cast<uint8_t*>(complex_data->index.data.imm.data);
                                         break;
                                     case OperandSize::WORD:
-                                        delete (uint16_t*)(data->index.data.imm.data);
+                                        delete static_cast<uint16_t*>(complex_data->index.data.imm.data);
                                         break;
                                     case OperandSize::DWORD:
-                                        delete (uint32_t*)(data->index.data.imm.data);
+                                        delete static_cast<uint32_t*>(complex_data->index.data.imm.data);
                                         break;
                                     case OperandSize::QWORD:
-                                        delete (uint64_t*)(data->index.data.imm.data);
+                                        delete static_cast<uint64_t*>(complex_data->index.data.imm.data);
                                         break;
                                     }
-                                }
-                                else if (data->index.type == ComplexItem::Type::REGISTER) {
-                                    delete data->index.data.reg;
-                                }
-                                else if (data->index.type == ComplexItem::Type::LABEL) {
+                                } else if (complex_data->index.type == ComplexItem::Type::REGISTER) {
+                                    delete complex_data->index.data.reg;
+                                } else if (complex_data->index.type == ComplexItem::Type::LABEL) {
                                     // do nothing
-                                }
-                                else if (data->index.type == ComplexItem::Type::SUBLABEL) {
+                                } else if (complex_data->index.type == ComplexItem::Type::SUBLABEL) {
                                     // do nothing
                                 }
                             }
-                            if (data->offset.present) {
-                                if (data->offset.type == ComplexItem::Type::IMMEDIATE) {
-                                    switch (data->offset.data.imm.size) {
+                            if (complex_data->offset.present) {
+                                if (complex_data->offset.type == ComplexItem::Type::IMMEDIATE) {
+                                    switch (complex_data->offset.data.imm.size) {
                                     case OperandSize::BYTE:
-                                        delete (uint8_t*)(data->offset.data.imm.data);
+                                        delete static_cast<uint8_t*>(complex_data->offset.data.imm.data);
                                         break;
                                     case OperandSize::WORD:
-                                        delete (uint16_t*)(data->offset.data.imm.data);
+                                        delete static_cast<uint16_t*>(complex_data->offset.data.imm.data);
                                         break;
                                     case OperandSize::DWORD:
-                                        delete (uint32_t*)(data->offset.data.imm.data);
+                                        delete static_cast<uint32_t*>(complex_data->offset.data.imm.data);
                                         break;
                                     case OperandSize::QWORD:
-                                        delete (uint64_t*)(data->offset.data.imm.data);
+                                        delete static_cast<uint64_t*>(complex_data->offset.data.imm.data);
                                         break;
                                     }
-                                }
-                                else if (data->offset.type == ComplexItem::Type::REGISTER) {
-                                    delete data->offset.data.reg;
-                                }
-                                else if (data->offset.type == ComplexItem::Type::LABEL) {
+                                } else if (complex_data->offset.type == ComplexItem::Type::REGISTER) {
+                                    delete complex_data->offset.data.reg;
+                                } else if (complex_data->offset.type == ComplexItem::Type::LABEL) {
                                     // do nothing
-                                }
-                                else if (data->offset.type == ComplexItem::Type::SUBLABEL) {
+                                } else if (complex_data->offset.type == ComplexItem::Type::SUBLABEL) {
                                     // do nothing
                                 }
                             }
-                            delete data;
-                        }
-                        else if (operand->type == OperandType::MEMORY) {
-                            delete (uint64_t*)(operand->data);
-                        }
-                        else if (operand->type == OperandType::IMMEDIATE) {
+                            delete complex_data;
+                        } else if (operand->type == OperandType::MEMORY) {
+                            delete static_cast<uint64_t*>(operand->data);
+                        } else if (operand->type == OperandType::IMMEDIATE) {
                             switch (operand->size) {
                             case OperandSize::BYTE:
-                                delete (uint8_t*)(operand->data);
+                                delete static_cast<uint8_t*>(operand->data);
                                 break;
                             case OperandSize::WORD:
-                                delete (uint16_t*)(operand->data);
+                                delete static_cast<uint16_t*>(operand->data);
                                 break;
                             case OperandSize::DWORD:
-                                delete (uint32_t*)(operand->data);
+                                delete static_cast<uint32_t*>(operand->data);
                                 break;
                             case OperandSize::QWORD:
-                                delete (uint64_t*)(operand->data);
+                                delete static_cast<uint64_t*>(operand->data);
                                 break;
                             }
-                        }
-                        else if (operand->type == OperandType::REGISTER) {
-                            delete (Register*)(operand->data);
+                        } else if (operand->type == OperandType::REGISTER) {
+                            delete static_cast<Register*>(operand->data);
                         }
                         delete operand;
                         return true;
                     });
                     ins->operands.clear();
                     delete ins;
-                }
-                else {
-                    RawData* raw_data = (RawData*)(data->data);
+                } else {
+                    RawData* raw_data = static_cast<RawData*>(data->data);
                     if (raw_data == nullptr)
                         return false;
                     if (raw_data->type == RawDataType::RAW) {
                         switch (raw_data->data_size) {
                         case 1:
-                            delete (uint8_t*)(raw_data->data);
+                            delete static_cast<uint8_t*>(raw_data->data);
                             break;
                         case 2:
-                            delete (uint16_t*)(raw_data->data);
+                            delete static_cast<uint16_t*>(raw_data->data);
                             break;
                         case 4:
-                            delete (uint32_t*)(raw_data->data);
+                            delete static_cast<uint32_t*>(raw_data->data);
                             break;
                         case 8:
-                            delete (uint64_t*)(raw_data->data);
+                            delete static_cast<uint64_t*>(raw_data->data);
+                            break;
+                        default:
+                            delete[] static_cast<uint8_t*>(raw_data->data);
                             break;
                         }
                     }
@@ -982,7 +923,7 @@ void Parser::PrintSections(FILE* fd) const {
                 if (data == nullptr)
                     return;
                 if (data->type) { // instruction
-                    Instruction* ins = (Instruction*)(data->data);
+                    Instruction* ins = static_cast<Instruction*>(data->data);
                     if (ins == nullptr)
                         return;
                     fprintf(fd, "Instruction: \"%s\":\n", GetInstructionName(ins->GetOpcode()));
@@ -1005,146 +946,145 @@ void Parser::PrintSections(FILE* fd) const {
                             operand_size = "qword";
                             break;
                         }
-                        fprintf(fd, "Operand: size = %s, type = %d, ", operand_size, (int)operand->type);
+                        fprintf(fd, "Operand: size = %s, type = %d, ", operand_size, static_cast<int>(operand->type));
                         switch (operand->type) {
                         case OperandType::REGISTER:
-                            fprintf(fd, "Register: \"%s\"\n", GetRegisterName(*(Register*)(operand->data)));
+                            fprintf(fd, "Register: \"%s\"\n", GetRegisterName(*static_cast<Register*>(operand->data)));
                             break;
                         case OperandType::MEMORY:
-                            fprintf(fd, "Memory address: %#018lx\n", *(uint64_t*)(operand->data));
+                            fprintf(fd, "Memory address: %#18lx\n", *static_cast<uint64_t*>(operand->data));
                             break;
                         case OperandType::COMPLEX: {
-                            ComplexData* data = (ComplexData*)(operand->data);
-                            if (data == nullptr)
+                            ComplexData* complex_data = static_cast<ComplexData*>(operand->data);
+                            if (complex_data == nullptr)
                                 return;
                             fprintf(fd, "Complex data:\n");
-                            if (data->base.present) {
+                            if (complex_data->base.present) {
                                 fprintf(fd, "Base: ");
-                                switch (data->base.type) {
+                                switch (complex_data->base.type) {
                                 case ComplexItem::Type::IMMEDIATE:
-                                    switch (data->base.data.imm.size) {
+                                    switch (complex_data->base.data.imm.size) {
                                     case OperandSize::BYTE:
-                                        fprintf(fd, "size = 1, immediate = %#04hhx\n", *(uint8_t*)(data->base.data.imm.data));
+                                        fprintf(fd, "size = 1, immediate = %#4hhx\n", *static_cast<uint8_t*>(complex_data->base.data.imm.data));
                                         break;
                                     case OperandSize::WORD:
-                                        fprintf(fd, "size = 2, immediate = %#06hx\n", *(uint16_t*)(data->base.data.imm.data));
+                                        fprintf(fd, "size = 2, immediate = %#6hx\n", *static_cast<uint16_t*>(complex_data->base.data.imm.data));
                                         break;
                                     case OperandSize::DWORD:
-                                        fprintf(fd, "size = 4, immediate = %#010x\n", *(uint32_t*)(data->base.data.imm.data));
+                                        fprintf(fd, "size = 4, immediate = %#10x\n", *static_cast<uint32_t*>(complex_data->base.data.imm.data));
                                         break;
                                     case OperandSize::QWORD:
-                                        fprintf(fd, "size = 8, immediate = %#018lx\n", *(uint64_t*)(data->base.data.imm.data));
+                                        fprintf(fd, "size = 8, immediate = %#18lx\n", *static_cast<uint64_t*>(complex_data->base.data.imm.data));
                                         break;
                                     }
                                     break;
                                 case ComplexItem::Type::REGISTER:
-                                    fprintf(fd, "Register: \"%s\"\n", GetRegisterName(*data->base.data.reg));
+                                    fprintf(fd, "Register: \"%s\"\n", GetRegisterName(*complex_data->base.data.reg));
                                     break;
                                 case ComplexItem::Type::LABEL: {
-                                    size_t size = data->base.data.label->name_size;
-                                    char* name = new char[size + 1];
-                                    strncpy(name, data->base.data.label->name, size);
-                                    name[size] = 0;
-                                    fprintf(fd, "Label: \"%s\"\n", name);
-                                    delete[] name;
+                                    size_t size = complex_data->base.data.label->name_size;
+                                    char* i_name = new char[size + 1];
+                                    strncpy(i_name, complex_data->base.data.label->name, size);
+                                    i_name[size] = 0;
+                                    fprintf(fd, "Label: \"%s\"\n", i_name);
+                                    delete[] i_name;
                                     break;
                                 }
                                 case ComplexItem::Type::SUBLABEL: {
-                                    size_t size = data->base.data.sublabel->name_size;
-                                    char* name = new char[size + 1];
-                                    strncpy(name, data->base.data.sublabel->name, size);
-                                    name[size] = 0;
-                                    fprintf(fd, "Sublabel: \"%s\"\n", name);
-                                    delete[] name;
+                                    size_t size = complex_data->base.data.sublabel->name_size;
+                                    char* i_name = new char[size + 1];
+                                    strncpy(i_name, complex_data->base.data.sublabel->name, size);
+                                    i_name[size] = 0;
+                                    fprintf(fd, "Sublabel: \"%s\"\n", i_name);
+                                    delete[] i_name;
                                     break;
                                 }
                                 case ComplexItem::Type::UNKNOWN:
                                     break;
                                 }
                             }
-                            if (data->index.present) {
+                            if (complex_data->index.present) {
                                 fprintf(fd, "Index: ");
-                                switch (data->index.type) {
+                                switch (complex_data->index.type) {
                                 case ComplexItem::Type::IMMEDIATE:
-                                    switch (data->index.data.imm.size) {
+                                    switch (complex_data->index.data.imm.size) {
                                     case OperandSize::BYTE:
-                                        fprintf(fd, "size = 1, immediate = %#04hhx\n", *(uint8_t*)(data->index.data.imm.data));
+                                        fprintf(fd, "size = 1, immediate = %#4hhx\n", *static_cast<uint8_t*>(complex_data->index.data.imm.data));
                                         break;
                                     case OperandSize::WORD:
-                                        fprintf(fd, "size = 2, immediate = %#06hx\n", *(uint16_t*)(data->index.data.imm.data));
+                                        fprintf(fd, "size = 2, immediate = %#6hx\n", *static_cast<uint16_t*>(complex_data->index.data.imm.data));
                                         break;
                                     case OperandSize::DWORD:
-                                        fprintf(fd, "size = 4, immediate = %#010x\n", *(uint32_t*)(data->index.data.imm.data));
+                                        fprintf(fd, "size = 4, immediate = %#10x\n", *static_cast<uint32_t*>(complex_data->index.data.imm.data));
                                         break;
                                     case OperandSize::QWORD:
-                                        fprintf(fd, "size = 8, immediate = %#018lx\n", *(uint64_t*)(data->index.data.imm.data));
+                                        fprintf(fd, "size = 8, immediate = %#18lx\n", *static_cast<uint64_t*>(complex_data->index.data.imm.data));
                                         break;
                                     }
                                     break;
                                 case ComplexItem::Type::REGISTER:
-                                    fprintf(fd, "Register: \"%s\"\n", GetRegisterName(*data->index.data.reg));
+                                    fprintf(fd, "Register: \"%s\"\n", GetRegisterName(*complex_data->index.data.reg));
                                     break;
                                 case ComplexItem::Type::LABEL: {
-                                    size_t size = data->index.data.label->name_size;
-                                    char* name = new char[size + 1];
-                                    strncpy(name, data->index.data.label->name, size);
-                                    name[size] = 0;
-                                    fprintf(fd, "Label: \"%s\"\n", name);
-                                    delete[] name;
+                                    size_t size = complex_data->index.data.label->name_size;
+                                    char* i_name = new char[size + 1];
+                                    strncpy(i_name, complex_data->index.data.label->name, size);
+                                    i_name[size] = 0;
+                                    fprintf(fd, "Label: \"%s\"\n", i_name);
+                                    delete[] i_name;
                                     break;
                                 }
                                 case ComplexItem::Type::SUBLABEL: {
-                                    size_t size = data->index.data.sublabel->name_size;
-                                    char* name = new char[size + 1];
-                                    strncpy(name, data->index.data.sublabel->name, size);
-                                    name[size] = 0;
-                                    fprintf(fd, "Sublabel: \"%s\"\n", name);
-                                    delete[] name;
+                                    size_t size = complex_data->index.data.sublabel->name_size;
+                                    char* i_name = new char[size + 1];
+                                    strncpy(i_name, complex_data->index.data.sublabel->name, size);
+                                    i_name[size] = 0;
+                                    fprintf(fd, "Sublabel: \"%s\"\n", i_name);
+                                    delete[] i_name;
                                     break;
                                 }
                                 case ComplexItem::Type::UNKNOWN:
                                     break;
                                 }
                             }
-                            if (data->offset.present) {
+                            if (complex_data->offset.present) {
                                 fprintf(fd, "Offset: ");
-                                switch (data->offset.type) {
+                                switch (complex_data->offset.type) {
                                 case ComplexItem::Type::IMMEDIATE:
-                                    switch (data->offset.data.imm.size) {
+                                    switch (complex_data->offset.data.imm.size) {
                                     case OperandSize::BYTE:
-                                        fprintf(fd, "size = 1, immediate = %#04hhx\n", *(uint8_t*)(data->offset.data.imm.data));
+                                        fprintf(fd, "size = 1, immediate = %#4hhx\n", *static_cast<uint8_t*>(complex_data->offset.data.imm.data));
                                         break;
                                     case OperandSize::WORD:
-                                        fprintf(fd, "size = 2, immediate = %#06hx\n", *(uint16_t*)(data->offset.data.imm.data));
+                                        fprintf(fd, "size = 2, immediate = %#6hx\n", *static_cast<uint16_t*>(complex_data->offset.data.imm.data));
                                         break;
                                     case OperandSize::DWORD:
-                                        fprintf(fd, "size = 4, immediate = %#010x\n", *(uint32_t*)(data->offset.data.imm.data));
+                                        fprintf(fd, "size = 4, immediate = %#10x\n", *static_cast<uint32_t*>(complex_data->offset.data.imm.data));
                                         break;
                                     case OperandSize::QWORD:
-                                        fprintf(fd, "size = 8, immediate = %#018lx\n", *(uint64_t*)(data->offset.data.imm.data));
-                                        break;
+                                        fprintf(fd, "size = 8, immediate = %#18lx\n", *static_cast<uint64_t*>(complex_data->offset.data.imm.data));
                                         break;
                                     }
                                     break;
                                 case ComplexItem::Type::REGISTER:
-                                    fprintf(fd, "Register: \"%s\", sign = %s\n", GetRegisterName(*data->offset.data.reg), data->offset.sign ? "positive" : "negative");
+                                    fprintf(fd, "Register: \"%s\", sign = %s\n", GetRegisterName(*complex_data->offset.data.reg), complex_data->offset.sign ? "positive" : "negative");
                                     break;
                                 case ComplexItem::Type::LABEL: {
-                                    size_t size = data->offset.data.label->name_size;
-                                    char* name = new char[size + 1];
-                                    strncpy(name, data->offset.data.label->name, size);
-                                    name[size] = 0;
-                                    fprintf(fd, "Label: \"%s\"\n", name);
-                                    delete[] name;
+                                    size_t size = complex_data->offset.data.label->name_size;
+                                    char* i_name = new char[size + 1];
+                                    strncpy(i_name, complex_data->offset.data.label->name, size);
+                                    i_name[size] = 0;
+                                    fprintf(fd, "Label: \"%s\"\n", i_name);
+                                    delete[] i_name;
                                     break;
                                 }
                                 case ComplexItem::Type::SUBLABEL: {
-                                    size_t size = data->offset.data.sublabel->name_size;
-                                    char* name = new char[size + 1];
-                                    strncpy(name, data->offset.data.sublabel->name, size);
-                                    name[size] = 0;
-                                    fprintf(fd, "Sublabel: \"%s\"\n", name);
-                                    delete[] name;
+                                    size_t size = complex_data->offset.data.sublabel->name_size;
+                                    char* i_name = new char[size + 1];
+                                    strncpy(i_name, complex_data->offset.data.sublabel->name, size);
+                                    i_name[size] = 0;
+                                    fprintf(fd, "Sublabel: \"%s\"\n", i_name);
+                                    delete[] i_name;
                                     break;
                                 }
                                 case ComplexItem::Type::UNKNOWN:
@@ -1156,44 +1096,43 @@ void Parser::PrintSections(FILE* fd) const {
                         case OperandType::IMMEDIATE:
                             switch (operand->size) {
                             case OperandSize::BYTE:
-                                fprintf(fd, "size = 1, immediate = %#04hhx\n", *(uint8_t*)(operand->data));
+                                fprintf(fd, "size = 1, immediate = %#4hhx\n", *static_cast<uint8_t*>(operand->data));
                                 break;
                             case OperandSize::WORD:
-                                fprintf(fd, "size = 2, immediate = %#06hx\n", *(uint16_t*)(operand->data));
+                                fprintf(fd, "size = 2, immediate = %#6hx\n", *static_cast<uint16_t*>(operand->data));
                                 break;
                             case OperandSize::DWORD:
-                                fprintf(fd, "size = 4, immediate = %#010x\n", *(uint32_t*)(operand->data));
+                                fprintf(fd, "size = 4, immediate = %#10x\n", *static_cast<uint32_t*>(operand->data));
                                 break;
                             case OperandSize::QWORD:
-                                fprintf(fd, "size = 8, immediate = %#018lx\n", *(uint64_t*)(operand->data));
+                                fprintf(fd, "size = 8, immediate = %#18lx\n", *static_cast<uint64_t*>(operand->data));
                                 break;
                             }
                             break;
                         case OperandType::LABEL: {
-                            size_t size = ((Label*)(operand->data))->name_size;
-                            char* name = new char[size + 1];
-                            strncpy(name, ((Label*)(operand->data))->name, size);
-                            name[size] = 0;
-                            fprintf(fd, "Label: \"%s\"\n", name);
-                            delete[] name;
+                            size_t size = static_cast<Label*>(operand->data)->name_size;
+                            char* i_name = new char[size + 1];
+                            strncpy(i_name, static_cast<Label*>(operand->data)->name, size);
+                            i_name[size] = 0;
+                            fprintf(fd, "Label: \"%s\"\n", i_name);
+                            delete[] i_name;
                             break;
                         }
                         case OperandType::SUBLABEL: {
-                            size_t size = ((Block*)(operand->data))->name_size;
-                            char* name = new char[size + 1];
-                            strncpy(name, ((Block*)(operand->data))->name, size);
-                            name[size] = 0;
-                            fprintf(fd, "Sublabel: \"%s\"\n", name);
-                            delete[] name;
+                            size_t size = static_cast<Block*>(operand->data)->name_size;
+                            char* i_name = new char[size + 1];
+                            strncpy(i_name, static_cast<Block*>(operand->data)->name, size);
+                            i_name[size] = 0;
+                            fprintf(fd, "Sublabel: \"%s\"\n", i_name);
+                            delete[] i_name;
                             break;
                         }
                         default:
                             fputs("unknown type\n", fd);
                         }
                     }
-                }
-                else { // raw data
-                    RawData* raw_data = (RawData*)(data->data);
+                } else { // raw data
+                    RawData* raw_data = static_cast<RawData*>(data->data);
                     if (raw_data == nullptr || raw_data->data == nullptr)
                         return;
                     fputs("Raw data: ", fd);
@@ -1201,13 +1140,13 @@ void Parser::PrintSections(FILE* fd) const {
                     case RawDataType::RAW:
                         fprintf(fd, "size = %lu:\n", raw_data->data_size);
                         for (uint64_t l = 0; l < raw_data->data_size; l++)
-                            fprintf(fd, "%#02hhx%c", ((uint8_t*)(raw_data->data))[l], (l % 8) == 7 ? '\n' : ' ');
+                            fprintf(fd, "%#2hhx%c", static_cast<uint8_t*>(raw_data->data)[l], (l % 8) == 7 ? '\n' : ' ');
                         break;
                     case RawDataType::LABEL:
-                        fprintf(fd, "Label: \"%s\"\n", ((Label*)(raw_data->data))->name);
+                        fprintf(fd, "Label: \"%s\"\n", static_cast<Label*>(raw_data->data)->name);
                         break;
                     case RawDataType::SUBLABEL:
-                        fprintf(fd, "Sublabel: \"%s\"\n", ((Block*)(raw_data->data))->name);
+                        fprintf(fd, "Sublabel: \"%s\"\n", static_cast<Block*>(raw_data->data)->name);
                         break;
                     }
                     fputc('\n', fd);
@@ -1225,81 +1164,82 @@ InsEncoding::Opcode Parser::GetOpcode(const char* name, size_t name_size) const 
     using namespace InsEncoding;
     if (EQUALS(name, "push"))
         return Opcode::PUSH;
-    else if (EQUALS(name, "pop"))
+    if (EQUALS(name, "pop"))
         return Opcode::POP;
-    else if (EQUALS(name, "pusha"))
+    if (EQUALS(name, "pusha"))
         return Opcode::PUSHA;
-    else if (EQUALS(name, "popa"))
+    if (EQUALS(name, "popa"))
         return Opcode::POPA;
-    else if (EQUALS(name, "add"))
+    if (EQUALS(name, "add"))
         return Opcode::ADD;
-    else if (EQUALS(name, "mul"))
+    if (EQUALS(name, "mul"))
         return Opcode::MUL;
-    else if (EQUALS(name, "sub"))
+    if (EQUALS(name, "sub"))
         return Opcode::SUB;
-    else if (EQUALS(name, "div"))
+    if (EQUALS(name, "div"))
         return Opcode::DIV;
-    else if (EQUALS(name, "or"))
+    if (EQUALS(name, "or"))
         return Opcode::OR;
-    else if (EQUALS(name, "xor"))
+    if (EQUALS(name, "xor"))
         return Opcode::XOR;
-    else if (EQUALS(name, "nor"))
+    if (EQUALS(name, "nor"))
         return Opcode::NOR;
-    else if (EQUALS(name, "and"))
+    if (EQUALS(name, "and"))
         return Opcode::AND;
-    else if (EQUALS(name, "nand"))
+    if (EQUALS(name, "nand"))
         return Opcode::NAND;
-    else if (EQUALS(name, "not"))
+    if (EQUALS(name, "not"))
         return Opcode::NOT;
-    else if (EQUALS(name, "cmp"))
+    if (EQUALS(name, "cmp"))
         return Opcode::CMP;
-    else if (EQUALS(name, "inc"))
+    if (EQUALS(name, "inc"))
         return Opcode::INC;
-    else if (EQUALS(name, "dec"))
+    if (EQUALS(name, "dec"))
         return Opcode::DEC;
-    else if (EQUALS(name, "shl"))
+    if (EQUALS(name, "shl"))
         return Opcode::SHL;
-    else if (EQUALS(name, "shr"))
+    if (EQUALS(name, "shr"))
         return Opcode::SHR;
-    else if (EQUALS(name, "ret"))
+    if (EQUALS(name, "ret"))
         return Opcode::RET;
-    else if (EQUALS(name, "call"))
+    if (EQUALS(name, "call"))
         return Opcode::CALL;
-    else if (EQUALS(name, "jmp"))
+    if (EQUALS(name, "jmp"))
         return Opcode::JMP;
-    else if (EQUALS(name, "jc"))
+    if (EQUALS(name, "jc"))
         return Opcode::JC;
-    else if (EQUALS(name, "jnc"))
+    if (EQUALS(name, "jnc"))
         return Opcode::JNC;
-    else if (EQUALS(name, "jz"))
+    if (EQUALS(name, "jz"))
         return Opcode::JZ;
-    else if (EQUALS(name, "jnz"))
+    if (EQUALS(name, "jnz"))
         return Opcode::JNZ;
-    else if (EQUALS(name, "syscall"))
+    if (EQUALS(name, "syscall"))
         return Opcode::SYSCALL;
-    else if (EQUALS(name, "sysret"))
+    if (EQUALS(name, "sysret"))
         return Opcode::SYSRET;
-    else if (EQUALS(name, "enteruser"))
+    if (EQUALS(name, "enteruser"))
         return Opcode::ENTERUSER;
-    else if (EQUALS(name, "int"))
+    if (EQUALS(name, "int"))
         return Opcode::INT;
-    else if (EQUALS(name, "lidt"))
+    if (EQUALS(name, "lidt"))
         return Opcode::LIDT;
-    else if (EQUALS(name, "iret"))
+    if (EQUALS(name, "iret"))
         return Opcode::IRET;
-    else if (EQUALS(name, "mov"))
+    if (EQUALS(name, "mov"))
         return Opcode::MOV;
-    else if (EQUALS(name, "nop"))
+    if (EQUALS(name, "nop"))
         return Opcode::NOP;
-    else if (EQUALS(name, "hlt"))
+    if (EQUALS(name, "hlt"))
         return Opcode::HLT;
-    else
-        return Opcode::UNKNOWN;
+    return Opcode::UNKNOWN;
 }
 
 InsEncoding::Register Parser::GetRegister(const char* name, size_t name_size) const {
     using namespace InsEncoding;
-#define REG_EQUAL(rname) if (EQUALS(name, #rname)) return Register::rname
+#define REG_EQUAL(rname)      \
+    if (EQUALS(name, #rname)) \
+    return Register::rname
     REG_EQUAL(r0);
     REG_EQUAL(r1);
     REG_EQUAL(r2);
@@ -1342,83 +1282,87 @@ void Parser::error(const char* message) {
 
 const char* Parser::GetInstructionName(InsEncoding::Opcode opcode) const {
     using namespace InsEncoding;
-#define NAME_CASE(ins) case Opcode::ins: return #ins;
-    switch(opcode) {
-    NAME_CASE(PUSH)
-    NAME_CASE(POP)
-    NAME_CASE(PUSHA)
-    NAME_CASE(POPA)
-    NAME_CASE(ADD)
-    NAME_CASE(MUL)
-    NAME_CASE(SUB)
-    NAME_CASE(DIV)
-    NAME_CASE(OR)
-    NAME_CASE(XOR)
-    NAME_CASE(NOR)
-    NAME_CASE(AND)
-    NAME_CASE(NAND)
-    NAME_CASE(NOT)
-    NAME_CASE(CMP)
-    NAME_CASE(INC)
-    NAME_CASE(DEC)
-    NAME_CASE(SHL)
-    NAME_CASE(SHR)
-    NAME_CASE(RET)
-    NAME_CASE(CALL)
-    NAME_CASE(JMP)
-    NAME_CASE(JC)
-    NAME_CASE(JNC)
-    NAME_CASE(JZ)
-    NAME_CASE(JNZ)
-    NAME_CASE(SYSCALL)
-    NAME_CASE(SYSRET)
-    NAME_CASE(ENTERUSER)
-    NAME_CASE(INT)
-    NAME_CASE(LIDT)
-    NAME_CASE(IRET)
-    NAME_CASE(MOV)
-    NAME_CASE(NOP)
-    NAME_CASE(HLT)
-    NAME_CASE(UNKNOWN)
+#define NAME_CASE(ins) \
+    case Opcode::ins:  \
+        return #ins;
+    switch (opcode) {
+        NAME_CASE(PUSH)
+        NAME_CASE(POP)
+        NAME_CASE(PUSHA)
+        NAME_CASE(POPA)
+        NAME_CASE(ADD)
+        NAME_CASE(MUL)
+        NAME_CASE(SUB)
+        NAME_CASE(DIV)
+        NAME_CASE(OR)
+        NAME_CASE(XOR)
+        NAME_CASE(NOR)
+        NAME_CASE(AND)
+        NAME_CASE(NAND)
+        NAME_CASE(NOT)
+        NAME_CASE(CMP)
+        NAME_CASE(INC)
+        NAME_CASE(DEC)
+        NAME_CASE(SHL)
+        NAME_CASE(SHR)
+        NAME_CASE(RET)
+        NAME_CASE(CALL)
+        NAME_CASE(JMP)
+        NAME_CASE(JC)
+        NAME_CASE(JNC)
+        NAME_CASE(JZ)
+        NAME_CASE(JNZ)
+        NAME_CASE(SYSCALL)
+        NAME_CASE(SYSRET)
+        NAME_CASE(ENTERUSER)
+        NAME_CASE(INT)
+        NAME_CASE(LIDT)
+        NAME_CASE(IRET)
+        NAME_CASE(MOV)
+        NAME_CASE(NOP)
+        NAME_CASE(HLT)
+        NAME_CASE(UNKNOWN)
     }
 #undef NAME_CASE
     return "UNKNOWN";
 }
 
-const char* Parser::GetRegisterName(InsEncoding::Register i_reg) const {
+const char* Parser::GetRegisterName(InsEncoding::Register reg) const {
     using namespace InsEncoding;
-#define NAME_CASE(reg) case Register::reg: return #reg;
-    switch (i_reg) {
-    NAME_CASE(r0)
-    NAME_CASE(r1)
-    NAME_CASE(r2)
-    NAME_CASE(r3)
-    NAME_CASE(r4)
-    NAME_CASE(r5)
-    NAME_CASE(r6)
-    NAME_CASE(r7)
-    NAME_CASE(r8)
-    NAME_CASE(r9)
-    NAME_CASE(r10)
-    NAME_CASE(r11)
-    NAME_CASE(r12)
-    NAME_CASE(r13)
-    NAME_CASE(r14)
-    NAME_CASE(r15)
-    NAME_CASE(scp)
-    NAME_CASE(sbp)
-    NAME_CASE(stp)
-    NAME_CASE(cr0)
-    NAME_CASE(cr1)
-    NAME_CASE(cr2)
-    NAME_CASE(cr3)
-    NAME_CASE(cr4)
-    NAME_CASE(cr5)
-    NAME_CASE(cr6)
-    NAME_CASE(cr7)
-    NAME_CASE(sts)
-    NAME_CASE(ip)
-    NAME_CASE(unknown)
+#define NAME_CASE(reg)  \
+    case Register::reg: \
+        return #reg;
+    switch (reg) {
+        NAME_CASE(r0)
+        NAME_CASE(r1)
+        NAME_CASE(r2)
+        NAME_CASE(r3)
+        NAME_CASE(r4)
+        NAME_CASE(r5)
+        NAME_CASE(r6)
+        NAME_CASE(r7)
+        NAME_CASE(r8)
+        NAME_CASE(r9)
+        NAME_CASE(r10)
+        NAME_CASE(r11)
+        NAME_CASE(r12)
+        NAME_CASE(r13)
+        NAME_CASE(r14)
+        NAME_CASE(r15)
+        NAME_CASE(scp)
+        NAME_CASE(sbp)
+        NAME_CASE(stp)
+        NAME_CASE(cr0)
+        NAME_CASE(cr1)
+        NAME_CASE(cr2)
+        NAME_CASE(cr3)
+        NAME_CASE(cr4)
+        NAME_CASE(cr5)
+        NAME_CASE(cr6)
+        NAME_CASE(cr7)
+        NAME_CASE(sts)
+        NAME_CASE(ip)
+        NAME_CASE(unknown)
     }
 #undef NAME_CASE
     return "unknown";

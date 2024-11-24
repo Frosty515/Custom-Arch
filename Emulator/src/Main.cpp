@@ -15,17 +15,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "ArgsParser.hpp"
-#include "IO/devices/Video/VideoBackend.hpp"
-#include <cctype>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-
 #include <util.h>
 
+#include <cctype>
 #include <Emulator.hpp>
+
+#include "ArgsParser.hpp"
+#include "IO/devices/Video/VideoBackend.hpp"
 
 #define MAX_PROGRAM_FILE_SIZE 0x1000'0000
 #define MIN_PROGRAM_FILE_SIZE 1
@@ -57,7 +56,6 @@ int main(int argc, char** argv) {
 
     std::string_view program = g_args->GetOption('p');
 
-
     size_t RAM_Size;
 
     if (g_args->HasOption('m'))
@@ -72,15 +70,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    size_t fileSize;
-
     int rc = fseek(fp, 0, SEEK_END);
     if (rc != 0) {
         perror("fseek");
         return 1;
     }
 
-    fileSize = ftell(fp);
+    size_t fileSize = ftell(fp);
 
     if (fileSize < MIN_PROGRAM_FILE_SIZE) {
         printf("File is too small to be a valid program.\n");
@@ -99,16 +95,12 @@ int main(int argc, char** argv) {
     }
 
     uint8_t* data = new uint8_t[fileSize];
-    if (data == nullptr) {
-        perror("new[]");
-        return 1;
-    }
 
     for (size_t i = 0; i < fileSize; i++) {
         int c = fgetc(fp);
         if (c == EOF)
             break;
-        data[i] = (uint8_t)c;
+        data[i] = static_cast<uint8_t>(c);
     }
 
     fclose(fp);
@@ -138,14 +130,12 @@ int main(int argc, char** argv) {
         }
     }
 
-
     // delete the args parser
     delete g_args;
 
     // Actually start emulator
 
-    int status = Emulator::Start(data, fileSize, RAM_Size, has_display, displayType);
-    if (status != 0) {
+    if (int status = Emulator::Start(data, fileSize, RAM_Size, has_display, displayType); status != 0) {
         printf("Emulator failed to start: %d\n", status);
         return 1;
     }
@@ -153,7 +143,6 @@ int main(int argc, char** argv) {
     // Cleanup
 
     delete[] data;
-    
 
     return 0;
 }

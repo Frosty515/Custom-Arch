@@ -18,12 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _UTIL_H
 #define _UTIL_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
-#define KiB(x) ((uint64_t)x * (uint64_t)1024)
-#define MiB(x) (KiB(x) * (uint64_t)1024)
-#define GiB(x) (MiB(x) * (uint64_t)1024)
+#define KiB(x) ((uint64_t)x * (uint64_t)1'024)
+#define MiB(x) (KiB(x) * (uint64_t)1'024)
+#define GiB(x) (MiB(x) * (uint64_t)1'024)
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +43,7 @@ extern "C" {
 
 #define ALIGN_ADDRESS_UP(ADDR, ALIGN) (void*)((((unsigned long)ADDR + (ALIGN - 1)) / ALIGN) * ALIGN)
 
-#define PAGE_SIZE 4096
+#define PAGE_SIZE 4'096
 
 #ifdef __APPLE__
 
@@ -67,4 +67,4 @@ void* _fast_memcpy(void* dst, const void* src, const size_t n);
 }
 #endif
 
-#endif /*_KERNEL_UTIL_H */
+#endif /* _UTIL_H */

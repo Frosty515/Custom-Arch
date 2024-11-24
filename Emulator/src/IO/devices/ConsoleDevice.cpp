@@ -23,12 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #endif
 
-ConsoleDevice::ConsoleDevice(uint64_t base_address, uint64_t size) : IODevice(base_address, size) {
-
+ConsoleDevice::ConsoleDevice(uint64_t base_address, uint64_t size)
+    : IODevice(base_address, size) {
 }
 
 ConsoleDevice::~ConsoleDevice() {
-
 }
 
 uint8_t ConsoleDevice::ReadByte(uint64_t address) {
@@ -37,7 +36,7 @@ uint8_t ConsoleDevice::ReadByte(uint64_t address) {
 #else
     (void)address;
 #endif
-    return (uint8_t)Emulator::ReadCharFromConsole();
+    return static_cast<uint8_t>(Emulator::ReadCharFromConsole());
 }
 
 uint16_t ConsoleDevice::ReadWord(uint64_t address) {
@@ -73,7 +72,7 @@ void ConsoleDevice::WriteByte(uint64_t address, uint8_t data) {
 #else
     (void)address;
 #endif
-    Emulator::WriteCharToConsole((char)data);
+    Emulator::WriteCharToConsole(static_cast<char>(data));
 }
 
 void ConsoleDevice::WriteWord(uint64_t address, uint16_t data) {
