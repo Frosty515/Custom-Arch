@@ -202,14 +202,13 @@ uint64_t VirtualMMU::TranslateAddress(uint64_t address, PageTranslateMode mode, 
                 g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, m_pageTableRoot + index * 8);
             {
                 uint64_t raw = m_physicalMMU->read64(m_pageTableRoot + index * 8);
-                // printf("Table: %lx\n", raw);
                 PageTableEntry* temp = reinterpret_cast<PageTableEntry*>(&raw);
                 table = *temp;
             }
         } else if (table.Lowest) {
             if (safe && success != nullptr)
                 *success = true;
-            return ((table.PhysicalAddress | (page & ((1 << (10 * (i - 1))) - 1))) << pageShift) | offset;
+            return (((table.PhysicalAddress >> (pageShift - 12)) | (page & ((1 << (10 * (i - 1))) - 1))) << pageShift) | offset;
         } else if (!GetNextTableLevel(table, index, &table)) {
             if (safe) {
                 if (success != nullptr)
@@ -249,7 +248,7 @@ uint64_t VirtualMMU::TranslateAddress(uint64_t address, PageTranslateMode mode, 
             code.user = inUserMode;
             g_ExceptionHandler->RaiseException(Exception::PAGING_VIOLATION, address, code);
         }
-        physicalAddress = table.PhysicalAddress;
+        physicalAddress = table.PhysicalAddress >> (pageShift - 12);
     }
     if (safe && success != nullptr)
         *success = true;
@@ -265,23 +264,12 @@ bool VirtualMMU::GetNextTableLevel(PageTableEntry table, uint64_t tableIndex, Pa
     if (table.Lowest)
         return false; // should already be handled by the caller
 
-    uint64_t pageSizeShift = 0;
-    switch (m_pageSize) {
-    case PS_4KiB:
-        pageSizeShift = 12;
-        break;
-    case PS_16KiB:
-        pageSizeShift = 14;
-        break;
-    case PS_64KiB:
-        pageSizeShift = 16;
-        break;
-    }
+    // data structure for PageTableEntry only supports 4KiB pages, so just shift by 12
+    if (!m_physicalMMU->ValidateRead(((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8, 8))
+        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, ((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8);
 
-    if (!m_physicalMMU->ValidateRead(((uint64_t)table.PhysicalAddress << pageSizeShift) + tableIndex * 8, 8))
-        g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, ((uint64_t)table.PhysicalAddress << pageSizeShift) + tableIndex * 8);
-
-    uint64_t raw = m_physicalMMU->read64(((uint64_t)table.PhysicalAddress << pageSizeShift) + tableIndex * 8);
+    uint64_t raw = m_physicalMMU->read64(((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8);
+    printf("Table: %lx, read from %lx\n", raw, ((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8);
     PageTableEntry* temp = reinterpret_cast<PageTableEntry*>(&raw);
     if (out != nullptr)
         *out = *temp;

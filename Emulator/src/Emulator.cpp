@@ -387,12 +387,21 @@ namespace Emulator {
         }
         if (g_Control[0]->IsDirty()) {
             uint64_t control = g_Control[0]->GetValue();
+            bool wasInProtectedMode = g_isInProtectedMode;
             g_isInProtectedMode = control & 1;
             if (((control & 2) > 0) != g_isPagingEnabled) {
                 g_isPagingEnabled = (control & 2) > 0;
                 if (g_isPagingEnabled) {
                     PageSize pageSize = static_cast<PageSize>((control & 0xC) >> 2);
                     PageTableLevelCount pageTableLevelCount = static_cast<PageTableLevelCount>((control & 0x30) >> 4);
+                    if (pageSize == PS_64KiB && pageTableLevelCount == PTLC_5) {
+                        // restore any changes
+                        if (!wasInProtectedMode && g_isInProtectedMode)
+                            g_isInProtectedMode = false;
+                        g_isPagingEnabled = false;
+                        g_Control[0]->SetDirty(false);
+                        g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
+                    }
                     uint64_t pageTableRoot = g_Control[3]->GetValue();
                     g_Control[3]->SetDirty(false);
                     g_VirtualMMU = new VirtualMMU(&g_PhysicalMMU, pageTableRoot, pageSize, pageTableLevelCount);
