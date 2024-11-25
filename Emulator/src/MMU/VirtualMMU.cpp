@@ -269,7 +269,6 @@ bool VirtualMMU::GetNextTableLevel(PageTableEntry table, uint64_t tableIndex, Pa
         g_ExceptionHandler->RaiseException(Exception::PHYS_MEM_VIOLATION, ((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8);
 
     uint64_t raw = m_physicalMMU->read64(((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8);
-    printf("Table: %lx, read from %lx\n", raw, ((uint64_t)table.PhysicalAddress << 12) + tableIndex * 8);
     PageTableEntry* temp = reinterpret_cast<PageTableEntry*>(&raw);
     if (out != nullptr)
         *out = *temp;
