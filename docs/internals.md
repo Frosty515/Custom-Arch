@@ -53,63 +53,63 @@ First 2 bytes are for the instruction stuff, and data follows it
 
 #### ALU
 
-| Name | offset |
-| ---- | --- |
-| add  | 0 |
-| mul  | 1 |
-| sub  | 2 |
-| div  | 3 |
-| or   | 4 |
-| xor  | 5 |
-| nor  | 6 |
-| and  | 7 |
-| nand | 8 |
-| not  | 9 |
-| cmp  | a |
-| inc  | b |
-| dec  | c |
-| shl  | d |
-| shr  | e |
-| (invalid)  | f |
+| Name      | offset |
+|-----------|--------|
+| add       | 0      |
+| mul       | 1      |
+| sub       | 2      |
+| div       | 3      |
+| or        | 4      |
+| xor       | 5      |
+| nor       | 6      |
+| and       | 7      |
+| nand      | 8      |
+| not       | 9      |
+| cmp       | a      |
+| inc       | b      |
+| dec       | c      |
+| shl       | d      |
+| shr       | e      |
+| (invalid) | f      |
 
 #### Control flow
 
-| Name | offset |
-| ---- | --- |
-| ret  | 0 |
-| call | 1 |
-| jmp  | 2 |
-| jc   | 3 |
-| jnc  | 4 |
-| jz   | 5 |
-| jnz  | 6 |
-| syscall | 7 |
-| sysret | 8 |
-| enteruser | 9 |
-| (invalid) | a |
-| (invalid) | b |
-| (invalid) | c |
-| (invalid) | d |
-| (invalid) | e |
-| (invalid) | f |
+| Name      | offset |
+|-----------|--------|
+| ret       | 0      |
+| call      | 1      |
+| jmp       | 2      |
+| jc        | 3      |
+| jnc       | 4      |
+| jz        | 5      |
+| jnz       | 6      |
+| syscall   | 7      |
+| sysret    | 8      |
+| enteruser | 9      |
+| (invalid) | a      |
+| (invalid) | b      |
+| (invalid) | c      |
+| (invalid) | d      |
+| (invalid) | e      |
+| (invalid) | f      |
 
 #### Other
 
-| Name | offset |
-| ---- | --- |
-| mov  | 0 |
-| nop  | 1 |
-| hlt  | 2 |
-| push  | 3 |
-| pop | 4 |
-| pusha | 5 |
-| popa | 6 |
-| int | 7 |
-| lidt | 8 |
-| iret | 9 |
-| (invalid) | a |
-| (invalid) | b |
-| (invalid) | c |
-| (invalid) | d |
-| (invalid) | e |
-| (invalid) | f |
+| Name      | offset |
+|-----------|--------|
+| mov       | 0      |
+| nop       | 1      |
+| hlt       | 2      |
+| push      | 3      |
+| pop       | 4      |
+| pusha     | 5      |
+| popa      | 6      |
+| int       | 7      |
+| lidt      | 8      |
+| iret      | 9      |
+| (invalid) | a      |
+| (invalid) | b      |
+| (invalid) | c      |
+| (invalid) | d      |
+| (invalid) | e      |
+| (invalid) | f      |

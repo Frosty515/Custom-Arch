@@ -12,53 +12,53 @@
 
 #### CR0
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0   | PE   | Protected mode enabled |
-| 1   | PG   | Paging enabled |
-| 2-3 | PGS  | Base page size |
-| 4-5 | PTL  | Page table levels |
-| 6-63| RESERVED | Reserved |
+| Bit  | Name     | Description            |
+|------|----------|------------------------|
+| 0    | PE       | Protected mode enabled |
+| 1    | PG       | Paging enabled         |
+| 2-3  | PGS      | Base page size         |
+| 4-5  | PTL      | Page table levels      |
+| 6-63 | RESERVED | Reserved               |
 
 #### CR1
 
 - Note: CR1 is reserved in 64-bit real mode
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0-63| SFLAGS | Supervisor flags on supervisor mode entry |
+| Bit  | Name   | Description                               |
+|------|--------|-------------------------------------------|
+| 0-63 | SFLAGS | Supervisor flags on supervisor mode entry |
 
 #### CR2
 
 - Note: CR2 is reserved in 64-bit real mode
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0-63| SENTRY | Supervisor `I0` on supervisor mode entry |
+| Bit  | Name   | Description                              |
+|------|--------|------------------------------------------|
+| 0-63 | SENTRY | Supervisor `I0` on supervisor mode entry |
 
 #### CR3
 
 - Note: CR3 is reserved in 64-bit real mode
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0-63 | PT | Page table address (must be page aligned) |
+| Bit  | Name | Description                               |
+|------|------|-------------------------------------------|
+| 0-63 | PT   | Page table address (must be page aligned) |
 
 #### CR4-CR7
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0-63| RESERVED | Reserved |
+| Bit  | Name     | Description |
+|------|----------|-------------|
+| 0-63 | RESERVED | Reserved    |
 
 ### Status Layout
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0   | CF   | Carry flag |
-| 1   | ZF   | Zero flag |
-| 2   | SF   | Sign flag |
-| 3   | IF   | Interrupt flag |
-| 4-63| RESERVED | Reserved |
+| Bit  | Name     | Description    |
+|------|----------|----------------|
+| 0    | CF       | Carry flag     |
+| 1    | ZF       | Zero flag      |
+| 2    | SF       | Sign flag      |
+| 3    | IF       | Interrupt flag |
+| 4-63 | RESERVED | Reserved       |
 
 ## Stack Info
 
@@ -70,18 +70,18 @@
 ## Exceptions
 
 - The first 32 interrupts are reserved for exceptions.
-- Currently there are 8 exceptions defined as follows:
+- Currently, there are 8 exceptions defined as follows:
 
-| Number | Name | Error Code Size in QWORDs | Description |
-| ------ | ---- | ------------------------- | ----------- |
-| 0 | Divide by zero | 0 | Thrown when a divide by zero is attempted |
-| 1 | Phys Mem Violation | 1 | Thrown when an invalid physical memory address is accessed |
-| 2 | Unhandled Interrupt | 1 | Thrown when an interrupt is raised but not handled |
-| 3 | Invalid Instruction | 0 | Thrown when an invalid instruction is executed |
-| 4 | Stack Violation | 1 | Thrown when the stack is out of bounds or unaligned |
-| 5 | User Mode Violation | 0 | Thrown when a supervisor mode instruction is executed in user mode |
-| 6 | Supervisor Mode Violation | 0 | Thrown when a user mode instruction is executed in supervisor mode |
-| 7 | Paging Violation | 2 | Thrown when a paging violation occurs |
+| Number | Name                      | Error Code Size in QWORDs | Description                                                        |
+|--------|---------------------------|---------------------------|--------------------------------------------------------------------|
+| 0      | Divide by zero            | 0                         | Thrown when a divide by zero is attempted                          |
+| 1      | Phys Mem Violation        | 1                         | Thrown when an invalid physical memory address is accessed         |
+| 2      | Unhandled Interrupt       | 1                         | Thrown when an interrupt is raised but not handled                 |
+| 3      | Invalid Instruction       | 0                         | Thrown when an invalid instruction is executed                     |
+| 4      | Stack Violation           | 1                         | Thrown when the stack is out of bounds or unaligned                |
+| 5      | User Mode Violation       | 0                         | Thrown when a supervisor mode instruction is executed in user mode |
+| 6      | Supervisor Mode Violation | 0                         | Thrown when a user mode instruction is executed in supervisor mode |
+| 7      | Paging Violation          | 2                         | Thrown when a paging violation occurs                              |
 
 ### Error Info
 
@@ -101,12 +101,12 @@
 
 - The error code is in the following format:
 
-| Offset in bits | Name | Description |
-| ------ | ---- | ----------- |
-| 0 | UNDER | Did the current pointer go under the bottom pointer |
-| 1 | OVER | Did the current pointer go over the top pointer |
-| 2 | ALIGN | Was the stack pointer not 8-byte aligned |
-| 3-63 | RESERVED | Reserved |
+| Offset in bits | Name     | Description                                         |
+|----------------|----------|-----------------------------------------------------|
+| 0              | UNDER    | Did the current pointer go under the bottom pointer |
+| 1              | OVER     | Did the current pointer go over the top pointer     |
+| 2              | ALIGN    | Was the stack pointer not 8-byte aligned            |
+| 3-63           | RESERVED | Reserved                                            |
 
 #### Paging Violation
 
@@ -114,15 +114,15 @@
 - First QWORD is the virtual address that was attempted to be accessed.
 - Second QWORD is the error code in the following format:
 
-| Offset in bits | Name | Description |
-| ------ | ---- | ----------- |
-| 0 | PRESENT | Was the page present |
-| 1 | READ | Was the page attempted to be read |
-| 2 | WRITE | Was the page attempted to be written |
-| 3 | EXECUTE | Was the page attempted to be executed |
-| 4 | USER | Was the page attempted to be accessed from user mode |
-| 5 | RSVD_WRITE | Was a reserved bit in the data structures set |
-| 6-63 | RESERVED | Reserved |
+| Offset in bits | Name       | Description                                          |
+|----------------|------------|------------------------------------------------------|
+| 0              | PRESENT    | Was the page present                                 |
+| 1              | READ       | Was the page attempted to be read                    |
+| 2              | WRITE      | Was the page attempted to be written                 |
+| 3              | EXECUTE    | Was the page attempted to be executed                |
+| 4              | USER       | Was the page attempted to be accessed from user mode |
+| 5              | RSVD_WRITE | Was a reserved bit in the data structures set        |
+| 6-63           | RESERVED   | Reserved                                             |
 
 
 ## Calling convention info
@@ -197,7 +197,7 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 - There are 3 different page size options set in PGS: 4KiB (0), 16KiB (1), 64KiB (2).
 - Each page table level takes up 10 bits of the address space.
 - There can be 3-5 page table levels. This is set in PTL: 3 levels is 0, 4 levels is 1, 5 levels is 2.
-- A page size of 64KiB is not an option for 5 levels of page tables.
+- A page size of 64KiB is not an option for 5 levels of page tables. An `INVALID_INSTRUCTION` exception will be generated if this is attempted to be enabled.
 - At each level, there is the option to specify if the page table is the lowest level. This allows for larger pages to save space in the page tables.
 
 ### Enabling paging
@@ -211,16 +211,16 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 - 64-bit entries
 - Follows the following format:
 
-| Bit | Name | Description |
-| -------- | ---- | ----------- |
-| 0        | Present | Is this entry present |
-| 1        | Read | Is this entry readable |
-| 2        | Write | Is this entry writable |
-| 3        | Execute | Is this entry executable |
-| 4        | User | Is this entry accessible in user mode |
-| 5        | Lowest | Is this the lowest level of the page table |
-| 6-(PS-1) | Reserved | Must be 0, PS is Page Size |
-| PS-63    | Address | Physical address of the next page table or the physical address of the page shifted to the right by PS bits |
+| Bit      | Name     | Description                                                                                                 |
+|----------|----------|-------------------------------------------------------------------------------------------------------------|
+| 0        | Present  | Is this entry present                                                                                       |
+| 1        | Read     | Is this entry readable                                                                                      |
+| 2        | Write    | Is this entry writable                                                                                      |
+| 3        | Execute  | Is this entry executable                                                                                    |
+| 4        | User     | Is this entry accessible in user mode                                                                       |
+| 5        | Lowest   | Is this the lowest level of the page table                                                                  |
+| 6-(PS-1) | Reserved | Must be 0, PS is Page Size                                                                                  |
+| PS-63    | Address  | Physical address of the next page table or the physical address of the page shifted to the right by PS bits |
 
 ## Instructions
 
@@ -229,10 +229,10 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 - Described as `SIZE` in the following instructions.
 - Can be one of the following:
 
-| Name | Description |
-| -----| ----------- |
-| BYTE | 8-bit integer |
-| WORD | 16-bit integer |
+| Name  | Description    |
+|-------|----------------|
+| BYTE  | 8-bit integer  |
+| WORD  | 16-bit integer |
 | DWORD | 32-bit integer |
 | QWORD | 64-bit integer |
 
@@ -454,10 +454,10 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 
 Has a register called IDTR which contains the address of a table called the Interrupt Descriptor Table (IDT) which contains the addresses of interrupt handlers. It is 256 entries long. The format of an entry is as follows:
 
-| Bit | Name | Description |
-| --- | ---- | ----------- |
-| 0   | Present | Is this entry present |
-| 1-7 | Flags | Reserved |
+| Bit  | Name    | Description                  |
+|------|---------|------------------------------|
+| 0    | Present | Is this entry present        |
+| 1-7  | Flags   | Reserved                     |
 | 8-71 | Address | Address of interrupt handler |
 
 ### Interrupt calling
@@ -522,7 +522,7 @@ foo:
 
 - 2 forms
 - form 1: `[literal]` where literal is a 64-bit integer (also known as `MEMORY`).
-- form 2: `[base*index+offset]`, where any of the 3 can be a register or a immediate of any size (also known as `COMPLEX`).
+- form 2: `[base*index+offset]`, where any of the 3 can be a register or an immediate of any size (also known as `COMPLEX`).
 - In form 2, index or offset can be excluded. If the offset is a register, it can be positive or negative.
 
 ### Labels
@@ -546,20 +546,20 @@ foo:
 
 #### Video device registers
 
-| Port | Name | Description |
-| ---- | ---- | ----------- |
+| Port | Name    | Description      |
+|------|---------|------------------|
 | 16   | COMMAND | Command register |
-| 17   | DATA | Data register |
-| 18   | STATUS | Status register |
+| 17   | DATA    | Data register    |
+| 18   | STATUS  | Status register  |
 
 #### Video device commands
 
-| Command | Description |
-| ------- | ----------- |
-| 0 | Initialise |
-| 1 | Get screen info |
-| 2 | Get mode |
-| 3 | Set mode |
+| Command | Description     |
+|---------|-----------------|
+| 0       | Initialise      |
+| 1       | Get screen info |
+| 2       | Get mode        |
+| 3       | Set mode        |
 
 ##### Initialise
 
@@ -571,45 +571,45 @@ foo:
 - 1 argument: address to store the screen info.
 - Returns a non-zero value in the STATUS register if there is an error. The buffer is as follows:
 
-| Offset | Width | Name | Description |
-| ------ | ----- | ---- | ----------- |
-| 0 | 4 | WIDTH | Native width of the screen in pixels |
-| 4 | 4 | HEIGHT | Native height of the screen in pixels |
-| 8 | 2 | HZ | Refresh rate of the screen in Hz |
-| 10 | 2 | BPP | Maximum bits per pixel |
-| 12 | 2 | MODES | Number of modes available |
-| 14 | 2 | CURMODE | Current mode |
+| Offset | Width | Name    | Description                           |
+|--------|-------|---------|---------------------------------------|
+| 0      | 4     | WIDTH   | Native width of the screen in pixels  |
+| 4      | 4     | HEIGHT  | Native height of the screen in pixels |
+| 8      | 2     | HZ      | Refresh rate of the screen in Hz      |
+| 10     | 2     | BPP     | Maximum bits per pixel                |
+| 12     | 2     | MODES   | Number of modes available             |
+| 14     | 2     | CURMODE | Current mode                          |
 
 ##### Get mode
 
 - 1 argument: address of the input data. The buffer is as follows:
   
-| Offset | Width | Name | Description |
-| ------ | ----- | ---- | ----------- |
-| 0 | 8 | ADDRESS | Address to store output data |
-| 8 | 2 | MODE | Mode to get |
-| 10 | 6 | RESERVED | Reserved |
+| Offset | Width | Name     | Description                  |
+|--------|-------|----------|------------------------------|
+| 0      | 8     | ADDRESS  | Address to store output data |
+| 8      | 2     | MODE     | Mode to get                  |
+| 10     | 6     | RESERVED | Reserved                     |
 
 - Returns a non-zero value in the STATUS register if there is an error. The buffer is as follows:
 
-| Offset | Width | Name | Description |
-| ------ | ----- | ---- | ----------- |
-| 0 | 4 | WIDTH | Width of the screen in pixels |
-| 4 | 4 | HEIGHT | Height of the screen in pixels |
-| 8 | 2 | BPP | Bits per pixel |
-| 10 | 4 | PITCH | Pitch of the screen in bytes |
-| 14 | 2 | HZ | Refresh rate of the screen in Hz |
+| Offset | Width | Name   | Description                      |
+|--------|-------|--------|----------------------------------|
+| 0      | 4     | WIDTH  | Width of the screen in pixels    |
+| 4      | 4     | HEIGHT | Height of the screen in pixels   |
+| 8      | 2     | BPP    | Bits per pixel                   |
+| 10     | 4     | PITCH  | Pitch of the screen in bytes     |
+| 14     | 2     | HZ     | Refresh rate of the screen in Hz |
 
 ##### Set mode
 
 - 1 argument: address of the mode info.
 - Returns a non-zero value in the STATUS register if there is an error. The buffer is as follows:
 
-| Offset | Width | Name | Description |
-| ------ | ----- | ---- | ----------- |
-| 0 | 8 | ADDRESS | Address of the framebuffer |
-| 8 | 2 | MODE | Mode to set |
-| 10 | 6 | RESERVED | Reserved |
+| Offset | Width | Name     | Description                |
+|--------|-------|----------|----------------------------|
+| 0      | 8     | ADDRESS  | Address of the framebuffer |
+| 8      | 2     | MODE     | Mode to set                |
+| 10     | 6     | RESERVED | Reserved                   |
 
 
 ## The BIOS
