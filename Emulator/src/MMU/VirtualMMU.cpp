@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <Emulator.hpp>
 #include <Exceptions.hpp>
 
-#include "MMU/StandardMemoryRegion.hpp"
+#include "StandardMemoryRegion.hpp"
 
 VirtualMMU::VirtualMMU(MMU* physicalMMU, uint64_t pageTableRoot, PageSize pageSize, PageTableLevelCount pageTableLevelCount)
     : m_physicalMMU(physicalMMU), m_pageTableRoot(pageTableRoot), m_pageSize(pageSize), m_pageTableLevelCount(pageTableLevelCount) {
@@ -273,74 +273,4 @@ bool VirtualMMU::GetNextTableLevel(PageTableEntry table, uint64_t tableIndex, Pa
     if (out != nullptr)
         *out = *temp;
     return true;
-}
-
-[[noreturn]] void TestVMMU() {
-    MMU* physicalMMU = new MMU();
-
-    physicalMMU->AddMemoryRegion(new StandardMemoryRegion(0, 16 * 1'024 * 1'024)); // 16 MiB
-
-    // 0x000000-0x400000 - test region - gets identity mapped
-    // 0x400000-0x402000 - Level 5 table
-    // 0x402000-0x404000 - Level 4 table
-    // 0x404000-0x406000 - Level 3 table
-    // 0x406000-0x408000 - Level 2 table
-    // 0x408000-0x40A000 - Level 1 table
-
-    PageTableEntry* level5 = new PageTableEntry[1'024];
-    PageTableEntry* level4 = new PageTableEntry[1'024];
-    PageTableEntry* level3 = new PageTableEntry[1'024];
-    PageTableEntry* level2 = new PageTableEntry[1'024];
-    PageTableEntry* level1 = new PageTableEntry[1'024];
-
-    memset(level5, 0, 1'024 * sizeof(PageTableEntry));
-    memset(level4, 0, 1'024 * sizeof(PageTableEntry));
-    memset(level3, 0, 1'024 * sizeof(PageTableEntry));
-    memset(level2, 0, 1'024 * sizeof(PageTableEntry));
-    memset(level1, 0, 1'024 * sizeof(PageTableEntry));
-
-    for (uint64_t i = 0; i < 1'024; i++) {
-        level5[i].Present = true;
-        level5[i].Readable = true;
-        level5[i].Writable = true;
-        level5[i].Lowest = false;
-        level5[i].PhysicalAddress = 0x402000 + i * 8;
-        level4[i].Present = true;
-        level4[i].Readable = true;
-        level4[i].Writable = true;
-        level4[i].Lowest = false;
-        level4[i].PhysicalAddress = 0x404000 + i * 8;
-        level3[i].Present = true;
-        level3[i].Readable = true;
-        level3[i].Writable = true;
-        level3[i].Lowest = false;
-        level3[i].PhysicalAddress = 0x406000 + i * 8;
-        level2[i].Present = true;
-        level2[i].Readable = true;
-        level2[i].Writable = true;
-        level2[i].Lowest = false;
-        level2[i].PhysicalAddress = 0x408000 + i * 8;
-        level1[i].Present = true;
-        level1[i].Readable = true;
-        level1[i].Writable = true;
-        level1[i].Lowest = true;
-        level1[i].PhysicalAddress = i;
-    }
-
-    physicalMMU->WriteBuffer(0x400000, reinterpret_cast<uint8_t*>(level5), 8 * 1'024);
-    physicalMMU->WriteBuffer(0x402000, reinterpret_cast<uint8_t*>(level4), 8 * 1'024);
-    physicalMMU->WriteBuffer(0x404000, reinterpret_cast<uint8_t*>(level3), 8 * 1'024);
-    physicalMMU->WriteBuffer(0x406000, reinterpret_cast<uint8_t*>(level2), 8 * 1'024);
-    physicalMMU->WriteBuffer(0x408000, reinterpret_cast<uint8_t*>(level1), 8 * 1'024);
-
-    MMU* virtualMMU = new VirtualMMU(physicalMMU, 0x400000, PS_4KiB, PTLC_5);
-
-    for (uint64_t i = 0; i < 0x400000; i += 8) {
-        virtualMMU->write64(i, i);
-        assert(virtualMMU->read64(i) == i);
-    }
-
-    physicalMMU->DumpMemory();
-
-    exit(0);
 }

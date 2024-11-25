@@ -165,8 +165,6 @@ namespace Emulator {
     }
 
     int Start(uint8_t* program, size_t size, const size_t RAMSize, bool has_display, VideoBackendType displayType) {
-        // TestVMMU(); // test the virtual MMU. won't return
-
         if (size > 0x1000'0000)
             return 1; // program too large
 
@@ -432,8 +430,7 @@ namespace Emulator {
         printf("Crash: %s\n", message);
         DumpRegisters(stdout);
         // DumpRAM(stdout);
-        // exit(0);
-        while (true) {}
+        exit(0);
     }
 
     void HandleHalt() {

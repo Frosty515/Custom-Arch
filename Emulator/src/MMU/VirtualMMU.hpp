@@ -95,6 +95,4 @@ class VirtualMMU : public MMU {
     PageTableLevelCount m_pageTableLevelCount;
 };
 
-[[noreturn]] void TestVMMU();
-
 #endif /* _VIRTUAL_MMU_HPP */
