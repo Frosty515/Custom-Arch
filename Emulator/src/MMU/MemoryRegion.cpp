@@ -23,6 +23,10 @@ MemoryRegion::MemoryRegion(uint64_t start, uint64_t end) : m_start(start), m_end
 
 }
 
+MemoryRegion::~MemoryRegion() {
+
+}
+
 void MemoryRegion::read8(uint64_t address, uint8_t* buffer) {
     read(address, buffer, 1);
 }

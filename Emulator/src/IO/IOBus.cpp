@@ -17,7 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "IOBus.hpp"
 
-#include "IO/IODevice.hpp"
+#include "IODevice.hpp"
+#include "IOMemoryRegion.hpp"
 
 #ifdef EMULATOR_DEBUG
 #include <stdio.h>
@@ -28,102 +29,59 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 IOBus* g_IOBus = nullptr;
 
-IOBus::IOBus() {
+IOBus::IOBus(MMU* mmu)
+    : m_MMU(mmu), m_registers{0, {true, false, 0}, {0, 0, 0, 0}, {0, 0}} {
 }
 
 IOBus::~IOBus() {
 }
 
-uint8_t IOBus::ReadByte(uint64_t address) {
-    Validate();
+uint64_t IOBus::ReadRegister(uint64_t offset) {
 #ifdef EMULATOR_DEBUG
-    printf("IOBus::ReadByte(%lu)\n", address);
+    printf("IOBus::ReadRegister(%lu)\n", offset);
 #endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
+    Validate();
+    switch (static_cast<IOBusRegister>(offset)) {
+    case IOBusRegister::COMMAND:
         return 0;
-    return device->ReadByte(address - device->GetBaseAddress());
+    case IOBusRegister::STATUS: {
+        uint64_t* temp = reinterpret_cast<uint64_t*>(&m_registers);
+        return temp[1];
+    }
+    case IOBusRegister::DATA0:
+    case IOBusRegister::DATA1:
+    case IOBusRegister::DATA2:
+    case IOBusRegister::DATA3:
+        return m_registers.data[offset - static_cast<uint64_t>(IOBusRegister::DATA0)];
+    }
+    return 0;
 }
 
-uint16_t IOBus::ReadWord(uint64_t address) {
-    Validate();
+void IOBus::WriteRegister(uint64_t offset, uint64_t data) {
 #ifdef EMULATOR_DEBUG
-    printf("IOBus::ReadWord(%lu)\n", address);
+    printf("IOBus::WriteRegister(%lu, %lu)\n", offset, data);
 #endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return 0;
-    return device->ReadWord(address - device->GetBaseAddress());
-}
-
-uint32_t IOBus::ReadDWord(uint64_t address) {
     Validate();
-#ifdef EMULATOR_DEBUG
-    printf("IOBus::ReadDWord(%lu)\n", address);
-#endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return 0;
-    return device->ReadDWord(address - device->GetBaseAddress());
-}
-
-uint64_t IOBus::ReadQWord(uint64_t address) {
-    Validate();
-#ifdef EMULATOR_DEBUG
-    printf("IOBus::ReadQWord(%lu)\n", address);
-#endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return 0;
-    return device->ReadQWord(address - device->GetBaseAddress());
-}
-
-void IOBus::WriteByte(uint64_t address, uint8_t data) {
-    Validate();
-#ifdef EMULATOR_DEBUG
-    printf("IOBus::WriteByte(%lu, %hhu)\n", address, data);
-#endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return;
-    device->WriteByte(address - device->GetBaseAddress(), data);
-}
-
-void IOBus::WriteWord(uint64_t address, uint16_t data) {
-    Validate();
-#ifdef EMULATOR_DEBUG
-    printf("IOBus::WriteWord(%lu, %hu)\n", address, data);
-#endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return;
-    device->WriteWord(address - device->GetBaseAddress(), data);
-}
-
-void IOBus::WriteDWord(uint64_t address, uint32_t data) {
-    Validate();
-#ifdef EMULATOR_DEBUG
-    printf("IOBus::WriteDWord(%lu, %u)\n", address, data);
-#endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return;
-    device->WriteDWord(address - device->GetBaseAddress(), data);
-}
-
-void IOBus::WriteQWord(uint64_t address, uint64_t data) {
-    Validate();
-#ifdef EMULATOR_DEBUG
-    printf("IOBus::WriteQWord(%lu, %lu)\n", address, data);
-#endif
-    IODevice* device = FindDevice(address);
-    if (device == nullptr)
-        return;
-    device->WriteQWord(address - device->GetBaseAddress(), data);
+    switch (static_cast<IOBusRegister>(offset)) {
+    case IOBusRegister::COMMAND:
+        RunCommand(data);
+        break;
+    case IOBusRegister::STATUS: {
+        IOBus_StatusRegister* temp = reinterpret_cast<IOBus_StatusRegister*>(&m_registers);
+        m_registers.status = *temp;
+        break;
+    }
+    case IOBusRegister::DATA0:
+    case IOBusRegister::DATA1:
+    case IOBusRegister::DATA2:
+    case IOBusRegister::DATA3:
+        m_registers.data[offset - static_cast<uint64_t>(IOBusRegister::DATA0)] = data;
+        break;
+    }
 }
 
 bool IOBus::AddDevice(IODevice* device) {
-    if (FindDevice(device->GetBaseAddress(), device->GetSize()) != nullptr)
+    if (FindDevice(device->GetID()) != nullptr)
         return false;
     m_devices.insert(device);
     return true;
@@ -138,17 +96,76 @@ void IOBus::Validate() const {
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
 }
 
-IODevice* IOBus::FindDevice(uint64_t address) {
-    for (uint64_t i = 0; i < m_devices.getCount(); i++) {
-        if (IODevice* device = m_devices.get(i); device->GetBaseAddress() <= address && (device->GetBaseAddress() + device->GetSize()) > address)
-            return device;
+void IOBus::RunCommand(uint64_t command) {
+    IOBusCommands cmd = static_cast<IOBusCommands>(command);
+    m_registers.status.error = false;
+    m_registers.status.commandComplete = false;
+    switch (cmd) {
+    case IOBusCommands::GET_BUS_INFO: {
+        IOBus_GetBusInfoResponse response{m_devices.getCount()};
+        m_registers.data[0] = *reinterpret_cast<uint64_t*>(&response);
+        break;
     }
-    return nullptr;
+    case IOBusCommands::GET_DEVICE_INFO: {
+        // data[0] = index
+        uint64_t index = m_registers.data[0];
+        if (index >= m_devices.getCount()) {
+            m_registers.status.error = true;
+            break;
+        }
+        IODevice* device = m_devices.get(index);
+        if (device == nullptr) {
+            m_registers.status.error = true;
+            break;
+        }
+        IOBus_GetDeviceInfoResponse response;
+        response.ID = static_cast<uint64_t>(device->GetID());
+        response.baseAddress = device->GetBaseAddress();
+        response.size = device->GetSize();
+        m_registers.data[0] = *reinterpret_cast<uint64_t*>(&response);
+        break;
+    }
+    case IOBusCommands::SET_DEVICE_INFO: {
+        // data[0] = ID
+        // data[1] = baseAddress
+        IODeviceID ID = static_cast<IODeviceID>(m_registers.data[0]);
+        uint64_t baseAddress = m_registers.data[1];
+        IODevice* device = FindDevice(ID);
+        if (device == nullptr) {
+            m_registers.status.error = true;
+            break;
+        }
+        if (uint64_t oldBaseAddress = device->GetBaseAddress(); oldBaseAddress != 0) {
+            // need to delete the old region
+            if (IOMemoryRegion* region = device->GetMemoryRegion(); region != nullptr) {
+                uint64_t start = region->getStart();
+                uint64_t end = region->getEnd();
+                m_MMU->RemoveMemoryRegion(region);
+                delete region;
+                m_MMU->ReaddRegionSegment(start, end);
+            }
+        }
+        device->SetBaseAddress(baseAddress);
+        if (baseAddress != 0) {
+            uint64_t start = baseAddress;
+            uint64_t end = baseAddress + device->GetSize() * 8;
+            if (!m_MMU->RemoveRegionSegment(start, end)) {
+                m_registers.status.error = true;
+                break;
+            }
+            IOMemoryRegion* region = new IOMemoryRegion(start, end, device);
+            m_MMU->AddMemoryRegion(region);
+            device->SetMemoryRegion(region);
+        }
+        break;
+    }
+    }
+    m_registers.status.commandComplete = true;
 }
 
-IODevice* IOBus::FindDevice(uint64_t address, uint64_t size) {
+IODevice* IOBus::FindDevice(IODeviceID ID) {
     for (uint64_t i = 0; i < m_devices.getCount(); i++) {
-        if (IODevice* device = m_devices.get(i); device->GetBaseAddress() <= address && (device->GetBaseAddress() + device->GetSize()) >= (address + size))
+        if (IODevice* device = m_devices.get(i); device->GetID() == ID)
             return device;
     }
     return nullptr;

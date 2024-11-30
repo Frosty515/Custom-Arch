@@ -85,7 +85,7 @@ namespace VideoCommand {
 
 class VideoDevice : public IODevice {
 public:
-    VideoDevice(uint64_t base_address, uint64_t size, VideoBackendType backendType, MMU& mmu);
+    VideoDevice(VideoBackendType backendType, MMU& mmu);
     virtual ~VideoDevice();
 
     virtual void Init();

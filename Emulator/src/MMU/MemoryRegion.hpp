@@ -18,12 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _MEMORY_REGION_HPP
 #define _MEMORY_REGION_HPP
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 class MemoryRegion {
-public:
+   public:
     MemoryRegion(uint64_t start, uint64_t end);
+    virtual ~MemoryRegion();
 
     virtual void read(uint64_t address, uint8_t* buffer, size_t size) = 0;
     virtual void write(uint64_t address, const uint8_t* buffer, size_t size) = 0;
@@ -48,7 +49,7 @@ public:
 
     virtual bool canSplit() { return false; }
 
-private:
+   private:
     uint64_t m_start;
     uint64_t m_end;
     size_t m_size;

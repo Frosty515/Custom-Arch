@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "InstructionBuffer.hpp"
 
+#include <Exceptions.hpp>
+
 InstructionBuffer::InstructionBuffer(MMU* mmu, uint64_t base_address) : Buffer(0), m_mmu(mmu), m_base_address(base_address) {
 
 }
@@ -30,6 +32,8 @@ void InstructionBuffer::Write(uint64_t offset, const uint8_t* data, size_t size)
 }
 
 void InstructionBuffer::Read(uint64_t offset, uint8_t* data, size_t size) const {
+    if (!m_mmu->ValidateExecute(m_base_address + offset, size))
+        g_ExceptionHandler->RaiseException(Exception::PAGING_VIOLATION, m_base_address + offset); // TODO: maybe dynamically change the exception type
     m_mmu->ReadBuffer(m_base_address + offset, data, size);
 }
 

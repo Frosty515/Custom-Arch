@@ -246,6 +246,10 @@ bool MMU::ValidateRead(uint64_t address, size_t size) {
     return true;
 }
 
+bool MMU::ValidateExecute(uint64_t address, size_t size) {
+    return ValidateRead(address, size);
+}
+
 void MMU::AddMemoryRegion(MemoryRegion* region) {
     m_regions.insert(region);
 }

@@ -68,7 +68,7 @@ class VirtualMMU : public MMU {
     virtual void write64(uint64_t address, uint64_t data) override;
 
     virtual bool ValidateRead(uint64_t address, size_t size) override;
-    virtual bool ValidateExecute(uint64_t address, size_t size);
+    virtual bool ValidateExecute(uint64_t address, size_t size) override;
 
     virtual void AddMemoryRegion(MemoryRegion* region) override; // disabled
     virtual void RemoveMemoryRegion(MemoryRegion* region) override; // disabled

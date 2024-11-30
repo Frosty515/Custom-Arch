@@ -44,6 +44,7 @@ class MMU {
     virtual void write64(uint64_t address, uint64_t data);
 
     virtual bool ValidateRead(uint64_t address, size_t size);
+    virtual bool ValidateExecute(uint64_t address, size_t size);
 
     virtual void AddMemoryRegion(MemoryRegion* region);
     virtual void RemoveMemoryRegion(MemoryRegion* region);

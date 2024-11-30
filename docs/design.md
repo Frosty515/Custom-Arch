@@ -531,26 +531,77 @@ foo:
 
 ## Devices
 
-- 1 64-bit Memory mapped I/O bus from 0xE000'0000 to 0xEFFF'FFFF, which is 256MB in size
-- All accesses are 8-byte aligned regardless of the size of the access, allowing for up to 33,554,432 ports
+### Memory mapped I/O bus device
+
+- 1 64-bit Memory mapped I/O bus device in the last 256 bytes of the BIOS address space.
+- All accesses are 8-byte aligned regardless of the size of the access, allowing for up to 8 ports.
+- This is the current port layout:
+
+| Offset | Size in QWORDS | Name     | Description      |
+|--------|----------------|----------|------------------|
+| 0      | 1              | COMMAND  | Command register |
+| 1      | 1              | STATUS   | Status register  |
+| 2      | 4              | DATA     | Data register    |
+| 6      | 2              | RESERVED | Reserved         |
+
+- The command register is used to send commands to the device.
+- The status register is used to get the status of the device. Bit 0 is set to 1 when the current command is complete, and bit 1 is set to 1 when there is an error.
+- The data register is used to send data to the device or get data from the device.
+
+#### Commands
+
+| Command | Description     |
+|---------|-----------------|
+| 0       | Get bus info    |
+| 1       | Get device info |
+| 2       | Set device info |
+
+##### Get bus info
+
+- 0 arguments
+- Data register contains the following:
+
+| Offset | Width | Name    | Description                  |
+|--------|-------|---------|------------------------------|
+| 0      | 8     | DEVICES | Number of devices on the bus |
+
+##### Get device info
+
+- 1 argument: the index of the device. Not to be confused with the device ID.
+- Data register contains the following:
+
+| Offset | Width | Name         | Description                         |
+|--------|-------|--------------|-------------------------------------|
+| 0      | 8     | ID           | Device ID                           |
+| 8      | 8     | Base Address | Base physical address of the device |
+| 16     | 8     | Size         | Size of the device in bytes         |
+
+##### Set device info
+
+- Arguments are as follows:
+
+| Offset | Width | Name         | Description                         |
+|--------|-------|--------------|-------------------------------------|
+| 0      | 8     | ID           | Device ID                           |
+| 8      | 8     | Base Address | Base physical address of the device |
 
 ### Console device
 
-- There is a console I/O device on ports 0-15
+- There is a console I/O device taking up 16 ports by default
 - A raw read/write of a byte will read/write to the console via stdin/stderr respectively
 - Any other sized read/write will be ignored
 
 ### Video device
 
-- There is a video I/O device on ports 16-18
+- There is a video I/O device taking up 3 ports by default
 
 #### Video device registers
 
 | Port | Name    | Description      |
 |------|---------|------------------|
-| 16   | COMMAND | Command register |
-| 17   | DATA    | Data register    |
-| 18   | STATUS  | Status register  |
+| 0    | COMMAND | Command register |
+| 1    | DATA    | Data register    |
+| 2    | STATUS  | Status register  |
 
 #### Video device commands
 

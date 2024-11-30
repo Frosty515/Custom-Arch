@@ -25,8 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "IOBus.hpp"
 
 class IOMemoryRegion : public MemoryRegion {
-public:
+   public:
     IOMemoryRegion(uint64_t start, uint64_t end, IOBus* bus);
+    IOMemoryRegion(uint64_t start, uint64_t end, IODevice* device);
+    ~IOMemoryRegion() override;
 
     virtual void read(uint64_t address, uint8_t* buffer, size_t size) override;
     virtual void write(uint64_t address, const uint8_t* buffer, size_t size) override;
@@ -42,8 +44,12 @@ public:
 
     virtual void dump() override;
 
-private:
-    IOBus* m_bus;
+   private:
+    union {
+        IOBus* bus;
+        IODevice* device;
+    } m_data;
+    bool m_isBus;
 };
 
 #endif /* _IO_MEMORY_REGION_HPP */

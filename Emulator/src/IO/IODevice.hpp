@@ -20,9 +20,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "IOBus.hpp"
+
+class IOMemoryRegion;
+
 class IODevice {
-public:
-    IODevice(uint64_t base_address, uint64_t size) : m_base_address(base_address), m_size(size) {}
+   public:
+    explicit IODevice(IODeviceID ID, uint64_t size)
+        : m_base_address(0), m_size(size), m_ID(ID), m_memoryRegion(nullptr) {}
     virtual ~IODevice() = default;
 
     virtual uint8_t ReadByte(uint64_t address) = 0;
@@ -37,10 +42,17 @@ public:
 
     uint64_t GetBaseAddress() const { return m_base_address; }
     uint64_t GetSize() const { return m_size; }
+    IODeviceID GetID() const { return m_ID; }
+    IOMemoryRegion* GetMemoryRegion() const { return m_memoryRegion; }
 
-private:
+    void SetBaseAddress(uint64_t base_address) { m_base_address = base_address; }
+    void SetMemoryRegion(IOMemoryRegion* memoryRegion) { m_memoryRegion = memoryRegion; }
+
+   private:
     uint64_t m_base_address;
     uint64_t m_size;
+    IODeviceID m_ID;
+    IOMemoryRegion* m_memoryRegion;
 };
 
 #endif /* _IO_DEVICE_HPP */

@@ -23,8 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #endif
 
-ConsoleDevice::ConsoleDevice(uint64_t base_address, uint64_t size)
-    : IODevice(base_address, size) {
+ConsoleDevice::ConsoleDevice(uint64_t size)
+    : IODevice(IODeviceID::CONSOLE, size) {
 }
 
 ConsoleDevice::~ConsoleDevice() {

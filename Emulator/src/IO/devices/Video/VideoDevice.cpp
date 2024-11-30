@@ -26,8 +26,8 @@ void HandleVideoMemoryOperation(bool write, uint64_t address, uint8_t* buffer, s
     device->HandleMemoryOperation(write, address, buffer, size);
 }
 
-VideoDevice::VideoDevice(uint64_t base_address, uint64_t size, VideoBackendType backendType, MMU& mmu)
-    : IODevice(base_address, size), m_memoryRegion(nullptr), m_backendType(backendType), m_backend(nullptr), m_mmu(mmu), m_command(0), m_data(0), m_status(0), m_initialised(false), m_currentMode({0, 0, 0, 0, 0}), m_currentModeIndex(0), m_modes({}) {
+VideoDevice::VideoDevice(VideoBackendType backendType, MMU& mmu)
+    : IODevice(IODeviceID::VIDEO, 3), m_memoryRegion(nullptr), m_backendType(backendType), m_backend(nullptr), m_mmu(mmu), m_command(0), m_data(0), m_status(0), m_initialised(false), m_currentMode({0, 0, 0, 0, 0}), m_currentModeIndex(0), m_modes({}) {
 }
 
 VideoDevice::~VideoDevice() {

@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class ConsoleDevice : public IODevice {
 public:
-    ConsoleDevice(uint64_t base_address, uint64_t size);
+    ConsoleDevice(uint64_t size);
     virtual ~ConsoleDevice();
 
     virtual uint8_t ReadByte(uint64_t address) override;

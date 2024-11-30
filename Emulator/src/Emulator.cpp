@@ -178,28 +178,28 @@ namespace Emulator {
         g_ExceptionHandler->SetINTHandler(g_InterruptHandler);
 
         // Configure the IO bus
-        g_IOBus = new IOBus();
+        g_IOBus = new IOBus(&g_PhysicalMMU);
 
         // Add an IOMemoryRegion
-        g_IOMemoryRegion = new IOMemoryRegion(0xE000'0000, 0xF000'0000, g_IOBus);
+        g_IOMemoryRegion = new IOMemoryRegion(0xFFFF'FF00, 0x1'0000'0000, g_IOBus);
         g_PhysicalMMU.AddMemoryRegion(g_IOMemoryRegion);
 
         // Add a BIOSMemoryRegion
-        g_BIOSMemoryRegion = new BIOSMemoryRegion(0xF000'0000, 0x1'0000'0000, size);
+        g_BIOSMemoryRegion = new BIOSMemoryRegion(0xF000'0000, 0xFFFF'FF00, size);
         g_PhysicalMMU.AddMemoryRegion(g_BIOSMemoryRegion);
 
         // Split the RAM into two regions
-        g_PhysicalMMU.AddMemoryRegion(new StandardMemoryRegion(0, MAX(RAMSize, 0xE000'0000)));
-        if (RAMSize > 0xE000'0000)
-            g_PhysicalMMU.AddMemoryRegion(new StandardMemoryRegion(0x1'0000'0000, RAMSize + 0x2000'0000));
+        g_PhysicalMMU.AddMemoryRegion(new StandardMemoryRegion(0, MAX(RAMSize, 0xF000'0000)));
+        if (RAMSize > 0xF000'0000)
+            g_PhysicalMMU.AddMemoryRegion(new StandardMemoryRegion(0x1'0000'0000, RAMSize + 0x1000'0000));
 
         // Configure the console device
-        g_ConsoleDevice = new ConsoleDevice(0, 0xF);
+        g_ConsoleDevice = new ConsoleDevice(16);
         g_IOBus->AddDevice(g_ConsoleDevice);
 
         // Configure the video device
         if (has_display) {
-            g_VideoDevice = new VideoDevice(16, 3, displayType, g_PhysicalMMU);
+            g_VideoDevice = new VideoDevice(displayType, g_PhysicalMMU);
             assert(g_IOBus->AddDevice(g_VideoDevice));
         }
 
