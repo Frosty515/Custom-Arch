@@ -238,7 +238,7 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 
 ### Flags
 
-- The flags (`STS` register) are set by the ALU instructions depending on the result of the operation.
+- The flags (in the `STS` register) are set by the ALU instructions depending on the result of the operation.
 
 ### Stack
 
@@ -473,7 +473,8 @@ Has a register called IDTR which contains the address of a table called the Inte
 
 ### Protected mode interrupts
 
-- Bit 1 of the IDT entry is set to 1 if the interrupt is available in user mode.
+- Bit 1 of the IDT entry is set to 1 if the interrupt is able to be raised from user mode.
+- If an interrupt is raised from user mode that isn't configured to be able to, a `USER_MODE_VIOLATION` exception is thrown.
 - Interrupts are **always** handled in kernel mode.
 
 ## Assembly syntax
@@ -493,7 +494,7 @@ foo:
 - Sub-labels are defined by a period followed by a string followed by a colon
 - Sub-labels are only accessible within the scope of the label they are defined in
 - Example:
-  
+
 ```asm
 foo:
     nop
@@ -508,7 +509,8 @@ foo:
 
 ### Includes
 
-- `%include "path/to/file.asm"` to include another assembly file
+- `%include "path/to/file.asm"` to include another assembly file.
+- At this stage, it is relative to the working-directory the assembler is run from. Ideally, this should be relative to the file being assembled.
 
 ### Directives
 
