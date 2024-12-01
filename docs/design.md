@@ -537,6 +537,12 @@ foo:
 | `\0`     | Null byte                              |
 | `\xHH`   | Hexadecimal byte (upper or lower case) |
 
+### Character literals
+
+- Characters are defined by single quotes.
+- They are converted to a number, so can be used anywhere.
+- They support the same escape sequences as string literals, so see [the string literals section](#string-literals) for more info.
+
 ### Memory addresses
 
 - 2 forms

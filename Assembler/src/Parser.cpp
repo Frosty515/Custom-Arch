@@ -143,7 +143,6 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             out_str += static_cast<const char*>(token->data)[i];
                     }
                     uint64_t str_len = out_str.size();
-                    fprintf(stderr, "String: \"%s\", size: %lu\n", out_str.c_str(), str_len);
                     raw_data->data_size = str_len + (raw_data->type == RawDataType::ASCIIZ ? 1 : 0);
                     raw_data->data = new char[raw_data->data_size];
                     memcpy(raw_data->data, out_str.c_str(), str_len);

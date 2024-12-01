@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 #include <util.h>
 
+#include <algorithm>
+
 Lexer::Lexer() {
 }
 
@@ -65,6 +67,83 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 token = "";
                 current_offset_in_token = 0;
                 i = end - source;
+            } else if (source[i] == '\'') {
+                if ((i + 2) >= source_size)
+                    error("Invalid character literal");
+                i++;
+                if (source[i] == '\'')
+                    error("Character literal cannot be empty");
+                char c = 0;
+                if (source[i] == '\\') {
+                    i++;
+                    if ((i + 1) >= source_size)
+                        error("Invalid character literal");
+                    switch (source[i]) {
+                    case 'n':
+                        c = '\n';
+                        break;
+                    case 't':
+                        c = '\t';
+                        break;
+                    case 'r':
+                        c = '\r';
+                        break;
+                    case '0':
+                        c = '\0';
+                        break;
+                    case '\\':
+                        c = '\\';
+                        break;
+                    case '\'':
+                        c = '\'';
+                        break;
+                    case '\"':
+                        c = '\"';
+                        break;
+                    case 'x': {
+                        i++;
+                        if ((i + 2) >= source_size)
+                            error("Invalid character literal");
+                        uint8_t hex = 0;
+                        for (uint8_t j = 0; j < 2; j++) {
+                            hex *= 16;
+                            if (char current = source[i + j]; current >= '0' && current <= '9')
+                                hex += current - '0';
+                            else if (current >= 'a' && current <= 'f')
+                                hex += current - 'a' + 10;
+                            else if (current >= 'A' && current <= 'F')
+                                hex += current - 'A' + 10;
+                            else
+                                error("Invalid escape sequence");
+                        }
+                        i++; // due to incrementing earlier, we must increment 1 instead of 2
+                        c = static_cast<char>(hex);
+                        break;
+                    }
+                    default:
+                        error("Invalid escape sequence");
+                    }
+                }
+                else
+                    c = source[i];
+                i++;
+                if (source[i] != '\'')
+                    error("Invalid character literal: missing end");
+                i++;
+                uint8_t raw = static_cast<uint8_t>(c);
+                token = "";
+                if (raw == 0)
+                    token = "0";
+                else {
+                    while (raw != 0) {
+                        token += raw % 10 + '0';
+                        raw /= 10;
+                    }
+                    std::ranges::reverse(token);
+                }
+                AddToken(token);
+                token = "";
+                current_offset_in_token = 0;
             } else {
                 start_of_token = false;
                 token += source[i];
