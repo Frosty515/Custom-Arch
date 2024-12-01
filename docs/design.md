@@ -691,5 +691,5 @@ foo:
 
 ## The BIOS
 
-- The BIOS has a dedicated memory region from 0xF000'0000 to 0xFFFF'FFFF.
+- The BIOS has a dedicated memory region from 0xF000'0000 to 0xFFFF'FEFF.
 - The IP register is set to 0xF000'0000 on boot.
