@@ -517,6 +517,25 @@ foo:
 - `dd` to define a double-word (4 bytes)
 - `dq` to define a quad-word (8 bytes)
 - `org` to set the origin of the program counter. Can only be set once. Regardless of where the in the program it is specified in, it will be set to the first instruction.
+- `ascii` to define a string
+- `asciiz` to define a null-terminated string
+
+### String literals
+
+- Strings are defined by double quotes.
+- They are only valid in the `ascii` and `asciiz` directives.
+- They support the following escape sequences:
+
+| Sequence | Description                            |
+|----------|----------------------------------------|
+| `\"`     | `"`                                    |
+| `\'`     | `'`                                    |
+| `\\`     | `\`                                    |
+| `\n`     | Newline                                |
+| `\r`     | Carriage return                        |
+| `\t`     | Tab                                    |
+| `\0`     | Null byte                              |
+| `\xHH`   | Hexadecimal byte (upper or lower case) |
 
 ### Memory addresses
 

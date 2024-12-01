@@ -198,7 +198,9 @@ namespace InsEncoding {
     enum class RawDataType {
         RAW,
         LABEL,
-        SUBLABEL
+        SUBLABEL,
+        ASCII,
+        ASCIIZ
     };
 
     struct RawData {

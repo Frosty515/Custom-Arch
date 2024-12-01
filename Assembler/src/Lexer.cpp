@@ -49,6 +49,22 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 AddToken(token);
                 token = "";
                 current_offset_in_token = 0;
+            } else if (source[i] == '\"') {
+                char const* end;
+                uint64_t offset = i;
+                while (true) {
+                    end = strchr(source + offset + 1, '\"');
+                    if (end == nullptr)
+                        error("Unterminated string literal");
+                    offset = end - source;
+                    if (source[offset - 1] != '\\')
+                        break;
+                }
+                token = std::string(&source[i], end + 1);
+                AddToken(token);
+                token = "";
+                current_offset_in_token = 0;
+                i = end - source;
             } else {
                 start_of_token = false;
                 token += source[i];
@@ -135,6 +151,8 @@ const char* Lexer::TokenTypeToString(TokenType type) {
         return "COMMA";
     case TokenType::OPERATOR:
         return "OPERATOR";
+    case TokenType::STRING:
+        return "STRING";
     case TokenType::UNKNOWN:
         return "UNKNOWN";
     default:
@@ -152,79 +170,81 @@ void Lexer::Clear() {
 }
 
 void Lexer::AddToken(const std::string& str_token) {
-    std::string token = "";
+    std::string lower_token = "";
     for (char c : str_token) { // convert the token to lowercase
         if (c >= 'A' && c <= 'Z')
             c = c - 'A' + 'a';
-        token += c;
+        lower_token += c;
     }
     Token* new_token = new Token;
-    new_token->data = new char[token.size() + 1];
-    memcpy(new_token->data, token.c_str(), token.size());
-    static_cast<char*>(new_token->data)[token.size()] = 0;
-    new_token->data_size = token.size();
+    new_token->data = new char[lower_token.size() + 1];
+    memcpy(new_token->data, lower_token.c_str(), lower_token.size());
+    static_cast<char*>(new_token->data)[lower_token.size()] = 0;
+    new_token->data_size = lower_token.size();
 
     /* now we identify the token type */
 #define IS_REGISTER(token) (token == "r0" || token == "r1" || token == "r2" || token == "r3" || token == "r4" || token == "r5" || token == "r6" || token == "r7" || token == "r8" || token == "r9" || token == "r10" || token == "r11" || token == "r12" || token == "r13" || token == "r14" || token == "r15" || token == "scp" || token == "sbp" || token == "stp" || token == "cr0" || token == "cr1" || token == "cr2" || token == "cr3" || token == "cr4" || token == "cr5" || token == "cr6" || token == "cr7" || token == "sts" || token == "ip")
 #define IS_INSTRUCTION(token) (token == "push" || token == "pop" || token == "pusha" || token == "popa" || token == "add" || token == "mul" || token == "sub" || token == "div" || token == "or" || token == "xor" || token == "nor" || token == "and" || token == "nand" || token == "not" || token == "cmp" || token == "inc" || token == "dec" || token == "shl" || token == "shr" || token == "ret" || token == "call" || token == "jmp" || token == "jc" || token == "jnc" || token == "jz" || token == "jnz" || token == "int" || token == "lidt" || token == "iret" || token == "mov" || token == "nop" || token == "hlt" || token == "syscall" || token == "sysret" || token == "enteruser")
-    if IS_REGISTER (token)
+    if IS_REGISTER (lower_token)
         new_token->type = TokenType::REGISTER;
     /*else if (token == "byte" || token == "word" || token == "dword" || token == "qword")
         new_token->type = TokenType::SIZE;*/
-    else if IS_INSTRUCTION (token)
+    else if IS_INSTRUCTION (lower_token)
         new_token->type = TokenType::INSTRUCTION;
-    else if (token == "[")
+    else if (lower_token == "[")
         new_token->type = TokenType::LBRACKET;
-    else if (token == "]")
+    else if (lower_token == "]")
         new_token->type = TokenType::RBRACKET;
-    else if (token == ",")
+    else if (lower_token == ",")
         new_token->type = TokenType::COMMA;
-    else if (token == "db" || token == "dw" || token == "dd" || token == "dq" || token == "org")
+    else if (lower_token == "db" || lower_token == "dw" || lower_token == "dd" || lower_token == "dq" || lower_token == "org" || lower_token == "ascii" || lower_token == "asciiz")
         new_token->type = TokenType::DIRECTIVE;
-    else if (token == "byte" || token == "word" || token == "dword" || token == "qword")
+    else if (lower_token == "byte" || lower_token == "word" || lower_token == "dword" || lower_token == "qword")
         new_token->type = TokenType::SIZE;
-    else if (token == "+" || token == "-" || token == "*")
+    else if (lower_token == "+" || lower_token == "-" || lower_token == "*")
         new_token->type = TokenType::OPERATOR;
+    else if (lower_token[0] == '\"' && lower_token[lower_token.size() - 1] == '\"')
+        new_token->type = TokenType::STRING;
     else {
-        if (uint64_t size = token.size(); size == 0)
+        if (uint64_t size = lower_token.size(); size == 0)
             new_token->type = TokenType::UNKNOWN;
         else {
             uint64_t offset = 0;
-            if (token[0] == '.')
+            if (lower_token[0] == '.')
                 offset++;
-            if (token[size - 1] == ':')
+            if (lower_token[size - 1] == ':')
                 size--;
 
             bool is_label = true;
 
             for (uint64_t i = 0; (i + offset) < size; i++) {
-                if (!((token[i + offset] >= 'a' && token[i + offset] <= 'z') || (i > 0 && token[i + offset] >= '0' && token[i + offset] <= '9') || ((i + offset + 1) < size && token[i + offset] == '_'))) {
+                if (!((lower_token[i + offset] >= 'a' && lower_token[i + offset] <= 'z') || (i > 0 && lower_token[i + offset] >= '0' && lower_token[i + offset] <= '9') || ((i + offset + 1) < size && lower_token[i + offset] == '_'))) {
                     is_label = false;
                     break;
                 }
             }
 
             if (is_label) {
-                if (offset == 0 && size == token.size())
+                if (offset == 0 && size == lower_token.size())
                     new_token->type = TokenType::LABEL;
-                else if (offset == 1 && size == token.size())
+                else if (offset == 1 && size == lower_token.size())
                     new_token->type = TokenType::SUBLABEL;
-                else if (offset == 0 && size < token.size())
+                else if (offset == 0 && size < lower_token.size())
                     new_token->type = TokenType::BLABEL;
-                else if (offset == 1 && size < token.size())
+                else if (offset == 1 && size < lower_token.size())
                     new_token->type = TokenType::BSUBLABEL;
             } else {
                 bool is_number = true;
                 uint8_t base = 10;
                 uint64_t i = 0;
-                if (token[0] == '+' || token[0] == '-') {
+                if (lower_token[0] == '+' || lower_token[0] == '-') {
                     i++;
-                    if (i >= token.size()) {
+                    if (i >= lower_token.size()) {
                         is_number = false;
                     }
-                } else if (token[0] == '0') {
+                } else if (lower_token[0] == '0') {
                     i += 2;
-                    switch (token[1]) {
+                    switch (lower_token[1]) {
                     case 'x':
                         base = 16;
                         break;
@@ -239,28 +259,28 @@ void Lexer::AddToken(const std::string& str_token) {
                         i -= 2;
                         break;
                     }
-                    if (i >= token.size())
+                    if (i >= lower_token.size())
                         is_number = false;
                 }
 
-                for (; i < token.size(); i++) {
+                for (; i < lower_token.size(); i++) {
                     if (base == 16) {
-                        if (!((token[i] >= '0' && token[i] <= '9') || (token[i] >= 'a' && token[i] <= 'f'))) {
+                        if (!((lower_token[i] >= '0' && lower_token[i] <= '9') || (lower_token[i] >= 'a' && lower_token[i] <= 'f'))) {
                             is_number = false;
                             break;
                         }
                     } else if (base == 2) {
-                        if (token[i] != '0' && token[i] != '1') {
+                        if (lower_token[i] != '0' && lower_token[i] != '1') {
                             is_number = false;
                             break;
                         }
                     } else if (base == 8) {
-                        if (token[i] < '0' || token[i] > '7') {
+                        if (lower_token[i] < '0' || lower_token[i] > '7') {
                             is_number = false;
                             break;
                         }
                     } else {
-                        if (token[i] < '0' || token[i] > '9') {
+                        if (lower_token[i] < '0' || lower_token[i] > '9') {
                             is_number = false;
                             break;
                         }
@@ -273,8 +293,22 @@ void Lexer::AddToken(const std::string& str_token) {
             }
         }
     }
+    if (new_token->type == TokenType::STRING || new_token->type == TokenType::LABEL || new_token->type == TokenType::SUBLABEL || new_token->type == TokenType::BLABEL || new_token->type == TokenType::BSUBLABEL) {
+        // need to switch to the unmodified token
+        delete[] static_cast<char*>(new_token->data);
+        new_token->data = new char[str_token.size() + 1];
+        memcpy(new_token->data, str_token.c_str(), str_token.size());
+        static_cast<char*>(new_token->data)[str_token.size()] = 0;
+        new_token->data_size = str_token.size();
+    }
     m_tokens.insert(new_token);
 #ifdef ASSEMBLER_DEBUG
-    printf("Token: \"%s\", type = %s\n", token.c_str(), TokenTypeToString(new_token->type));
+    printf("Token: \"%s\", type = %s\n", lower_token.c_str(), TokenTypeToString(new_token->type));
 #endif
+}
+
+[[noreturn]] void Lexer::error(const char* message) {
+    printf("Lexer error: %s\n", message);
+    Clear();
+    exit(1);
 }

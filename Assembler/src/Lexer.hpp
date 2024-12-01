@@ -37,6 +37,7 @@ enum class TokenType {
     SUBLABEL,
     COMMA,
     OPERATOR,
+    STRING,
     UNKNOWN
 };
 
@@ -61,6 +62,8 @@ class Lexer {
 
    private:
     void AddToken(const std::string& str_token);
+
+    [[noreturn]] void error(const char* message);
 
    private:
     LinkedList::RearInsertLinkedList<Token> m_tokens;

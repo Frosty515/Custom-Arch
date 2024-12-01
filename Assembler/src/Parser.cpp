@@ -80,6 +80,80 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
 #endif
 
         if (in_directive) {
+            if (token->type == TokenType::NUMBER && base_address_parsed && !base_address_set) {
+                m_base_address = strtoull(static_cast<const char*>(token->data), nullptr, 0);
+                base_address_set = true;
+                in_directive = false;
+                return true;
+            }
+            if (static_cast<RawData*>(current_data->data)->type == RawDataType::ASCII || static_cast<RawData*>(current_data->data)->type == RawDataType::ASCIIZ) {
+                if (token->type == TokenType::STRING) {
+                    RawData* raw_data = static_cast<RawData*>(current_data->data);
+                    std::string out_str;
+                    // need to loop through the string and resolve escape sequences
+                    for (uint64_t i = 1; i < (token->data_size - 1) /* remove the start and end quotes */; i++) {
+                        if (static_cast<const char*>(token->data)[i] == '\\') {
+                            i++;
+                            switch (static_cast<const char*>(token->data)[i]) {
+                            case 'n':
+                                out_str += '\n';
+                                break;
+                            case 't':
+                                out_str += '\t';
+                                break;
+                            case 'r':
+                                out_str += '\r';
+                                break;
+                            case '0':
+                                out_str += '\0';
+                                break;
+                            case '\\':
+                                out_str += '\\';
+                                break;
+                            case '\'':
+                                out_str += '\'';
+                                break;
+                            case '\"':
+                                out_str += '\"';
+                                break;
+                            case 'x': {
+                                // next 2 chars are hex
+                                uint8_t hex = 0;
+                                for (uint8_t j = 0; j < 2; j++) {
+                                    hex *= 16;
+                                    i++;
+                                    if (i + 1 >= token->data_size)
+                                        error("Invalid escape sequence");
+                                    if (static_cast<const char*>(token->data)[i] >= '0' && static_cast<const char*>(token->data)[i] <= '9')
+                                        hex += static_cast<const char*>(token->data)[i] - '0';
+                                    else if (static_cast<const char*>(token->data)[i] >= 'a' && static_cast<const char*>(token->data)[i] <= 'f')
+                                        hex += static_cast<const char*>(token->data)[i] - 'a' + 10;
+                                    else if (static_cast<const char*>(token->data)[i] >= 'A' && static_cast<const char*>(token->data)[i] <= 'F')
+                                        hex += static_cast<const char*>(token->data)[i] - 'A' + 10;
+                                    else
+                                        error("Invalid escape sequence");
+                                }
+                                out_str += static_cast<char>(hex);
+                                break;
+                            }
+                            default:
+                                error("Invalid escape sequence");
+                            }
+                        } else
+                            out_str += static_cast<const char*>(token->data)[i];
+                    }
+                    uint64_t str_len = out_str.size();
+                    fprintf(stderr, "String: \"%s\", size: %lu\n", out_str.c_str(), str_len);
+                    raw_data->data_size = str_len + (raw_data->type == RawDataType::ASCIIZ ? 1 : 0);
+                    raw_data->data = new char[raw_data->data_size];
+                    memcpy(raw_data->data, out_str.c_str(), str_len);
+                    if (raw_data->type == RawDataType::ASCIIZ)
+                        static_cast<char*>(raw_data->data)[str_len] = 0;
+                } else
+                    error("Invalid token after directive");
+                in_directive = false;
+                return true;
+            }
             switch (token->type) {
             case TokenType::NUMBER:
                 if (base_address_parsed && !base_address_set) {
@@ -209,6 +283,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 static_cast<RawData*>(data->data)->data_size = 4;
             else if (strncmp(static_cast<char*>(token->data), "dq", token->data_size) == 0)
                 static_cast<RawData*>(data->data)->data_size = 8;
+            else if (strncmp(static_cast<char*>(token->data), "ascii", token->data_size) == 0)
+                static_cast<RawData*>(data->data)->type = RawDataType::ASCII;
+            else if (strncmp(static_cast<char*>(token->data), "asciiz", token->data_size) == 0)
+                static_cast<RawData*>(data->data)->type = RawDataType::ASCIIZ;
             else
                 error("Invalid directive");
             static_cast<RawData*>(data->data)->data = nullptr;
@@ -1147,6 +1225,12 @@ void Parser::PrintSections(FILE* fd) const {
                         break;
                     case RawDataType::SUBLABEL:
                         fprintf(fd, "Sublabel: \"%s\"\n", static_cast<Block*>(raw_data->data)->name);
+                        break;
+                    case RawDataType::ASCII:
+                        fprintf(fd, "ASCII: \"%s\"\n", static_cast<char*>(raw_data->data));
+                        break;
+                    case RawDataType::ASCIIZ:
+                        fprintf(fd, "ASCIIZ: \"%s\"\n", static_cast<char*>(raw_data->data));
                         break;
                     }
                     fputc('\n', fd);

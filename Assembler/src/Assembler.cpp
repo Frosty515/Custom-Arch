@@ -96,6 +96,11 @@ void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Lab
                         m_current_offset += 8;
                         break;
                     }
+                    case RawDataType::ASCII:
+                    case RawDataType::ASCIIZ: // null terminator is already handled by the parser
+                        m_buffer.Write(m_current_offset, static_cast<uint8_t*>(raw_data->data), raw_data->data_size);
+                        m_current_offset += raw_data->data_size;
+                        break;
                     }
                 }
             });
