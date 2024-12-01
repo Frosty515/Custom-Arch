@@ -266,8 +266,6 @@ void Lexer::AddToken(const std::string& str_token) {
 #define IS_INSTRUCTION(token) (token == "push" || token == "pop" || token == "pusha" || token == "popa" || token == "add" || token == "mul" || token == "sub" || token == "div" || token == "or" || token == "xor" || token == "nor" || token == "and" || token == "nand" || token == "not" || token == "cmp" || token == "inc" || token == "dec" || token == "shl" || token == "shr" || token == "ret" || token == "call" || token == "jmp" || token == "jc" || token == "jnc" || token == "jz" || token == "jnz" || token == "int" || token == "lidt" || token == "iret" || token == "mov" || token == "nop" || token == "hlt" || token == "syscall" || token == "sysret" || token == "enteruser")
     if IS_REGISTER (lower_token)
         new_token->type = TokenType::REGISTER;
-    /*else if (token == "byte" || token == "word" || token == "dword" || token == "qword")
-        new_token->type = TokenType::SIZE;*/
     else if IS_INSTRUCTION (lower_token)
         new_token->type = TokenType::INSTRUCTION;
     else if (lower_token == "[")
@@ -276,7 +274,7 @@ void Lexer::AddToken(const std::string& str_token) {
         new_token->type = TokenType::RBRACKET;
     else if (lower_token == ",")
         new_token->type = TokenType::COMMA;
-    else if (lower_token == "db" || lower_token == "dw" || lower_token == "dd" || lower_token == "dq" || lower_token == "org" || lower_token == "ascii" || lower_token == "asciiz")
+    else if (lower_token == "db" || lower_token == "dw" || lower_token == "dd" || lower_token == "dq" || lower_token == "org" || lower_token == "ascii" || lower_token == "asciiz" || lower_token == "align")
         new_token->type = TokenType::DIRECTIVE;
     else if (lower_token == "byte" || lower_token == "word" || lower_token == "dword" || lower_token == "qword")
         new_token->type = TokenType::SIZE;

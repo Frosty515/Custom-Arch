@@ -31,19 +31,24 @@ extern "C" {
 
 #define BCD_TO_BINARY(x) (((x & 0xF0) >> 1) + ((x & 0xF0) >> 3) + (x & 0xF))
 
-#define DIV_ROUNDUP(VALUE, DIV) (VALUE + (DIV - 1)) / DIV
+#define DIV_ROUNDUP(VALUE, DIV) (((VALUE) + ((DIV) - 1)) / (DIV))
+#define DIV_ROUNDUP_ADDRESS(ADDR, DIV) ((void*)DIV_ROUNDUP(((unsigned long)(ADDR)), DIV))
 
-#define DIV_ROUNDUP_ADDRESS(ADDR, DIV) (void*)(((unsigned long)ADDR + (DIV - 1)) / DIV)
+#define ALIGN_UP(VALUE, ALIGN) (DIV_ROUNDUP(VALUE, ALIGN) * (ALIGN))
+#define ALIGN_UP_BASE2(VALUE, ALIGN) (((VALUE) + ((ALIGN) - 1)) & ~((ALIGN) - 1))
 
-#define ALIGN_UP(VALUE, ALIGN) DIV_ROUNDUP(VALUE, ALIGN) * ALIGN
+#define ALIGN_UP_ADDRESS(ADDR, ALIGN) ((void*)ALIGN_UP(((unsigned long)(ADDR)), ALIGN))
+#define ALIGN_UP_ADDRESS_BASE2(ADDR, ALIGN) ((void*)ALIGN_UP_BASE2(((unsigned long)(ADDR)), ALIGN))
 
-#define ALIGN_DOWN(VALUE, ALIGN) (VALUE / ALIGN) * ALIGN
+#define ALIGN_DOWN(VALUE, ALIGN) (((VALUE) / (ALIGN)) * (ALIGN))
+#define ALIGN_DOWN_BASE2(VALUE, ALIGN) ((VALUE) & ~((ALIGN) - 1))
 
-#define ALIGN_ADDRESS_DOWN(ADDR, ALIGN) (void*)(((unsigned long)ADDR / ALIGN) * ALIGN)
-
-#define ALIGN_ADDRESS_UP(ADDR, ALIGN) (void*)((((unsigned long)ADDR + (ALIGN - 1)) / ALIGN) * ALIGN)
+#define ALIGN_DOWN_ADDRESS(ADDR, ALIGN) ((void*)ALIGN_DOWN(((unsigned long)ADDR), ALIGN))
+#define ALIGN_DOWN_ADDRESS_BASE2(ADDR, ALIGN) ((void*)ALIGN_DOWN_BASE2(((unsigned long)ADDR), ALIGN))
 
 #define PAGE_SIZE 4'096
+
+#define IS_POWER_OF_TWO(x) ((x & (x - 1)) == 0 && x != 0)
 
 #ifdef __APPLE__
 

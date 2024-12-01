@@ -155,11 +155,6 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             }
             switch (token->type) {
             case TokenType::NUMBER:
-                if (base_address_parsed && !base_address_set) {
-                    m_base_address = strtoull(static_cast<const char*>(token->data), nullptr, 0);
-                    base_address_set = true;
-                    break;
-                }
                 switch (static_cast<RawData*>(current_data->data)->data_size) {
                 case 1: { // byte
                     uint8_t* data = new uint8_t;
@@ -189,7 +184,8 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     error("Invalid data size for directive");
                     break;
                 }
-                static_cast<RawData*>(current_data->data)->type = RawDataType::RAW;
+                if (static_cast<RawData*>(current_data->data)->type != RawDataType::ALIGNMENT)
+                    static_cast<RawData*>(current_data->data)->type = RawDataType::RAW;
                 break;
             case TokenType::LABEL: {
                 if (current_operand != nullptr)
@@ -282,6 +278,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 static_cast<RawData*>(data->data)->data_size = 4;
             else if (strncmp(static_cast<char*>(token->data), "dq", token->data_size) == 0)
                 static_cast<RawData*>(data->data)->data_size = 8;
+            else if (strncmp(static_cast<char*>(token->data), "align", token->data_size) == 0) {
+                static_cast<RawData*>(data->data)->data_size = 8;
+                static_cast<RawData*>(data->data)->type = RawDataType::ALIGNMENT;
+            }
             else if (strncmp(static_cast<char*>(token->data), "ascii", token->data_size) == 0)
                 static_cast<RawData*>(data->data)->type = RawDataType::ASCII;
             else if (strncmp(static_cast<char*>(token->data), "asciiz", token->data_size) == 0)
@@ -1230,6 +1230,9 @@ void Parser::PrintSections(FILE* fd) const {
                         break;
                     case RawDataType::ASCIIZ:
                         fprintf(fd, "ASCIIZ: \"%s\"\n", static_cast<char*>(raw_data->data));
+                        break;
+                    case RawDataType::ALIGNMENT:
+                        fprintf(fd, "Alignment: %lu\n", *static_cast<uint64_t*>(raw_data->data));
                         break;
                     }
                     fputc('\n', fd);

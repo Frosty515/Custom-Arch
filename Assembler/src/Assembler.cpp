@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <util.h>
 
 #include <libarch/Instruction.hpp>
 #include <libarch/Operand.hpp>
@@ -101,6 +102,20 @@ void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Lab
                         m_buffer.Write(m_current_offset, static_cast<uint8_t*>(raw_data->data), raw_data->data_size);
                         m_current_offset += raw_data->data_size;
                         break;
+                    case RawDataType::ALIGNMENT: {
+                        uint64_t align = *static_cast<uint64_t*>(raw_data->data);
+                        if (!IS_POWER_OF_TWO(align))
+                            error("Alignment must be a power of 2");
+                        uint64_t bytes_to_add = ALIGN_UP_BASE2(m_current_offset, align) - m_current_offset;
+                        // fill the space with `nop`s
+                        uint8_t* i_data = new uint8_t[bytes_to_add];
+                        uint8_t nop = static_cast<uint8_t>(Opcode::NOP);
+                        memset(i_data, nop, bytes_to_add);
+                        m_buffer.Write(m_current_offset, i_data, bytes_to_add);
+                        m_current_offset += bytes_to_add;
+                        delete[] i_data;
+                        break;
+                    }
                     }
                 }
             });

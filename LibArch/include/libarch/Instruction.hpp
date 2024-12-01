@@ -200,7 +200,8 @@ namespace InsEncoding {
         LABEL,
         SUBLABEL,
         ASCII,
-        ASCIIZ
+        ASCIIZ,
+        ALIGNMENT
     };
 
     struct RawData {

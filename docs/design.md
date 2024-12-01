@@ -519,6 +519,7 @@ foo:
 - `org` to set the origin of the program counter. Can only be set once. Regardless of where the in the program it is specified in, it will be set to the first instruction.
 - `ascii` to define a string
 - `asciiz` to define a null-terminated string
+- `align` to align the current position in the program to a multiple of a number. The number must be a power of 2. It fills the space with `nop` instructions.
 
 ### String literals
 
