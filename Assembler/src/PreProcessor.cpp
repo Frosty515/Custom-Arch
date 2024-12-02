@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 
@@ -31,7 +32,7 @@ PreProcessor::PreProcessor()
 PreProcessor::~PreProcessor() {
 }
 
-void PreProcessor::process(const char* source, size_t source_size) {
+void PreProcessor::process(const char* source, size_t source_size, const std::string_view& file_name) {
     // 1. resolve includes in %include "file" format
     {
         char* source_i = new char[source_size + 1];
@@ -51,10 +52,8 @@ void PreProcessor::process(const char* source, size_t source_size) {
             include_start += 10;
             include_end = strchr(include_start, '"');
             if (include_end != nullptr) {
-                char* include_file = new char[include_end - include_start + 1];
-                strncpy(include_file, include_start, include_end - include_start);
-                include_file[include_end - include_start] = '\0';
-                if (FILE* file = fopen(include_file, "r"); file != nullptr) {
+                std::string include_string = std::filesystem::path(file_name).replace_filename(std::string(include_start, include_end));
+                if (FILE* file = fopen(include_string.c_str(), "r"); file != nullptr) {
                     fseek(file, 0, SEEK_END);
                     size_t file_size = ftell(file);
                     fseek(file, 0, SEEK_SET);
@@ -62,7 +61,7 @@ void PreProcessor::process(const char* source, size_t source_size) {
                     fread(file_data, 1, file_size, file);
                     fclose(file);
                     PreProcessor preprocessor;
-                    preprocessor.process(file_data, file_size);
+                    preprocessor.process(file_data, file_size, include_string);
                     size_t processed_size = preprocessor.GetProcessedBufferSize();
                     uint8_t* processed_data = new uint8_t[processed_size];
                     preprocessor.ExportProcessedBuffer(processed_data);
@@ -72,7 +71,6 @@ void PreProcessor::process(const char* source, size_t source_size) {
                     delete[] file_data;
                 } else
                     error("Could not open include file");
-                delete[] include_file;
                 i_source = include_end + 1;
             } else
                 error("Unterminated include directive");

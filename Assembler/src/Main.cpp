@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     fclose(file);
 
     PreProcessor pre_processor;
-    pre_processor.process(reinterpret_cast<const char*>(file_contents), file_size);
+    pre_processor.process(reinterpret_cast<const char*>(file_contents), file_size, program);
     size_t processed_buffer_size = pre_processor.GetProcessedBufferSize();
     uint8_t* processed_buffer_data = new uint8_t[processed_buffer_size];
     pre_processor.ExportProcessedBuffer(processed_buffer_data);

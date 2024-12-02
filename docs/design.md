@@ -510,7 +510,7 @@ foo:
 ### Includes
 
 - `%include "path/to/file.asm"` to include another assembly file.
-- At this stage, it is relative to the working-directory the assembler is run from. Ideally, this should be relative to the file being assembled.
+- They are relative to the file being assembled.
 
 ### Define macros
 

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stddef.h>
 
+#include <string_view>
+
 #include "Buffer.hpp"
 
 class PreProcessor {
@@ -27,7 +29,7 @@ public:
     PreProcessor();
     ~PreProcessor();
 
-    void process(const char* source, size_t source_size);
+    void process(const char* source, size_t source_size, const std::string_view& file_name);
 
     size_t GetProcessedBufferSize() const;
     void ExportProcessedBuffer(uint8_t* data) const;
