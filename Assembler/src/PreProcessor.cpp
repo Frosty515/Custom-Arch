@@ -17,9 +17,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "PreProcessor.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
+#include <unordered_map>
 
 PreProcessor::PreProcessor()
     : m_buffer(), m_current_offset(0) {
@@ -155,6 +158,128 @@ void PreProcessor::process(const char* source, size_t source_size) {
     }
 
     delete[] original_source3;
+
+    // export the buffer to a char const* and size
+    size_t source4_size = m_current_offset;
+    char const* source4;
+    {
+        char* source4_i = new char[source4_size + 1];
+        m_buffer.Read(0, reinterpret_cast<uint8_t*>(source4_i), source4_size);
+        source4_i[source4_size] = '\0';
+        source4 = source4_i;
+    }
+
+    // clear the buffer
+    m_buffer.Clear();
+    m_current_offset = 0;
+
+    const char* original_source4 = source4;
+
+    // 4. resolve macros in %define name value format
+
+    struct Define {
+        std::string name;
+        std::string value;
+        char const* start;
+    };
+
+    std::vector<Define> defines;
+
+    // start by finding all the macros and making a list of them
+    while (true) {
+        char* define_start = strstr(const_cast<char*>(source4), "%define ");
+        if (define_start == nullptr)
+            break;
+        define_start += 8;
+        char* define_end = strchr(define_start, ' ');
+        if (define_end == nullptr)
+            error("Invalid define directive");
+        char* value_end = strchr(define_end + 1, '\n');
+        if (value_end == nullptr)
+            error("Unterminated define directive");
+        defines.push_back({std::string(define_start, define_end), std::string(define_end + 1, value_end), define_start - 8});
+        source4 = value_end + 1;
+    }
+
+    source4 = original_source4;
+
+    // then remove the macros from the source
+    for (Define& define : defines) {
+        m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source4), define.start - source4);
+        m_current_offset += define.start - source4;
+        source4 = define.start + define.name.size() + define.value.size() + 9;
+    }
+    // write the rest of the source
+    m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source4), source4_size - (source4 - original_source4));
+    m_current_offset += source4_size - (source4 - original_source4);
+
+    // export into source 5
+    delete[] original_source4;
+
+    size_t source5_size = m_current_offset;
+    char const* source5;
+    {
+        char* source5_i = new char[source5_size + 1];
+        m_buffer.Read(0, reinterpret_cast<uint8_t*>(source5_i), source5_size);
+        source5_i[source5_size] = '\0';
+        source5 = source5_i;
+    }
+
+    // clear the buffer
+    m_buffer.Clear();
+    m_current_offset = 0;
+
+    char const* original_source5 = source5;
+
+    // make a list of all references to the macros
+    struct DefineReference {
+        std::string name;
+        char const* start;
+    };
+
+    std::vector<std::pair<size_t /* offset */, Define&>> define_references;
+
+    for (Define& define : defines) {
+        char* define_start = const_cast<char*>(source5);
+        while (define_start != nullptr) {
+            define_start = strstr(define_start, define.name.c_str());
+            if (define_start != nullptr) {
+                define_references.push_back({define_start - source5, define});
+                define_start += define.name.size();
+            }
+        }
+    }
+
+    // sort the references by offset
+    std::sort(define_references.begin(), define_references.end(), [](auto& a, auto& b) {
+        return a.first < b.first;
+    });
+
+    for (auto& [offset, define] : define_references) {
+        if (offset < m_current_offset) { // possible overlap
+            // need to ensure it does overlap and isn't before. if it is before, then an error has occurred
+            if (offset + define.name.size() <= m_current_offset)
+                error("Invalid define reference");
+
+            // no need to copy before the offset
+            m_buffer.Write(m_current_offset - (m_current_offset - offset), reinterpret_cast<const uint8_t*>(define.value.c_str()), define.value.size());
+            m_current_offset += define.value.size() - (m_current_offset - offset);
+            source5 += define.name.size() - (m_current_offset - offset);
+
+        } else {
+            m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source5), offset - (source5 - original_source5));
+            m_current_offset += offset - (source5 - original_source5);
+            m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(define.value.c_str()), define.value.size());
+            m_current_offset += define.value.size();
+            source5 += offset - (source5 - original_source5) + define.name.size();
+        }
+    }
+
+    // copy the rest of the source
+    m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source5), source5_size - (source5 - original_source5));
+    m_current_offset += source5_size - (source5 - original_source5);
+
+    delete[] original_source5;
 }
 
 size_t PreProcessor::GetProcessedBufferSize() const {
@@ -180,7 +305,7 @@ char* PreProcessor::GetLine(char* source, size_t source_size, size_t& line_size)
     return nullptr;
 }
 
-void PreProcessor::error(const char* message) {
+[[noreturn]] void PreProcessor::error(const char* message) {
     fprintf(stderr, "PreProcessor error: %s\n", message);
     exit(1);
 }

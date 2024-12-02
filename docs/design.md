@@ -512,6 +512,13 @@ foo:
 - `%include "path/to/file.asm"` to include another assembly file.
 - At this stage, it is relative to the working-directory the assembler is run from. Ideally, this should be relative to the file being assembled.
 
+### Define macros
+
+- `%define name value` to define a macro.
+- Does not support arguments.
+- The value goes until the end of the line.
+- Multi-line macros are unsupported.
+
 ### Directives
 
 - `db` to define a byte
