@@ -529,6 +529,14 @@ foo:
 - `ascii` to define a string
 - `asciiz` to define a null-terminated string
 - `align` to align the current position in the program to a multiple of a number. The number must be a power of 2. It fills the space with `nop` instructions.
+- Example usage:
+```
+org 0xF0000000
+db 0x00
+align 8
+ascii "Hello, world!"
+asciiz "Hello, world!"
+```
 
 ### String literals
 
@@ -727,3 +735,16 @@ foo:
 
 - The BIOS has a dedicated memory region from 0xF000'0000 to 0xFFFF'FEFF.
 - The IP register is set to 0xF000'0000 on boot.
+
+## Memory layout
+
+- This is the current memory layout of the system:
+
+| Start                 | End                   | Description      |
+|-----------------------|-----------------------|------------------|
+| 0x0000'0000'0000'0000 | 0x0000'0000'EFFF'FFFF | Low User memory  |
+| 0x0000'0000'F000'0000 | 0x0000'0000'FFFF'FEFF | BIOS             |
+| 0x0000'0000'FFFF'FF00 | 0x0000'0000'FFFF'FFFF | I/O bus          |
+| 0x0000'0001'0000'0000 | 0xFFFF'FFFF'FFFF'FFFF | High User memory |
+
+- The BIOS region should never be accessed outside the BIOS.
