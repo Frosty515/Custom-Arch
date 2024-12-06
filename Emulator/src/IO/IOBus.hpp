@@ -20,7 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include <Data-structures/Bitmap.hpp>
 #include <Data-structures/LinkedList.hpp>
+#include <map>
+#include <math.hpp>
+#include <unordered_map>
+#include <utility>
 
 class MMU;
 class IODevice;
@@ -37,7 +42,9 @@ enum class IOBusRegister {
 enum class IOBusCommands {
     GET_BUS_INFO = 0,
     GET_DEVICE_INFO = 1,
-    SET_DEVICE_INFO = 2
+    SET_DEVICE_INFO = 2,
+    GET_INTERRUPT_MAPPING = 3,
+    SET_INTERRUPT_MAPPING = 4
 };
 
 enum class IODeviceID {
@@ -53,11 +60,23 @@ struct [[gnu::packed]] IOBus_GetDeviceInfoResponse {
     uint64_t ID;
     uint64_t baseAddress; // 0 if not set
     uint64_t size;
+    uint64_t INTCount;
 };
 
 struct [[gnu::packed]] IOBus_SetDeviceInfoRequest { // ID and size cannot be changed
     uint64_t ID; // device to set the data to
     uint64_t baseAddress;
+};
+
+struct [[gnu::packed]] IOBus_GetInterruptMappingRequest {
+    uint64_t deviceID;
+    uint64_t interrupt;
+};
+
+struct [[gnu::packed]] IOBus_SetInterruptMappingRequest {
+    uint64_t deviceID;
+    uint64_t interrupt;
+    uint8_t SINT; // Software interrupt
 };
 
 struct [[gnu::packed]] IOBus_StatusRegister {
@@ -84,6 +103,8 @@ class IOBus {
     bool AddDevice(IODevice* device);
     void RemoveDevice(IODevice* device);
 
+    void HandleDeviceInterrupt(IODeviceID device, uint64_t index);
+
    private:
     void Validate() const;
 
@@ -92,9 +113,35 @@ class IOBus {
     IODevice* FindDevice(IODeviceID ID);
 
    private:
+    struct IODeviceInterruptInfo {
+        IODeviceInterruptInfo(IODeviceID device, uint64_t index)
+            : device(device), index(index) {}
+        bool operator==(const IODeviceInterruptInfo& other) const {
+            return device == other.device && index == other.index;
+        }
+        // IODeviceInterruptInfo operator=(const IODeviceInterruptInfo& other) {
+        //     device = other.device;
+        //     index = other.index;
+        //     return *this;
+        // }
+        IODeviceID device;
+        uint64_t index;
+    };
+
+    struct IODeviceInterruptInfoHash {
+        size_t operator()(const IODeviceInterruptInfo info) const {
+            size_t seed = 0;
+            Math::hash_combine(seed, static_cast<uint64_t>(info.device));
+            Math::hash_combine(seed, info.index);
+            return seed;
+        }
+    };
+
     MMU* m_MMU;
     IOBusRegisters m_registers;
     LinkedList::SimpleLinkedList<IODevice> m_devices;
+    std::unordered_map<IODeviceInterruptInfo, uint8_t, IODeviceInterruptInfoHash> m_interruptMapping;
+    Bitmap m_interruptMap;
 };
 
 extern IOBus* g_IOBus;

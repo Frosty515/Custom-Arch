@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Interrupts.hpp"
 
+#include <Instruction/Instruction.hpp>
+
 #include "Emulator.hpp"
 #include "Exceptions.hpp"
 #include "Stack.hpp"
@@ -40,20 +42,16 @@ void InterruptHandler::SetIDTR(uint64_t base) {
 }
 
 [[noreturn]] void InterruptHandler::RaiseInterrupt(uint8_t interrupt, uint64_t IP) {
-    if (!m_IDT[interrupt].loaded)
-        m_IDT[interrupt] = ReadDescriptor(interrupt);
-    if ((m_IDT[interrupt].flags & 1) == 0)
-        HandleFailure(interrupt);
-    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
-        Emulator::ExitUserMode();
-    if (g_stack->WillOverflowOnPush())
-        HandleFailure(interrupt);
-    g_stack->push(IP);
-    if (g_stack->WillOverflowOnPush())
-        HandleFailure(interrupt);
-    g_stack->push(Emulator::GetCPUStatus());
+    RaiseInterruptCommon(interrupt, IP);
     Emulator::JumpToIP(m_IDT[interrupt].handler);
 }
+
+void InterruptHandler::RaiseInterruptExternal(uint8_t interrupt) {
+    Emulator::KillCurrentInstruction();
+    RaiseInterruptCommon(interrupt, Emulator::GetCPU_IP());
+    Emulator::JumpToIPExternal(m_IDT[interrupt].handler);
+}
+
 
 void InterruptHandler::ReturnFromInterrupt() {
     StackViolationErrorCode code = {1, 0, 0, 0};
@@ -90,5 +88,19 @@ void InterruptHandler::HandleFailure(uint8_t interrupt) {
         m_ExceptionHandler->RaiseException(Exception::UNHANDLED_INTERRUPT, interrupt);
 }
 
+void InterruptHandler::RaiseInterruptCommon(uint8_t interrupt, uint64_t IP) {
+    if (!m_IDT[interrupt].loaded)
+        m_IDT[interrupt] = ReadDescriptor(interrupt);
+    if ((m_IDT[interrupt].flags & 1) == 0)
+        HandleFailure(interrupt);
+    if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
+        Emulator::ExitUserMode();
+    if (g_stack->WillOverflowOnPush())
+        HandleFailure(interrupt);
+    g_stack->push(IP);
+    if (g_stack->WillOverflowOnPush())
+        HandleFailure(interrupt);
+    g_stack->push(Emulator::GetCPUStatus());
+}
 
 InterruptHandler* g_InterruptHandler = nullptr;

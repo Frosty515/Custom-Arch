@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Instruction.hpp"
 
+#include <atomic>
 #include <Emulator.hpp>
 #include <Exceptions.hpp>
 #include <Interrupts.hpp>
@@ -27,6 +28,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <Stack.hpp>
 
 #include "InstructionBuffer.hpp"
+
+std::atomic_uchar g_ExecutionAllowed = 1;
+std::atomic_uchar g_ExecutionRunning = 1;
+std::atomic_uchar g_TerminateExecution = 0;
 
 bool deleted[2] = {true, true};
 
@@ -40,7 +45,7 @@ void CleanupCurrentInstruction() {
     const uint64_t count = g_current_instruction->operands.getCount();
     for (uint8_t i = 0; i < count; i++) {
         if (g_currentOperands[i]->GetType() == OperandType::Complex) {
-            ComplexData* complex = (ComplexData*)g_currentOperands[i]->GetComplexData();
+            ComplexData* complex = g_currentOperands[i]->GetComplexData();
             ComplexItem* items[3] = {&complex->base, &complex->index, &complex->offset};
             for (uint8_t j = 0; j < 3; j++) {
                 if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
@@ -67,7 +72,34 @@ void CleanupCurrentInstruction() {
     g_current_instruction = nullptr;
 }
 
-void ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, char const*& last_error) {
+void StopExecution() {
+    g_TerminateExecution.store(1);
+    while (g_ExecutionRunning.load() == 1) {
+    }
+}
+
+void PauseExecution() {
+    g_ExecutionAllowed.store(0);
+    while (g_ExecutionRunning.load() == 1) {
+    }
+}
+
+void AllowExecution() {
+    g_TerminateExecution.store(0);
+    g_ExecutionAllowed.store(1);
+}
+
+bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, char const*& last_error) {
+    if (g_TerminateExecution.load() == 1) {
+        g_ExecutionRunning.store(0);
+        return false; // completely stop execution
+    }
+    if (g_ExecutionAllowed.load() == 0 && g_ExecutionRunning.load() != 0) {
+        g_ExecutionRunning.store(0);
+        return true; // still looping through instructions, just not doing anything
+    }
+    else if (g_ExecutionRunning.load() == 0)
+        g_ExecutionRunning.store(1);
     assert(deleted[0] && deleted[1]);
     (void)CurrentState;
     (void)last_error;
@@ -236,11 +268,13 @@ void ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, c
     Emulator::SyncRegisters();
 
     Emulator::SetCPU_IP(Emulator::GetNextIP());
+    return true;
 }
 
-[[noreturn]] void ExecutionLoop(MMU* mmu, InstructionState& CurrentState, char const*& last_error) {
-    while (true)
-        ExecuteInstruction(Emulator::GetCPU_IP(), mmu, CurrentState, last_error);
+void ExecutionLoop(MMU* mmu, InstructionState& CurrentState, char const*& last_error) {
+    bool status = true;
+    while (status)
+        status = ExecuteInstruction(Emulator::GetCPU_IP(), mmu, CurrentState, last_error);
 }
 
 /*
@@ -551,7 +585,7 @@ ALU_INSTRUCTION2(xor)
 ALU_INSTRUCTION2(nor)
 ALU_INSTRUCTION2(and)
 ALU_INSTRUCTION2(nand)
-ALU_INSTRUCTION1(not )
+ALU_INSTRUCTION1(not)
 ALU_INSTRUCTION2(shl)
 ALU_INSTRUCTION2(shr)
 ALU_INSTRUCTION2_NO_RET_VAL(cmp)

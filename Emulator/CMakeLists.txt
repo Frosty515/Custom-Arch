@@ -20,13 +20,13 @@
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2 REQUIRED sdl2)
 
-if(BUILD_ARCHITECTURE STREQUAL "x86_64")
+if (BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/ALUInstruction.asm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/spinlock.asm
         ${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64/util.asm
     )
-endif()
+endif ()
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
     set(emulator_sources
@@ -38,11 +38,12 @@ else (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
         ${emulator_sources}
         ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Darwin/Memory.cpp
     )
-endif()
+endif ()
 
 set(emulator_sources
     ${emulator_sources}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/AVLTree.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/Bitmap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/Buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Data-structures/LinkedList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Instruction/Instruction.cpp
@@ -65,6 +66,7 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Exceptions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Interrupts.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/math.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Register.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Stack.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
@@ -87,7 +89,7 @@ target_link_libraries(Emulator PRIVATE arch ${SDL2_LIBRARIES})
 
 if (BUILD_CONFIG STREQUAL "Debug")
     target_compile_definitions(Emulator PRIVATE EMULATOR_DEBUG=1)
-endif()
+endif ()
 
 target_compile_options(Emulator
     PRIVATE $<$<COMPILE_LANGUAGE:CXX,C>:-g>

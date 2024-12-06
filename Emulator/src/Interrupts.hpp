@@ -22,6 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <MMU/MMU.hpp>
 
+#define INTERRUPT_COUNT 256
+#define RESERVED_INTERRUPTS 16
+#define USABLE_INTERRUPTS (INTERRUPT_COUNT - RESERVED_INTERRUPTS)
+
 struct InterruptDescriptor {
     bool loaded;
     uint8_t flags;
@@ -49,6 +53,7 @@ public:
     void SetIDTR(uint64_t base);
 
     [[noreturn]] void RaiseInterrupt(uint8_t interrupt, uint64_t IP);
+    void RaiseInterruptExternal(uint8_t interrupt);
     void ReturnFromInterrupt();
 
     void ChangeMMU(MMU* mmu);
@@ -57,6 +62,8 @@ public:
 private:
     InterruptDescriptor ReadDescriptor(uint8_t interrupt);
     void HandleFailure(uint8_t interrupt);
+
+    void RaiseInterruptCommon(uint8_t interrupt, uint64_t IP);
 
 private:
     MMU* m_MMU;

@@ -26,11 +26,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Emulator.hpp>
 #include <Exceptions.hpp>
+#include <Interrupts.hpp>
+
+void IOBus_HandleDeviceInterrupt(IODeviceID device, uint64_t index, void* data) {
+    if (IOBus* bus = static_cast<IOBus*>(data); bus != nullptr)
+        bus->HandleDeviceInterrupt(device, index);
+}
 
 IOBus* g_IOBus = nullptr;
 
 IOBus::IOBus(MMU* mmu)
-    : m_MMU(mmu), m_registers{0, {true, false, 0}, {0, 0, 0, 0}, {0, 0}} {
+    : m_MMU(mmu), m_registers{0, {true, false, 0}, {0, 0, 0, 0}, {0, 0}}, m_interruptMap(USABLE_INTERRUPTS) {
+    m_interruptMap.ClearAll();
 }
 
 IOBus::~IOBus() {
@@ -84,12 +91,24 @@ bool IOBus::AddDevice(IODevice* device) {
     if (FindDevice(device->GetID()) != nullptr)
         return false;
     m_devices.insert(device);
+    device->SetInterruptCallback(IOBus_HandleDeviceInterrupt, this);
+    for (uint64_t i = 0; i < device->GetInterruptCount(); i++)
+        m_interruptMapping.insert({{device->GetID(), i}, 0});
     return true;
 }
 
 void IOBus::RemoveDevice(IODevice* device) {
     m_devices.remove(device);
+    for (uint64_t i = 0; i < device->GetInterruptCount(); i++)
+        m_interruptMapping.erase({device->GetID(), i});
+    device->SetInterruptCallback(nullptr, nullptr);
 }
+
+void IOBus::HandleDeviceInterrupt(IODeviceID device, uint64_t index) {
+    if (uint8_t SINT = m_interruptMapping[{device, index}]; SINT != 0)
+        g_InterruptHandler->RaiseInterruptExternal(SINT);
+}
+
 
 void IOBus::Validate() const {
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
@@ -122,6 +141,7 @@ void IOBus::RunCommand(uint64_t command) {
         response.ID = static_cast<uint64_t>(device->GetID());
         response.baseAddress = device->GetBaseAddress();
         response.size = device->GetSize();
+        response.INTCount = device->GetInterruptCount();
         m_registers.data[0] = *reinterpret_cast<uint64_t*>(&response);
         break;
     }
@@ -157,6 +177,56 @@ void IOBus::RunCommand(uint64_t command) {
             m_MMU->AddMemoryRegion(region);
             device->SetMemoryRegion(region);
         }
+        break;
+    }
+    case IOBusCommands::GET_INTERRUPT_MAPPING: {
+        // data[0] = deviceID
+        // data[1] = interrupt
+        IOBus_GetInterruptMappingRequest request;
+        request.deviceID = m_registers.data[0];
+        request.interrupt = m_registers.data[1];
+        IODevice* device = FindDevice(static_cast<IODeviceID>(request.deviceID));
+        if (device == nullptr) {
+            m_registers.status.error = true;
+            break;
+        }
+        if (request.interrupt >= device->GetInterruptCount()) {
+            m_registers.status.error = true;
+            break;
+        }
+        m_registers.data[0] = m_interruptMapping[{static_cast<IODeviceID>(request.deviceID), request.interrupt}];
+        break;
+    }
+    case IOBusCommands::SET_INTERRUPT_MAPPING: {
+        // data[0] = deviceID
+        // data[1] = interrupt
+        // data[2] = SINT
+        IOBus_SetInterruptMappingRequest request;
+        request.deviceID = m_registers.data[0];
+        request.interrupt = m_registers.data[1];
+        request.SINT = m_registers.data[2];
+        IODevice* device = FindDevice(static_cast<IODeviceID>(request.deviceID));
+        if (device == nullptr) {
+            m_registers.status.error = true;
+            break;
+        }
+        if (request.interrupt >= device->GetInterruptCount()) {
+            m_registers.status.error = true;
+            break;
+        }
+        if (request.SINT < RESERVED_INTERRUPTS && request.SINT != 0) {
+            m_registers.status.error = true;
+            break;
+        }
+        if (request.SINT != 0) {
+            if (m_interruptMap.Test(request.SINT)) {
+                m_registers.status.error = true;
+                break;
+            }
+            m_interruptMap.Set(request.SINT);
+        } else
+            m_interruptMap.Clear(request.SINT);
+        m_interruptMapping[{static_cast<IODeviceID>(request.deviceID), request.interrupt}] = request.SINT;
         break;
     }
     }

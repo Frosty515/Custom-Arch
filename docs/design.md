@@ -585,11 +585,13 @@ foo:
 
 #### Commands
 
-| Command | Description     |
-|---------|-----------------|
-| 0       | Get bus info    |
-| 1       | Get device info |
-| 2       | Set device info |
+| Command | Description           |
+|---------|-----------------------|
+| 0       | Get bus info          |
+| 1       | Get device info       |
+| 2       | Set device info       |
+| 3       | Get Interrupt mapping |
+| 4       | Set Interrupt mapping |
 
 ##### Get bus info
 
@@ -605,11 +607,12 @@ foo:
 - 1 argument: the index of the device. Not to be confused with the device ID.
 - Data register contains the following:
 
-| Offset | Width | Name         | Description                         |
-|--------|-------|--------------|-------------------------------------|
-| 0      | 8     | ID           | Device ID                           |
-| 8      | 8     | Base Address | Base physical address of the device |
-| 16     | 8     | Size         | Size of the device in bytes         |
+| Offset | Width | Name          | Description                         |
+|--------|-------|---------------|-------------------------------------|
+| 0      | 8     | ID            | Device ID                           |
+| 8      | 8     | Base Address  | Base physical address of the device |
+| 16     | 8     | Size          | Size of the device in bytes         |
+| 24     | 8     | INT Count     | Number of interrupts the device has |
 
 ##### Set device info
 
@@ -619,6 +622,28 @@ foo:
 |--------|-------|--------------|-------------------------------------|
 | 0      | 8     | ID           | Device ID                           |
 | 8      | 8     | Base Address | Base physical address of the device |
+
+##### Get Interrupt mapping
+
+- Arguments are as follows:
+
+| Offset | Width | Name | Description      |
+|--------|-------|------|------------------|
+| 0      | 8     | ID   | Device ID        |
+| 8      | 8     | INT  | Interrupt index  |
+
+- Data register contains the software interrupt number (SINT) that the hardware interrupt is mapped to.
+
+##### Set Interrupt mapping
+
+- Arguments are as follows:
+
+| Offset | Width | Name | Description               |
+|--------|-------|------|---------------------------|
+| 0      | 8     | ID   | Device ID                 |
+| 8      | 8     | INT  | Interrupt index           |
+| 16     | 1     | SINT | Software interrupt number |
+
 
 ### Console device
 

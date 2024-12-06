@@ -141,16 +141,18 @@ namespace Emulator {
                 Event* event = g_events.getHead();
                 switch (event->type) {
                 case EventType::SwitchToIP:
-                    SetCPU_IP(event->data);
                     assert(ExecutionThread != nullptr);
-                    ExecutionThread->detach();
+                    StopExecution();
+                    ExecutionThread->join();
                     delete ExecutionThread;
+                    SetCPU_IP(event->data);
                     ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
                     break;
                 case EventType::NewMMU:
                     g_InterruptHandler->ChangeMMU(g_CurrentMMU);
                     assert(ExecutionThread != nullptr);
-                    ExecutionThread->detach();
+                    StopExecution();
+                    ExecutionThread->join(); // wait for the thread to finish
                     delete ExecutionThread;
                     ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
                     break;
@@ -207,9 +209,9 @@ namespace Emulator {
         g_stack = new Stack(&g_PhysicalMMU, 0, 0, 0);
 
         // Load program into RAM
-        g_PhysicalMMU.WriteBuffer(0xF000'0000, program, size); // temp copy size for debugging
+        g_PhysicalMMU.WriteBuffer(0xF000'0000, program, size);
 
-        g_IP = new Register(RegisterType::Instruction, 0, false, 0xF000'0000); // explicitly initialise instruction pointer to 0
+        g_IP = new Register(RegisterType::Instruction, 0, false, 0xF000'0000); // explicitly initialise instruction pointer to start of BIOS region
         g_NextIP = 0;
 
         g_EmulatorRunning = true;
@@ -361,6 +363,12 @@ namespace Emulator {
         Crash("Emulator thread exited unexpectedly"); // should be unreachable
     }
 
+    void JumpToIPExternal(uint64_t value) {
+        SetCPU_IP(value);
+        ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
+    }
+
+
     void SyncRegisters() {
         if (g_SBP->IsDirty()) {
             g_stack->setStackBase(g_SBP->GetValue());
@@ -480,5 +488,18 @@ namespace Emulator {
     char ReadCharFromConsole() {
         return fgetc(stdin);
     }
+
+    void KillCurrentInstruction() {
+        if (std::this_thread::get_id() == ExecutionThread->get_id())
+            Crash("Cannot kill current instruction from the instruction thread");
+
+        StopExecution(); // wait for current instruction to finish executing
+
+        ExecutionThread->join(); // ensure the thread has finished executing
+        delete ExecutionThread;
+
+        AllowExecution();
+    }
+
 
 } // namespace Emulator

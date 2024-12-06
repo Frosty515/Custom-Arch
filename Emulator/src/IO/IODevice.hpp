@@ -24,10 +24,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class IOMemoryRegion;
 
+typedef void (*IOInterruptCallback)(IODeviceID device, uint64_t index, void* data);
+
 class IODevice {
    public:
-    explicit IODevice(IODeviceID ID, uint64_t size)
-        : m_base_address(0), m_size(size), m_ID(ID), m_memoryRegion(nullptr) {}
+    explicit IODevice(IODeviceID ID, uint64_t size, uint64_t interruptCount = 0)
+        : m_base_address(0), m_size(size), m_ID(ID), m_memoryRegion(nullptr), m_interruptCount(interruptCount), m_interruptCallback(nullptr), m_interruptData(nullptr) {}
     virtual ~IODevice() = default;
 
     virtual uint8_t ReadByte(uint64_t address) = 0;
@@ -40,19 +42,38 @@ class IODevice {
     virtual void WriteDWord(uint64_t address, uint32_t data) = 0;
     virtual void WriteQWord(uint64_t address, uint64_t data) = 0;
 
+    virtual void RaiseInterrupt(uint64_t index) { Internal_HandleInterrupt(index); }
+
     uint64_t GetBaseAddress() const { return m_base_address; }
     uint64_t GetSize() const { return m_size; }
     IODeviceID GetID() const { return m_ID; }
     IOMemoryRegion* GetMemoryRegion() const { return m_memoryRegion; }
+    uint64_t GetInterruptCount() const { return m_interruptCount; }
+    IOInterruptCallback GetInterruptCallback() const { return m_interruptCallback; }
+    void* GetInterruptData() const { return m_interruptData; }
 
     void SetBaseAddress(uint64_t base_address) { m_base_address = base_address; }
     void SetMemoryRegion(IOMemoryRegion* memoryRegion) { m_memoryRegion = memoryRegion; }
+    void SetInterruptCallback(IOInterruptCallback interruptCallback, void* interruptData) {
+        m_interruptCallback = interruptCallback;
+        m_interruptData = interruptData;
+    }
+
+   protected:
+    void Internal_HandleInterrupt(uint64_t index) {
+        if (m_interruptCallback != nullptr)
+            m_interruptCallback(m_ID, index, m_interruptData);
+    }
 
    private:
     uint64_t m_base_address;
     uint64_t m_size;
     IODeviceID m_ID;
     IOMemoryRegion* m_memoryRegion;
+    uint64_t m_interruptCount;
+    IOInterruptCallback m_interruptCallback;
+    void* m_interruptData;
+    std::unordered_map<uint64_t, uint8_t> m_interruptMap;
 };
 
 #endif /* _IO_DEVICE_HPP */

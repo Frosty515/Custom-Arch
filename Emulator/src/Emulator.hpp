@@ -60,6 +60,8 @@ namespace Emulator {
     uint64_t GetCPU_IP();
 
     [[noreturn]] void JumpToIP(uint64_t value);
+    void JumpToIPExternal(uint64_t value); // assumes the execution thread is dead
+
 
     void SyncRegisters();
 
@@ -77,6 +79,8 @@ namespace Emulator {
 
     void WriteCharToConsole(char c);
     char ReadCharFromConsole();
+
+    void KillCurrentInstruction(); // MUST NOT be called from the instruction thread
 } // namespace Emulator
 
 #endif /* _EMULATOR_HPP */
