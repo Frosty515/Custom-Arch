@@ -113,8 +113,10 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
             m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source2), comment_start - source2);
             m_current_offset += comment_start - source2;
             source2 = comment_start;
-            if (char const* comment_end = strchr(source2, '\n'); comment_end == nullptr)
-                error("Unterminated comment");
+            if (char const* comment_end = strchr(source2, '\n'); comment_end == nullptr) {
+                comment_end = original_source2 + source2_size;
+                break;
+            }
             else
                 source2 = comment_end;
         }
@@ -149,7 +151,7 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
             m_current_offset += comment_start - source3;
             source3 = comment_start;
             if (char const* comment_end = strstr(source3, "*/"); comment_end == nullptr)
-                error("Unterminated comment");
+                error("Unterminated comment2");
             else
                 source3 = comment_end + 2;
         }

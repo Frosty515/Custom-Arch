@@ -55,12 +55,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    FILE* output_file = fopen(output.data(), "w");
-    if (output_file == nullptr) {
-        printf("Error: could not open output file %s\n", output.data());
-        return 1;
-    }
-
     fseek(file, 0, SEEK_END);
     size_t file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -93,6 +87,12 @@ int main(int argc, char** argv) {
     size_t buffer_size = buffer.GetSize();
     uint8_t* buffer_data = new uint8_t[buffer_size];
     buffer.Read(0, buffer_data, buffer_size);
+
+    FILE* output_file = fopen(output.data(), "w");
+    if (output_file == nullptr) {
+        printf("Error: could not open output file %s\n", output.data());
+        return 1;
+    }
 
     if (buffer_size != fwrite(buffer_data, 1, buffer_size, output_file)) {
         perror("Error: could not write to output file");
