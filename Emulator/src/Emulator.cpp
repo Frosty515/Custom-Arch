@@ -140,19 +140,17 @@ namespace Emulator {
             for (uint64_t i = 0; i < g_events.getCount(); i++) {
                 Event* event = g_events.getHead();
                 switch (event->type) {
-                case EventType::SwitchToIP:
+                case EventType::SwitchToIP: // assuming that the execution thread has joined this thread
                     assert(ExecutionThread != nullptr);
-                    StopExecution();
-                    ExecutionThread->join();
+                    ExecutionThread->detach();
                     delete ExecutionThread;
                     SetCPU_IP(event->data);
                     ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
                     break;
-                case EventType::NewMMU:
+                case EventType::NewMMU: // assuming that the execution thread has joined this thread
                     g_InterruptHandler->ChangeMMU(g_CurrentMMU);
                     assert(ExecutionThread != nullptr);
-                    StopExecution();
-                    ExecutionThread->join(); // wait for the thread to finish
+                    ExecutionThread->detach();
                     delete ExecutionThread;
                     ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
                     break;
