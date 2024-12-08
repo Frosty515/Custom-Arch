@@ -69,3 +69,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ## Notes
 
 - The assembler and emulator are still in development and may not work as expected. Please report any issues you find.
+
+### Current todo list (in no particular order)
+
+- speed up video device including migrating to sdl3
+- fix bug I was having with defines
+- make assemblers errors better
+- make fancy docs
+- add better macros
+- firmware spec
+- maybe make a gtk backend for the video device
+- start writing firmware
+- llvm backend
+- make examples
