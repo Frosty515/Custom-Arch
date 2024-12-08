@@ -203,7 +203,6 @@ void VideoDevice::HandleCommand() {
         ptr[1] = m_mmu.read64(m_data + 8);
 
         if (request.mode >= m_modes.size()) {
-            printf("Invalid mode index: %d\n", request.mode);
             m_status = 1;
             return;
         }
@@ -222,7 +221,6 @@ void VideoDevice::HandleCommand() {
         size_t size = mode.pitch * mode.height;
 
         if (!m_mmu.RemoveRegionSegment(request.address, request.address + size)) {
-            printf("Failed to remove region segment\n");
             m_status = 1;
             return;
         }

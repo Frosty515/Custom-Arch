@@ -31,6 +31,7 @@ endif ()
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
     set(emulator_sources
         ${emulator_sources}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Linux/File.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/OSSpecific/Linux/Memory.cpp
     )
 else (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
@@ -52,6 +53,9 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOBus.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/IOMemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/ConsoleDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Storage/PhysicalRegionListBuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Storage/StorageDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Storage/StorageFile.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoBackend.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoMemoryRegion.cpp

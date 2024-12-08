@@ -246,6 +246,11 @@ bool MMU::ValidateRead(uint64_t address, size_t size) {
     return true;
 }
 
+bool MMU::ValidateWrite(uint64_t address, size_t size) {
+    return ValidateRead(address, size);
+}
+
+
 bool MMU::ValidateExecute(uint64_t address, size_t size) {
     return ValidateRead(address, size);
 }

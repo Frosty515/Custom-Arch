@@ -730,6 +730,128 @@ asciiz "Hello, world!"
 | 8      | 2     | MODE     | Mode to set                |
 | 10     | 6     | RESERVED | Reserved                   |
 
+### Storage device
+
+- There is a storage I/O device taking up 3 ports by default
+- The storage device is a block device. All reads and writes are in 512-byte blocks (or sectors).
+- Status register is read-only.
+- It can only handle 1 command at a time.
+
+#### Storage device registers
+
+| Port | Name    | Description      |
+|------|---------|------------------|
+| 0    | COMMAND | Command register |
+| 1    | STATUS  | Status register  |
+| 2    | DATA    | Data register    |
+
+##### Status register
+
+| Bit  | Name     | Description          |
+|------|----------|----------------------|
+| 0    | EN       | Device enabled       |
+| 1    | ERR      | Error flag           |
+| 2    | RDY      | Ready flag           |
+| 3    | TRN      | Transfer in progress |
+| 3    | INTE     | Interrupts enabled   |
+| 4    | INTP     | Interrupt pending    |
+| 5-63 | RESERVED | Reserved             |
+
+#### Storage device commands
+
+| Command | Description     |
+|---------|-----------------|
+| 0       | Configure       |
+| 1       | Get device info |
+| 2       | Read            |
+| 3       | Write           |
+
+##### Configure
+
+- 1 argument, QWORD of the config flags as follows:
+
+| Bit  | Name     | Description        |
+|------|----------|--------------------|
+| 0    | EN       | Enable device      |
+| 1    | INTE     | Enable interrupts  |
+| 2-63 | RESERVED | Reserved           |
+
+##### Get device info
+
+- 1 argument - address to store the device info.
+- The following data is stored at the given address:
+
+| Offset | Width | Name    | Description                                         |
+|--------|-------|---------|-----------------------------------------------------|
+| 0      | 8     | SIZE    | Raw size of the device, aligned to 512-byte blocks  |
+| 8      | 8     | BLOCKS  | Number of 512-byte blocks the device has            |
+
+##### Read
+
+- Data register contains address to store the following:
+
+| Offset | Width | Name    | Description                        |
+|--------|-------|---------|------------------------------------|
+| 0      | 8     | LBA     | Logical block address to read from |
+| 8      | 8     | COUNT   | Number of blocks to read           |
+| 16     | 8     | PRLS    | Physical region list start address |
+| 24     | 8     | PRLNC   | Physical region list node count    |
+| 32     | 8     | FLAGS   | Flags                              |
+
+- The flags are as follows:
+
+| Bit  | Name | Description                   |
+|------|------|-------------------------------|
+| 0    | INT  | Raise interrupt on completion |
+| 1-63 | RSVD | Reserved                      |
+
+- STATUS.TRN is set then the command has been validated and the actual transfer is in progress.
+- STATUS.RDY is set then the command is completely done and the transfer is complete.
+- If STATUS.TRN does not get set, then the command was invalid.
+
+##### Write
+
+- Data register contains address to store the following:
+
+| Offset | Width | Name    | Description                        |
+|--------|-------|---------|------------------------------------|
+| 0      | 8     | LBA     | Logical block address to write to  |
+| 8      | 8     | COUNT   | Number of blocks to write          |
+| 16     | 8     | PRLS    | Physical region list start address |
+| 24     | 8     | PRLNC   | Physical region list node count    |
+| 32     | 8     | FLAGS   | Flags                              |
+
+- The flags are as follows:
+
+| Bit  | Name | Description                   |
+|------|------|-------------------------------|
+| 0    | INT  | Raise interrupt on completion |
+| 1-63 | RSVD | Reserved                      |
+
+- STATUS.TRN is set then the command has been validated and the actual transfer is in progress.
+- STATUS.RDY is set then the command is completely done and the transfer is complete.
+- If STATUS.TRN does not get set, then the command was invalid.
+
+#### Physical region list
+
+- A list is made of multiple nodes of arbitrary size.
+- Each node has a total of 2 QWORDs of metadata. One at the start and one at the end.
+- Each item in a node is 2 QWORDS. An item has the following format:
+
+| Offset | Name  | Description                        |
+|--------|-------|------------------------------------|
+| 0      | PADDR | Physical address of the data block |
+| 8      | COUNT | Number of 512-byte blocks          |
+
+- Each node then has the following format:
+
+| Offset        | Name  | Description                       |
+|---------------|-------|-----------------------------------|
+| 0             | COUNT | Number of items in the node       |
+| 8-(COUNT*8-1) | ITEMS | List of items in the node         |
+| COUNT*8       | NEXT  | Physical address of the next node |
+
+- The next node is 0 if there is no next node.
 
 ## The BIOS
 

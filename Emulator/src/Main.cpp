@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
     g_args->AddOption('p', "program", "Program file to run", true);
     g_args->AddOption('m', "ram", "RAM size in bytes", false);
     g_args->AddOption('d', "display", "Display mode. Valid values are \"sdl\" or \"none\" (case insensitive).", false);
+    g_args->AddOption('D', "drive", "File to use a storage drive.", false);
     g_args->AddOption('h', "help", "Print this help message", false);
 
     g_args->ParseArgs(argc, argv);
@@ -130,12 +131,17 @@ int main(int argc, char** argv) {
         }
     }
 
+    std::string_view drive;
+    bool has_drive = g_args->HasOption('D');
+    if (has_drive)
+        drive = g_args->GetOption('D');
+
     // delete the args parser
     delete g_args;
 
     // Actually start emulator
 
-    if (int status = Emulator::Start(data, fileSize, RAM_Size, has_display, displayType); status != 0) {
+    if (int status = Emulator::Start(data, fileSize, RAM_Size, has_display, displayType, has_drive, drive.data()); status != 0) {
         printf("Emulator failed to start: %d\n", status);
         return 1;
     }

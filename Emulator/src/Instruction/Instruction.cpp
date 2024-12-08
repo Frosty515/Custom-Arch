@@ -61,7 +61,6 @@ void CleanupCurrentInstruction() {
             }
             delete complex;
         }
-        // printf("Deleting operand %d\n", i);
         delete g_currentOperands[i];
         deleted[i] = true;
         InsEncoding::Operand* op = g_current_instruction->operands.get(0);
@@ -236,33 +235,6 @@ bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, c
         reinterpret_cast<void (*)(Operand*, Operand*)>(ins)(operands[0], operands[1]);
 
     // perform cleanup
-    // const uint64_t count = instruction->operands.getCount();
-    // for (uint8_t i = 0; i < count; i++) {
-    //     if (operands[i]->GetType() == OperandType::Complex) {
-    //         ComplexData* complex = (ComplexData*)operands[i]->GetComplexData();
-    //         ComplexItem* items[3] = { &complex->base, &complex->index, &complex->offset };
-    //         for (uint8_t j = 0; j < 3; j++) {
-    //             if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
-    //                 if (items[j]->data.imm.size == OperandSize::BYTE)
-    //                     delete[] (uint8_t*)items[j]->data.imm.data;
-    //                 else if (items[j]->data.imm.size == OperandSize::WORD)
-    //                     delete[] (uint8_t*)items[j]->data.imm.data;
-    //                 else if (items[j]->data.imm.size == OperandSize::DWORD)
-    //                     delete[] (uint8_t*)items[j]->data.imm.data;
-    //                 else if (items[j]->data.imm.size == OperandSize::QWORD)
-    //                     delete[] (uint8_t*)items[j]->data.imm.data;
-    //             }
-    //         }
-    //         delete complex;
-    //     }
-    //     // printf("Deleting operand %d\n", i);
-    //     delete operands[i];
-    //     deleted[i] = true;
-    //     InsEncoding::Operand* op = instruction->operands.get(0);
-    //     instruction->operands.remove(op);
-    //     delete op;
-    // }
-    // delete instruction;
     CleanupCurrentInstruction();
 
     Emulator::SyncRegisters();

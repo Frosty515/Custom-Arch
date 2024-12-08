@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <Instruction/Operand.hpp>
 #include <Interrupts.hpp>
 #include <IO/devices/ConsoleDevice.hpp>
+#include <IO/devices/Storage/StorageDevice.hpp>
 #include <IO/devices/Video/backends/SDL/SDLVideoBackend.hpp>
 #include <IO/IOBus.hpp>
 #include <IO/IOMemoryRegion.hpp>
@@ -53,6 +54,7 @@ namespace Emulator {
 
     ConsoleDevice* g_ConsoleDevice;
     VideoDevice* g_VideoDevice;
+    StorageDevice* g_StorageDevice;
 
     uint64_t g_NextIP;
 
@@ -129,6 +131,14 @@ namespace Emulator {
         }
     }
 
+    void RaiseEvent(Event event) {
+        g_events.lock();
+        Event* new_event = new Event(event);
+        g_events.insert(new_event);
+        g_events.unlock();
+    }
+
+
     // what the EmulatorThread will run. just loops waiting for events.
     void WaitForOperation() {
         while (true) {
@@ -154,6 +164,11 @@ namespace Emulator {
                     delete ExecutionThread;
                     ExecutionThread = new std::thread(ExecutionLoop, g_CurrentMMU, std::ref(g_CurrentState), std::ref(last_error));
                     break;
+                case EventType::StorageTransfer: {
+                    StorageDevice* device = reinterpret_cast<StorageDevice*>(event->data);
+                    device->StartTransfer();
+                    break;
+                }
                 default:
                     break;
                 }
@@ -164,7 +179,7 @@ namespace Emulator {
         }
     }
 
-    int Start(uint8_t* program, size_t size, const size_t RAMSize, bool has_display, VideoBackendType displayType) {
+    int Start(uint8_t* program, size_t size, const size_t RAMSize, bool has_display, VideoBackendType displayType, bool has_drive, const char* drivePath) {
         if (size > 0x1000'0000)
             return 1; // program too large
 
@@ -201,6 +216,13 @@ namespace Emulator {
         if (has_display) {
             g_VideoDevice = new VideoDevice(displayType, g_PhysicalMMU);
             assert(g_IOBus->AddDevice(g_VideoDevice));
+        }
+
+        // Configure the storage device
+        if (has_drive) {
+            g_StorageDevice = new StorageDevice(&g_PhysicalMMU, drivePath);
+            g_StorageDevice->Initialise();
+            assert(g_IOBus->AddDevice(g_StorageDevice));
         }
 
         // Configure the stack

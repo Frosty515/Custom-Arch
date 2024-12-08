@@ -101,6 +101,32 @@ bool VirtualMMU::ValidateRead(uint64_t address, size_t size) {
     return true;
 }
 
+bool VirtualMMU::ValidateWrite(uint64_t address, size_t size) {
+    uint64_t pageSize = 0;
+    switch (m_pageSize) {
+    case PS_4KiB:
+        pageSize = 4'096;
+        break;
+    case PS_16KiB:
+        pageSize = 16'384;
+        break;
+    case PS_64KiB:
+        pageSize = 65'536;
+        break;
+    default:
+        Emulator::Crash("Invalid page size");
+    }
+    uint64_t start = ALIGN_DOWN_BASE2(address, pageSize);
+    uint64_t end = ALIGN_UP_BASE2(address + size, pageSize);
+    for (uint64_t i = start; i < end; i += pageSize) {
+        bool success = false;
+        TranslateAddress(i, PageTranslateMode::Write, true, &success);
+        if (!success)
+            return false;
+    }
+    return true;
+}
+
 bool VirtualMMU::ValidateExecute(uint64_t address, size_t size) {
     uint64_t pageSize = 0;
     switch (m_pageSize) {
