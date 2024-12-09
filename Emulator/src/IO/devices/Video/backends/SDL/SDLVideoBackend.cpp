@@ -70,6 +70,9 @@ void SDLVideoBackend::SetMode(VideoMode mode) {
 
     m_renderAllowed.store(true);
     m_renderThread = new std::thread(&SDLVideoBackend::RenderLoop, this);
+
+    while (!m_renderRunning.load())
+        ;
 }
 
 VideoMode SDLVideoBackend::GetMode() {
