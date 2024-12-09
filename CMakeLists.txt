@@ -25,6 +25,12 @@ if (NOT DEFINED BUILD_ARCHITECTURE)
     set(BUILD_ARCHITECTURE "x86_64")
 endif()
 
+add_custom_target(distinstall
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Emulator> /usr/bin/frost64-emu
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:Assembler> /usr/bin/frost64-asm
+    DEPENDS Emulator Assembler
+)
+
 add_subdirectory(LibArch)
 add_subdirectory(Assembler)
 add_subdirectory(Emulator)
