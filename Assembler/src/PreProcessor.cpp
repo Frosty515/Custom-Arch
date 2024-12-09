@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <map>
 #include <string>
 #include <unordered_map>
 
@@ -116,8 +117,7 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
             if (char const* comment_end = strchr(source2, '\n'); comment_end == nullptr) {
                 comment_end = original_source2 + source2_size;
                 break;
-            }
-            else
+            } else
                 source2 = comment_end;
         }
     }
@@ -237,23 +237,18 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
         char const* start;
     };
 
-    std::vector<std::pair<size_t /* offset */, Define&>> define_references;
+    std::map<size_t /* offset */, Define&> define_references;
 
     for (Define& define : defines) {
         char* define_start = const_cast<char*>(source5);
         while (define_start != nullptr) {
             define_start = strstr(define_start, define.name.c_str());
             if (define_start != nullptr) {
-                define_references.push_back({define_start - source5, define});
+                define_references.insert({define_start - source5, define});
                 define_start += define.name.size();
             }
         }
     }
-
-    // sort the references by offset
-    std::sort(define_references.begin(), define_references.end(), [](auto& a, auto& b) {
-        return a.first < b.first;
-    });
 
     for (auto& [offset, define] : define_references) {
         if (offset < m_current_offset) { // possible overlap

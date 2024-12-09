@@ -51,6 +51,7 @@ namespace Emulator {
     Register* g_GPR[16]; // general purpose registers
     Register* g_STS;  // status (STS) register
     Register* g_Control[8]; // control registers
+    bool g_registersInitialised = false;
 
     ConsoleDevice* g_ConsoleDevice;
     VideoDevice* g_VideoDevice;
@@ -241,6 +242,8 @@ namespace Emulator {
     }
 
     void DumpRegisters(FILE* fp) {
+        if (!g_registersInitialised)
+            return;
         fprintf(fp, "Registers:\n");
         fprintf(fp, "R0 =%016lx R1 =%016lx R2 =%016lx R3 =%016lx\n", g_GPR[0]->GetValue(), g_GPR[1]->GetValue(), g_GPR[2]->GetValue(), g_GPR[3]->GetValue());
         fprintf(fp, "R4 =%016lx R5 =%016lx R6 =%016lx R7 =%016lx\n", g_GPR[4]->GetValue(), g_GPR[5]->GetValue(), g_GPR[6]->GetValue(), g_GPR[7]->GetValue());
@@ -331,6 +334,8 @@ namespace Emulator {
             g_Control[i] = new Register(RegisterType::Control, i, true);
 
         g_STS = new Register(RegisterType::Status, 0, false);
+
+        g_registersInitialised = true;
 
         SyncRegisters();
 
