@@ -177,7 +177,6 @@ namespace Emulator {
                 delete event;
             }
             g_events.unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // temp
         }
     }
 
@@ -341,7 +340,7 @@ namespace Emulator {
         SyncRegisters();
 
         // setup instruction switch handling
-        // EmulatorThread = new std::thread(WaitForOperation);
+        EmulatorThread = new std::thread(WaitForOperation);
 
         // setup instruction stuff
         g_InstructionInProgress = false;
@@ -350,8 +349,7 @@ namespace Emulator {
         ExecutionThread = new std::thread(ExecutionLoop, &g_PhysicalMMU, std::ref(g_CurrentState), std::ref(last_error));
 
         // join with the emulator thread
-        // EmulatorThread->join();
-        ExecutionThread->join();
+        EmulatorThread->join();
     }
 
     void SetCPUStatus(uint64_t mask) {
