@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _SDL_VIDEO_BACKEND_HPP
 #define _SDL_VIDEO_BACKEND_HPP
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #include <thread>
 
@@ -37,6 +37,7 @@ class SDLVideoBackend : public VideoBackend {
     void Read(uint64_t offset, uint8_t* data, uint64_t size) override;
 
     void EnterEventLoop();
+    void RenderLoop();
 
    private:
     void Draw();
@@ -49,6 +50,11 @@ class SDLVideoBackend : public VideoBackend {
     uint8_t* m_framebuffer;
 
     std::thread* m_eventThread;
+    std::thread* m_renderThread;
+
+    std::atomic_bool m_renderAllowed;
+    std::atomic_bool m_renderRunning;
+    std::atomic_bool m_framebufferDirty;
 };
 
 #endif /* _SDL_VIDEO_BACKEND_HPP */

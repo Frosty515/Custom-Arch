@@ -17,8 +17,7 @@
 #   - Frosty515 <frosty515yt@gmail.com>
 #   - fwpirate <alavik@disroot.org>
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(SDL2 REQUIRED sdl2)
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 
 if (BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
@@ -87,9 +86,9 @@ set_target_properties(Emulator PROPERTIES C_STANDARD_REQUIRED ON)
 
 target_include_directories(Emulator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(Emulator PUBLIC ${CMAKE_SOURCE_DIR}/LibArch/include)
-target_include_directories(Emulator PUBLIC ${SDL2_INCLUDE_DIRS})
+#target_include_directories(Emulator PUBLIC ${SDL2_INCLUDE_DIRS})
 
-target_link_libraries(Emulator PRIVATE arch ${SDL2_LIBRARIES})
+target_link_libraries(Emulator PRIVATE arch SDL3::SDL3)
 
 if (BUILD_CONFIG STREQUAL "Debug")
     target_compile_definitions(Emulator PRIVATE EMULATOR_DEBUG=1)

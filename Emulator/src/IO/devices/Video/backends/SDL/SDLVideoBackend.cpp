@@ -17,6 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "SDLVideoBackend.hpp"
 
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
+
+#include <Emulator.hpp>
+
 #include "IO/devices/Video/VideoBackend.hpp"
 
 void EventHandler(void* data) {
@@ -25,66 +30,46 @@ void EventHandler(void* data) {
 }
 
 SDLVideoBackend::SDLVideoBackend(const VideoMode& mode)
-    : VideoBackend(mode), m_window(nullptr), m_renderer(nullptr), m_texture(nullptr), m_framebuffer(nullptr), m_eventThread(nullptr) {
+    : VideoBackend(mode), m_window(nullptr), m_renderer(nullptr), m_texture(nullptr), m_framebuffer(nullptr), m_eventThread(nullptr), m_renderThread(nullptr), m_renderAllowed(true), m_renderRunning(false), m_framebufferDirty(false) {
 }
 
 SDLVideoBackend::~SDLVideoBackend() {
 }
 
 void SDLVideoBackend::Init() {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    SDL_SetAppMetadata("Frost64 Emulator", "1.0-dev", "com.github.frost64-dev.frost64");
+
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("Failed to initialise SDL: %s\n", SDL_GetError());
         exit(1);
     }
 
     VideoMode mode = GetRawMode();
 
-    m_window = SDL_CreateWindow("Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, mode.width, mode.height, SDL_WINDOW_SHOWN);
-    if (m_window == nullptr) {
-        printf("Failed to create window: %s\n", SDL_GetError());
+    if (!SDL_CreateWindowAndRenderer("Emulator", mode.width, mode.height, 0, &m_window, &m_renderer)) {
+        printf("Failed to create window and renderer: %s\n", SDL_GetError());
         exit(1);
     }
 
-    m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED);
-    if (m_renderer == nullptr) {
-        printf("Failed to create renderer: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-    m_texture = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, mode.width, mode.height);
-    if (m_texture == nullptr) {
-        printf("Failed to create texture: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-    m_framebuffer = new uint8_t[mode.width * mode.height * 4];
-
-    memset(m_framebuffer, 0, mode.width * mode.height * 4);
-
-    Draw();
-
+    m_renderThread = new std::thread(&SDLVideoBackend::RenderLoop, this);
     m_eventThread = new std::thread(EventHandler, this);
 }
 
 void SDLVideoBackend::SetMode(VideoMode mode) {
+    m_renderAllowed.store(false);
+    while (m_renderRunning.load())
+        ;
+
+    m_renderThread->join();
+    delete m_renderThread;
+
     SetRawMode(mode);
 
     SDL_DestroyTexture(m_texture);
-
-    m_texture = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, mode.width, mode.height);
-    if (m_texture == nullptr) {
-        printf("Failed to create texture: %s\n", SDL_GetError());
-        exit(1);
-    }
-
     delete[] m_framebuffer;
-    m_framebuffer = new uint8_t[mode.width * mode.height * 4];
 
-    memset(m_framebuffer, 0, mode.width * mode.height * 4);
-
-    SDL_SetWindowSize(m_window, mode.width, mode.height);
-
-    Draw();
+    m_renderAllowed.store(true);
+    m_renderThread = new std::thread(&SDLVideoBackend::RenderLoop, this);
 }
 
 VideoMode SDLVideoBackend::GetMode() {
@@ -93,7 +78,7 @@ VideoMode SDLVideoBackend::GetMode() {
 
 void SDLVideoBackend::Write(uint64_t offset, uint8_t* data, uint64_t size) {
     memcpy(m_framebuffer + offset, data, size);
-    Draw();
+    m_framebufferDirty.store(true);
 }
 
 void SDLVideoBackend::Read(uint64_t offset, uint8_t* data, uint64_t size) {
@@ -105,8 +90,8 @@ void SDLVideoBackend::EnterEventLoop() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
-            case SDL_QUIT:
-                exit(0);
+            case SDL_EVENT_QUIT:
+                Emulator::Crash("User closed window");
             default:
                 break;
             }
@@ -115,11 +100,42 @@ void SDLVideoBackend::EnterEventLoop() {
 }
 
 void SDLVideoBackend::Draw() {
+    if (!m_framebufferDirty.load())
+        return;
+
     VideoMode mode = GetRawMode();
 
-    SDL_UpdateTexture(m_texture, nullptr, m_framebuffer, mode.width * 4);
+    void* pixels;
+    int pitch;
 
-    SDL_RenderClear(m_renderer);
-    SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
-    SDL_RenderPresent(m_renderer);
+    if (SDL_LockTexture(m_texture, nullptr, &pixels, &pitch)) {
+        memcpy(pixels, m_framebuffer, mode.width * mode.height * 4);
+        SDL_UnlockTexture(m_texture);
+        // SDL_RenderClear(m_renderer);
+        SDL_RenderTexture(m_renderer, m_texture, nullptr, nullptr);
+        SDL_RenderPresent(m_renderer);
+        m_framebufferDirty.store(false);
+    }
+}
+
+void SDLVideoBackend::RenderLoop() {
+    VideoMode mode = GetRawMode();
+
+    m_texture = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, mode.width, mode.height);
+    if (m_texture == nullptr) {
+        printf("Failed to create texture: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    m_framebuffer = new uint8_t[mode.width * mode.height * 4];
+    memset(m_framebuffer, 0, mode.width * mode.height * 4);
+
+    SDL_SetWindowSize(m_window, mode.width, mode.height);
+
+    m_renderRunning.store(true);
+    while (m_renderAllowed.load()) {
+        Draw();
+        std::this_thread::sleep_for(std::chrono::milliseconds(16)); // roughly 60fps
+    }
+    m_renderRunning.store(false);
 }
