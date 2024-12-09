@@ -90,7 +90,7 @@ struct [[gnu::packed]] IOBusRegisters {
     uint64_t command;
     IOBus_StatusRegister status;
     uint64_t data[4];
-    uint64_t reserved[2];
+    uint64_t reserved[26];
 };
 
 class IOBus {

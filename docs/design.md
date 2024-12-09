@@ -577,7 +577,7 @@ asciiz "Hello, world!"
 ### Memory mapped I/O bus device
 
 - 1 64-bit Memory mapped I/O bus device in the last 256 bytes of the BIOS address space.
-- All accesses are 8-byte aligned regardless of the size of the access, allowing for up to 8 ports.
+- All accesses are 8-byte aligned regardless of the size of the access, allowing for up to 32 ports.
 - This is the current port layout:
 
 | Offset | Size in QWORDS | Name     | Description      |
@@ -585,7 +585,7 @@ asciiz "Hello, world!"
 | 0      | 1              | COMMAND  | Command register |
 | 1      | 1              | STATUS   | Status register  |
 | 2      | 4              | DATA     | Data register    |
-| 6      | 2              | RESERVED | Reserved         |
+| 6      | 26             | RESERVED | Reserved         |
 
 - The command register is used to send commands to the device.
 - The status register is used to get the status of the device. Bit 0 is set to 1 when the current command is complete, and bit 1 is set to 1 when there is an error.
