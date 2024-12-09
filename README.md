@@ -72,12 +72,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ### Current todo list (in no particular order)
 
-- speed up video device including migrating to sdl3
 - make assemblers errors better
 - make fancy docs
 - add better macros
 - firmware spec
-- maybe make a gtk backend for the video device
+- maybe make a gtk backend for the video device or make it less buggy
 - start writing firmware
 - llvm backend
 - make examples
+- custom fs
+- custom executable format
