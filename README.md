@@ -73,7 +73,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ### Current todo list (in no particular order)
 
 - speed up video device including migrating to sdl3
-- fix bug I was having with defines
 - make assemblers errors better
 - make fancy docs
 - add better macros
