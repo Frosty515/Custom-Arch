@@ -272,30 +272,24 @@ void MMU::DumpMemory() const {
 bool MMU::RemoveRegionSegment(uint64_t start, uint64_t end) {
     for (uint64_t i = 0; i < m_regions.getCount(); i++) {
         if (MemoryRegion* region = m_regions.get(i); start >= region->getStart() && end <= region->getEnd()) {
-            if (start == region->getStart() && end == region->getEnd()) {
-                m_regions.remove(region);
-                return true;
-            }
             if (!region->canSplit())
                 return false;
+            uint64_t regionStart = region->getStart();
+            uint64_t regionEnd = region->getEnd();
+
+            m_regions.remove(region);
+            delete region;
+
             // check if the region starts at start
-            if (region->getStart() < start) {
-                m_regions.remove(region);
-
-                StandardMemoryRegion* newRegion = new StandardMemoryRegion(region->getStart(), start);
+            if (regionStart < start) {
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(regionStart, start);
                 m_regions.insert(newRegion);
-
-                region = new StandardMemoryRegion(end, region->getEnd());
             }
 
             // check if the region ends at end
-            if (region->getEnd() > end) {
-                m_regions.remove(region);
-
-                StandardMemoryRegion* newRegion = new StandardMemoryRegion(end, region->getEnd());
+            if (regionEnd > end) {
+                StandardMemoryRegion* newRegion = new StandardMemoryRegion(end, regionEnd);
                 m_regions.insert(newRegion);
-
-                region = newRegion;
             }
 
             return true;
