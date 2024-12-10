@@ -17,7 +17,9 @@
 #   - Frosty515 <frosty515yt@gmail.com>
 #   - fwpirate <alavik@disroot.org>
 
-find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
+if (ENABLE_SDL STREQUAL "ON")
+    find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
+endif ()
 
 if (BUILD_ARCHITECTURE STREQUAL "x86_64")
     set(emulator_sources
@@ -58,7 +60,6 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoBackend.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/VideoMemoryRegion.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/backends/SDL/SDLVideoBackend.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/BIOSMemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MemoryRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MMU/MMU.cpp
@@ -75,6 +76,17 @@ set(emulator_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/util.c
 )
 
+if (NOT DEFINED ENABLE_SDL)
+    set(ENABLE_SDL "OFF")
+endif ()
+
+if (ENABLE_SDL STREQUAL "ON")
+    set(emulator_sources
+        ${emulator_sources}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/IO/devices/Video/backends/SDL/SDLVideoBackend.cpp
+    )
+endif ()
+
 add_executable(Emulator ${emulator_sources})
 
 set_target_properties(Emulator PROPERTIES CXX_STANDARD 23)
@@ -86,12 +98,15 @@ set_target_properties(Emulator PROPERTIES C_STANDARD_REQUIRED ON)
 
 target_include_directories(Emulator PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(Emulator PUBLIC ${CMAKE_SOURCE_DIR}/LibArch/include)
-#target_include_directories(Emulator PUBLIC ${SDL2_INCLUDE_DIRS})
 
-target_link_libraries(Emulator PRIVATE arch SDL3::SDL3)
 
 if (BUILD_CONFIG STREQUAL "Debug")
     target_compile_definitions(Emulator PRIVATE EMULATOR_DEBUG=1)
+endif ()
+
+if (ENABLE_SDL STREQUAL "ON")
+    target_link_libraries(Emulator PRIVATE arch SDL3::SDL3)
+    target_compile_definitions(Emulator PRIVATE ENABLE_SDL=1)
 endif ()
 
 target_compile_options(Emulator

@@ -19,7 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#ifdef ENABLE_SDL
 #include "backends/SDL/SDLVideoBackend.hpp"
+#endif
 
 void HandleVideoMemoryOperation(bool write, uint64_t address, uint8_t* buffer, size_t size, void* data) {
     VideoDevice* device = static_cast<VideoDevice*>(data);
@@ -105,14 +107,16 @@ void VideoDevice::WriteQWord(uint64_t address, uint64_t data) {
 void VideoDevice::HandleMemoryOperation(bool write, uint64_t address, uint8_t* buffer, uint64_t size) {
     if (!m_initialised)
         return;
-
+#ifdef ENABLE_SDL
     if (write)
         m_backend->Write(address, buffer, size);
     else
         m_backend->Read(address, buffer, size);
+#endif
 }
 
 void VideoDevice::HandleCommand() {
+#ifdef ENABLE_SDL
     switch (static_cast<VideoDeviceCommands>(m_command)) {
     case VideoDeviceCommands::INITIALISE: {
         if (m_initialised)
@@ -240,4 +244,5 @@ void VideoDevice::HandleCommand() {
     default:
         break;
     }
+#endif
 }

@@ -121,8 +121,13 @@ int main(int argc, char** argv) {
                 display += c;
         }
 
+#ifdef ENABLE_SDL
         if (display == "sdl")
             displayType = VideoBackendType::SDL;
+#else
+        if constexpr (false)
+            ;
+#endif
         else if (display == "none")
             displayType = VideoBackendType::NONE;
         else {
