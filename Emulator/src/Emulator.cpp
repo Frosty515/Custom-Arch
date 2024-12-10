@@ -27,7 +27,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <Interrupts.hpp>
 #include <IO/devices/ConsoleDevice.hpp>
 #include <IO/devices/Storage/StorageDevice.hpp>
-#include <IO/devices/Video/backends/SDL/SDLVideoBackend.hpp>
 #include <IO/IOBus.hpp>
 #include <IO/IOMemoryRegion.hpp>
 #include <MMU/BIOSMemoryRegion.hpp>
