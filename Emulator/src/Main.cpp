@@ -39,7 +39,11 @@ int main(int argc, char** argv) {
 
     g_args->AddOption('p', "program", "Program file to run", true);
     g_args->AddOption('m', "ram", "RAM size in bytes", false);
+#ifdef ENABLE_SDL
     g_args->AddOption('d', "display", "Display mode. Valid values are \"sdl\" or \"none\" (case insensitive).", false);
+#else
+    g_args->AddOption('d', "display", "Display mode. Valid value is \"none\" (case insensitive).", false);
+#endif
     g_args->AddOption('D', "drive", "File to use a storage drive.", false);
     g_args->AddOption('h', "help", "Print this help message", false);
 
