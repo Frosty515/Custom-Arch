@@ -107,6 +107,8 @@ endif ()
 if (ENABLE_SDL STREQUAL "ON")
     target_link_libraries(Emulator PRIVATE arch SDL3::SDL3)
     target_compile_definitions(Emulator PRIVATE ENABLE_SDL=1)
+else ()
+    target_link_libraries(Emulator PRIVATE arch)
 endif ()
 
 target_compile_options(Emulator
