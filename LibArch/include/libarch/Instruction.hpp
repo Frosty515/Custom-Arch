@@ -46,9 +46,10 @@ namespace InsEncoding {
         JNC,
         JZ,
         JNZ,
-        SYSCALL,
-        SYSRET,
-        ENTERUSER,
+        JL,
+        JLE,
+        JNL,
+        JNLE,
         MOV = 0x20,
         NOP,
         HLT,
@@ -59,6 +60,9 @@ namespace InsEncoding {
         INT,
         LIDT,
         IRET,
+        SYSCALL,
+        SYSRET,
+        ENTERUSER,
         UNKNOWN = 0xFF
     };
 

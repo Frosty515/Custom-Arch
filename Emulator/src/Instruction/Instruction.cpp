@@ -249,79 +249,6 @@ void ExecutionLoop(MMU* mmu, InstructionState& CurrentState, char const*& last_e
         status = ExecuteInstruction(Emulator::GetCPU_IP(), mmu, CurrentState, last_error);
 }
 
-/*
-### Opcode
-
-#### Numbering
-
-- Bits 0-3 are the offset
-- Bits 4-6 are the group (0 for ALU, 1 for control flow, 2 for other, 3-7 are reserved)
-- Bit 7 is reserved and should always be 0
-
-#### ALU
-
-| Name | offset |
-| ---- | --- |
-| add  | 0 |
-| mul  | 1 |
-| sub  | 2 |
-| div  | 3 |
-| or   | 4 |
-| xor  | 5 |
-| nor  | 6 |
-| and  | 7 |
-| nand | 8 |
-| not  | 9 |
-| cmp  | a |
-| inc  | b |
-| dec  | c |
-| shl  | d |
-| shr  | e |
-| (invalid)  | f |
-
-#### Control flow
-
-| Name | offset |
-| ---- | --- |
-| ret  | 0 |
-| call | 1 |
-| jmp  | 2 |
-| jc   | 3 |
-| jnc  | 4 |
-| jz   | 5 |
-| jnz  | 6 |
-| syscall | 7 |
-| sysret | 8 |
-| enteruser | 9 |
-| (invalid) | a |
-| (invalid) | b |
-| (invalid) | c |
-| (invalid) | d |
-| (invalid) | e |
-| (invalid) | f |
-
-#### Other
-
-| Name | offset |
-| ---- | --- |
-| mov  | 0 |
-| nop  | 1 |
-| hlt  | 2 |
-| push  | 3 |
-| pop | 4 |
-| pusha | 5 |
-| popa | 6 |
-| int | 7 |
-| lidt | 8 |
-| iret | 9 |
-| (invalid) | a |
-| (invalid) | b |
-| (invalid) | c |
-| (invalid) | d |
-| (invalid) | e |
-| (invalid) | f |
-*/
-
 void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count) {
     uint8_t offset = opcode & 0x0f;
     switch ((opcode >> 4) & 0x07) {
@@ -420,18 +347,38 @@ void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count) {
             if (argument_count != nullptr)
                 *argument_count = 1;
             return reinterpret_cast<void*>(ins_jnz);
-        case 7: // syscall
-            if (argument_count != nullptr)
-                *argument_count = 0;
-            return reinterpret_cast<void*>(ins_syscall);
-        case 8: // sysret
-            if (argument_count != nullptr)
-                *argument_count = 0;
-            return reinterpret_cast<void*>(ins_sysret);
-        case 9: // enteruser
+        case 7: // jl
             if (argument_count != nullptr)
                 *argument_count = 1;
-            return reinterpret_cast<void*>(ins_enteruser);
+            return reinterpret_cast<void*>(ins_jl);
+        case 8: // jle
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jle);
+        case 9: // jnl
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jnl);
+        case 0xa: // jnle
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jnle);
+        case 0xb: // jg
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jg);
+        case 0xc: // jge
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jge);
+        case 0xd: // jng
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jng);
+        case 0xe: // jnge
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_jnge);
         default:
             return nullptr;
         }
@@ -477,6 +424,18 @@ void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count) {
             if (argument_count != nullptr)
                 *argument_count = 0;
             return reinterpret_cast<void*>(ins_iret);
+        case 0xa: // syscall
+            if (argument_count != nullptr)
+                *argument_count = 0;
+            return reinterpret_cast<void*>(ins_syscall);
+        case 0xb: // sysret
+            if (argument_count != nullptr)
+                *argument_count = 0;
+            return reinterpret_cast<void*>(ins_sysret);
+        case 0xc: // enteruser
+            if (argument_count != nullptr)
+                *argument_count = 1;
+            return reinterpret_cast<void*>(ins_enteruser);
         default:
             return nullptr;
         }
@@ -515,8 +474,8 @@ extern "C" int printf(const char* __format, ...);
         PRINT_INS_INFO2(dst, src);                                              \
         uint64_t flags = 0;                                                     \
         dst->SetValue(x86_64_##name(dst->GetValue(), src->GetValue(), &flags)); \
-        Emulator::ClearCPUStatus(7);                                            \
-        Emulator::SetCPUStatus(flags & 7);                                      \
+        Emulator::ClearCPUStatus(0xF);                                          \
+        Emulator::SetCPUStatus(flags & 0xF);                                    \
     }
 
 #define ALU_INSTRUCTION2_NO_RET_VAL(name)                        \
@@ -524,8 +483,8 @@ extern "C" int printf(const char* __format, ...);
         PRINT_INS_INFO2(dst, src);                               \
         uint64_t flags = 0;                                      \
         x86_64_##name(dst->GetValue(), src->GetValue(), &flags); \
-        Emulator::ClearCPUStatus(7);                             \
-        Emulator::SetCPUStatus(flags & 7);                       \
+        Emulator::ClearCPUStatus(0xF);                           \
+        Emulator::SetCPUStatus(flags & 0xF);                     \
     }
 
 #define ALU_INSTRUCTION1(name)                                 \
@@ -533,8 +492,8 @@ extern "C" int printf(const char* __format, ...);
         PRINT_INS_INFO1(dst);                                  \
         uint64_t flags = 0;                                    \
         dst->SetValue(x86_64_##name(dst->GetValue(), &flags)); \
-        Emulator::ClearCPUStatus(7);                           \
-        Emulator::SetCPUStatus(flags & 7);                     \
+        Emulator::ClearCPUStatus(0xF);                         \
+        Emulator::SetCPUStatus(flags & 0xF);                   \
     }
 
 ALU_INSTRUCTION2(add)
@@ -548,8 +507,8 @@ void ins_div(Operand* dst, Operand* src) {
         g_ExceptionHandler->RaiseException(Exception::DIV_BY_ZERO);
     uint64_t flags = 0;
     dst->SetValue(x86_64_div(dst->GetValue(), src_val, &flags));
-    Emulator::ClearCPUStatus(7);
-    Emulator::SetCPUStatus(flags & 7);
+    Emulator::ClearCPUStatus(0xF);
+    Emulator::SetCPUStatus(flags & 0xF);
 }
 
 ALU_INSTRUCTION2(or)
@@ -679,6 +638,54 @@ void ins_jz(Operand* dst) {
 void ins_jnz(Operand* dst) {
     PRINT_INS_INFO1(dst);
     if (uint64_t flags = Emulator::GetCPUStatus(); !(flags & 2))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jl(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 4) != (flags & 8))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jle(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 4) != (flags & 8) || (flags & 2))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jnl(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 4) == (flags & 8))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jnle(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 4) == (flags & 8) && !(flags & 2))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jg(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); !(flags & 2) && (flags & 4) == (flags & 8))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jge(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 4) == (flags & 8))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jng(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 2) || (flags & 4) != (flags & 8))
+        Emulator::SetNextIP(dst->GetValue());
+}
+
+void ins_jnge(Operand* dst) {
+    PRINT_INS_INFO1(dst);
+    if (uint64_t flags = Emulator::GetCPUStatus(); (flags & 4) != (flags & 8))
         Emulator::SetNextIP(dst->GetValue());
 }
 

@@ -169,6 +169,10 @@ namespace InsEncoding {
         case Opcode::JNC:
         case Opcode::JZ:
         case Opcode::JNZ:
+        case Opcode::JL:
+        case Opcode::JLE:
+        case Opcode::JNL:
+        case Opcode::JNLE:
         case Opcode::ENTERUSER:
         case Opcode::PUSH:
         case Opcode::POP:

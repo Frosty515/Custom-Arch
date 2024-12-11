@@ -102,6 +102,14 @@ void ins_jc(Operand* dst);
 void ins_jnc(Operand* dst);
 void ins_jz(Operand* dst);
 void ins_jnz(Operand* dst);
+void ins_jl(Operand* dst);
+void ins_jle(Operand* dst);
+void ins_jnl(Operand* dst);
+void ins_jnle(Operand* dst);
+void ins_jg(Operand* dst);
+void ins_jge(Operand* dst);
+void ins_jng(Operand* dst);
+void ins_jnge(Operand* dst);
 
 void ins_mov(Operand* dst, Operand* src);
 void ins_nop();

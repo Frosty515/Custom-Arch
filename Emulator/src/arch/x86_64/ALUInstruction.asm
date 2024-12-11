@@ -31,15 +31,19 @@ global _x86_64_dec
 global _x86_64_shl
 global _x86_64_shr
 
-x86_64_convert_flags: ; dil = CPU flags --> rax = flags
+x86_64_convert_flags: ; di = CPU flags --> rax = flags
     xor rax, rax
     mov sil, dil
     and sil, 1
-    or al, sil
+    or al, sil ; carry flag
     mov sil, dil
     and sil, 1<<6 | 1<<7
     shr sil, 5
-    or al, sil
+    or al, sil ; zero and sign flags
+    mov si, di
+    and si, 1<<11
+    shr si, 8 ; overflow flag
+    or ax, si
     ret
 
 _x86_64_add:

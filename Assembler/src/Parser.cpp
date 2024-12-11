@@ -1300,6 +1300,22 @@ InsEncoding::Opcode Parser::GetOpcode(const char* name, size_t name_size) const 
         return Opcode::JZ;
     if (EQUALS(name, "jnz"))
         return Opcode::JNZ;
+    if (EQUALS(name, "jl"))
+        return Opcode::JL;
+    if (EQUALS(name, "jle"))
+        return Opcode::JLE;
+    if (EQUALS(name, "jnl"))
+        return Opcode::JNL;
+    if (EQUALS(name, "jnle"))
+        return Opcode::JNLE;
+    if (EQUALS(name, "jg"))
+        return Opcode::JNLE;
+    if (EQUALS(name, "jge"))
+        return Opcode::JNL;
+    if (EQUALS(name, "jng"))
+        return Opcode::JLE;
+    if (EQUALS(name, "jnge"))
+        return Opcode::JL;
     if (EQUALS(name, "syscall"))
         return Opcode::SYSCALL;
     if (EQUALS(name, "sysret"))
@@ -1398,15 +1414,19 @@ const char* Parser::GetInstructionName(InsEncoding::Opcode opcode) const {
         NAME_CASE(JNC)
         NAME_CASE(JZ)
         NAME_CASE(JNZ)
-        NAME_CASE(SYSCALL)
-        NAME_CASE(SYSRET)
-        NAME_CASE(ENTERUSER)
+        NAME_CASE(JL)
+        NAME_CASE(JLE)
+        NAME_CASE(JNL)
+        NAME_CASE(JNLE)
         NAME_CASE(INT)
         NAME_CASE(LIDT)
         NAME_CASE(IRET)
         NAME_CASE(MOV)
         NAME_CASE(NOP)
         NAME_CASE(HLT)
+        NAME_CASE(SYSCALL)
+        NAME_CASE(SYSRET)
+        NAME_CASE(ENTERUSER)
         NAME_CASE(UNKNOWN)
     }
 #undef NAME_CASE

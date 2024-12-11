@@ -52,13 +52,14 @@
 
 ### Status Layout
 
-| Bit  | Name     | Description    |
-|------|----------|----------------|
-| 0    | CF       | Carry flag     |
-| 1    | ZF       | Zero flag      |
-| 2    | SF       | Sign flag      |
-| 3    | IF       | Interrupt flag |
-| 4-63 | RESERVED | Reserved       |
+| Bit     | Name     | Description    |
+|---------|----------|----------------|
+| 0       | CF       | Carry flag     |
+| 1       | ZF       | Zero flag      |
+| 2       | SF       | Sign flag      |
+| 3       | OF       | Overflow flag  |
+| 4       | IF       | Interrupt flag |
+| 5-63    | RESERVED | Reserved       |
 
 ## Stack Info
 
@@ -393,6 +394,58 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 - `jnz SIZE address` jumps to the function at `address` if the zero flag is not set.
 - `address` can be a register, memory address (simple or complex), or an immediate.
 - Equivalent to a `nop` if the zero flag is set.
+
+#### jl
+
+- `jl SIZE address` jumps to the function at `address` if the sign flag is not equal to the overflow flag.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+
+#### jle
+
+- `jle SIZE address` jumps to the function at `address` if the sign flag is not equal to the overflow flag or the zero flag is set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+
+#### jnl
+
+- `jnl SIZE address` jumps to the function at `address` if the sign flag is equal to the overflow flag.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+
+#### jnle
+
+- `jnle SIZE address` jumps to the function at `address` if the sign flag is equal to the overflow flag and the zero flag is not set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+
+#### jg
+
+- `jg SIZE address` jumps to the function at `address` if the sign flag is equal to the overflow flag and the zero flag is not set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+- This instruction is an alias for `jnle`.
+
+#### jge
+
+- `jge SIZE address` jumps to the function at `address` if the sign flag is equal to the overflow flag.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+- This instruction is an alias for `jnl`.
+
+#### jng
+
+- `jng SIZE address` jumps to the function at `address` if the sign flag is not equal to the overflow flag or the zero flag is set.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+- This instruction is an alias for `jle`.
+
+#### jnge
+
+- `jnge SIZE address` jumps to the function at `address` if the sign flag is not equal to the overflow flag.
+- `address` can be a register, memory address (simple or complex), or an immediate.
+- Equivalent to a `nop` if the condition is not met.
+- This instruction is an alias for `jl`.
 
 ### Interrupts
 
