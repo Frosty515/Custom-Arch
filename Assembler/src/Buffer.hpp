@@ -18,18 +18,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _BUFFER_HPP
 #define _BUFFER_HPP
 
-#include <stddef.h>
 #include <stdint.h>
 
 #include "LinkedList.hpp"
 
-#define DEFAULT_BUFFER_BLOCK_SIZE 64
+#define DEFAULT_BUFFER_BLOCK_SIZE 256
 
 // A dynamic buffer created from multiple blocks
 class Buffer {
 public:
     Buffer();
-    Buffer(size_t size, size_t blockSize = DEFAULT_BUFFER_BLOCK_SIZE);
+    explicit Buffer(size_t size, size_t blockSize = DEFAULT_BUFFER_BLOCK_SIZE);
     ~Buffer();
 
     // Write size bytes from data to the buffer at offset

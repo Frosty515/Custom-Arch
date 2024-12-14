@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unordered_map>
 
 PreProcessor::PreProcessor()
-    : m_buffer(), m_current_offset(0) {
+    : m_current_offset(0) {
 }
 
 PreProcessor::~PreProcessor() {
@@ -37,54 +37,13 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
     // 1. resolve includes in %include "file" format
     {
         char* source_i = new char[source_size + 1];
-        strncpy((char*)source_i, source, source_size);
+        strncpy(source_i, source, source_size);
         source_i[source_size] = '\0';
         source = source_i;
     }
-
-    char* include_start = const_cast<char*>(source);
-    char* include_end = nullptr;
-    char const* i_source = source;
-    while (include_start != nullptr) {
-        include_start = strstr(include_start, "%include \"");
-        if (include_start != nullptr) {
-            m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(i_source), include_start - i_source);
-            m_current_offset += include_start - i_source;
-            include_start += 10;
-            include_end = strchr(include_start, '"');
-            if (include_end != nullptr) {
-                std::string include_string = std::filesystem::path(file_name).replace_filename(std::string(include_start, include_end));
-                if (FILE* file = fopen(include_string.c_str(), "r"); file != nullptr) {
-                    fseek(file, 0, SEEK_END);
-                    size_t file_size = ftell(file);
-                    fseek(file, 0, SEEK_SET);
-                    char* file_data = new char[file_size];
-                    fread(file_data, 1, file_size, file);
-                    fclose(file);
-                    PreProcessor preprocessor;
-                    preprocessor.process(file_data, file_size, include_string);
-                    size_t processed_size = preprocessor.GetProcessedBufferSize();
-                    uint8_t* processed_data = new uint8_t[processed_size];
-                    preprocessor.ExportProcessedBuffer(processed_data);
-                    m_buffer.Write(m_current_offset, processed_data, processed_size);
-                    m_current_offset += processed_size;
-                    delete[] processed_data;
-                    delete[] file_data;
-                } else
-                    error("Could not open include file");
-                i_source = include_end + 1;
-            } else
-                error("Unterminated include directive");
-        }
-    }
     const char* original_source = source;
-    // read the rest of the source
-    if (include_end == nullptr)
-        include_end = const_cast<char*>(source);
-    else
-        include_end += 1;
-    m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(include_end), source_size - (include_end - source));
-    m_current_offset += source_size - (include_end - source);
+
+    HandleIncludes(source, source_size, file_name);
 
     delete[] original_source;
 
@@ -290,15 +249,55 @@ char* PreProcessor::GetLine(char* source, size_t source_size, size_t& line_size)
         line_size = static_cast<char*>(line) - source;
         return static_cast<char*>(line) + 1;
     }
-    // for (size_t i = 0; i < source_size; i++) {
-    //     if (source[i] == '\n') {
-    //         line_size = i;
-    //         return &(source[i+1]);
-    //     }
-    // }
     line_size = source_size;
     return nullptr;
 }
+
+void PreProcessor::HandleIncludes(const char* source, size_t source_size, const std::string_view& file_name) {
+    char* include_start = const_cast<char*>(source);
+    char* include_end = nullptr;
+    char const* i_source = source;
+    while (include_start != nullptr) {
+        include_start = strstr(include_start, "%include \"");
+        if (include_start != nullptr) {
+            m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(i_source), include_start - i_source);
+            m_current_offset += include_start - i_source;
+            include_start += 10;
+            include_end = strchr(include_start, '"');
+            if (include_end != nullptr) {
+                std::string include_string = std::filesystem::path(file_name).replace_filename(std::string(include_start, include_end));
+                if (FILE* file = fopen(include_string.c_str(), "r"); file != nullptr) {
+                    fseek(file, 0, SEEK_END);
+                    size_t file_size = ftell(file);
+                    fseek(file, 0, SEEK_SET);
+                    char* file_data = new char[file_size];
+                    fread(file_data, 1, file_size, file);
+                    fclose(file);
+                    PreProcessor preprocessor;
+                    preprocessor.HandleIncludes(file_data, file_size, include_string);
+                    size_t processed_size = preprocessor.GetProcessedBufferSize();
+                    uint8_t* processed_data = new uint8_t[processed_size];
+                    preprocessor.ExportProcessedBuffer(processed_data);
+                    m_buffer.Write(m_current_offset, processed_data, processed_size);
+                    m_current_offset += processed_size;
+                    delete[] processed_data;
+                    delete[] file_data;
+                } else
+                    error("Could not open include file");
+                i_source = include_end + 1;
+            } else
+                error("Unterminated include directive");
+        }
+    }
+    // read the rest of the source
+    if (include_end == nullptr)
+        include_end = const_cast<char*>(source);
+    else
+        include_end += 1;
+    m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(include_end), source_size - (include_end - source));
+    m_current_offset += source_size - (include_end - source);
+}
+
 
 [[noreturn]] void PreProcessor::error(const char* message) {
     fprintf(stderr, "PreProcessor error: %s\n", message);

@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <libarch/Operand.hpp>
 
 Parser::Parser()
-    : m_base_address(0) {
+    : m_base_address(0), m_opcodeTableInitialised(false), m_registerTableInitialised(false) {
 }
 
 Parser::~Parser() {
@@ -195,17 +195,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 char* name = new char[token->data_size + 1];
                 strncpy(name, static_cast<const char*>(token->data), token->data_size);
                 name[token->data_size] = 0;
-                for (uint64_t j = 0; j < m_labels.getCount(); j++) {
-                    Label* i_label = m_labels.get(j);
-                    if (i_label == nullptr)
-                        assert(nullptr == "Invalid label name in list"); // quick way to escape
+                m_labels.Enumerate([&](Label* i_label) -> bool {
                     if (i_label->name_size < token->data_size) // strncmp can only properly handle strings of equal or greater length.
-                        continue;
+                        return true;
                     if (strncmp(i_label->name, name, i_label->name_size) == 0) {
                         label = i_label;
-                        break;
+                        return false;
                     }
-                }
+                    return true;
+                });
                 delete[] name;
                 if (label == nullptr)
                     error("Invalid label");
@@ -227,17 +225,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     delete[] name;
                     error("Invalid sublabel name");
                 }
-                for (uint64_t j = 0; j < current_label->blocks.getCount(); j++) {
-                    Block* i_block = current_label->blocks.get(j);
-                    if (i_block == nullptr)
-                        assert(nullptr == "Invalid block name in list"); // quick way to escape
+                current_label->blocks.Enumerate([&](Block* i_block) -> bool {
                     if (i_block->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length
-                        continue;
+                        return true;
                     if (strncmp(i_block->name, name, i_block->name_size) == 0) {
                         block = i_block;
-                        break;
+                        return false;
                     }
-                }
+                    return true;
+                });
                 delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
                 if (block == nullptr)
                     error("Invalid sublabel");
@@ -301,17 +297,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             char* name = new char[token->data_size + 1];
             strncpy(name, static_cast<const char*>(token->data), token->data_size);
             name[token->data_size] = 0;
-            for (uint64_t j = 0; j < m_labels.getCount(); j++) {
-                Label* i_label = m_labels.get(j);
-                if (i_label == nullptr)
-                    assert(nullptr == "Invalid label name in list"); // quick way to escape
+            m_labels.Enumerate([&](Label* i_label) -> bool {
                 if (i_label->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length. -1 to remove the colon
-                    continue;
+                    return true;
                 if (strncmp(i_label->name, name, i_label->name_size) == 0) {
                     label = i_label;
-                    break;
+                    return false;
                 }
-            }
+                return true;
+            });
             delete[] name;
             current_label = label;
             if (current_label == nullptr) {
@@ -333,17 +327,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 delete[] name;
                 error("Invalid sublabel name");
             }
-            for (uint64_t j = 0; j < current_label->blocks.getCount(); j++) {
-                Block* i_block = current_label->blocks.get(j);
-                if (i_block == nullptr)
-                    assert(nullptr == "Invalid block name in list"); // quick way to escape
+            current_label->blocks.Enumerate([&](Block* i_block) -> bool {
                 if (i_block->name_size < (token->data_size - 2)) // strncmp can only properly handle strings of equal or greater length
-                    continue;
+                    return true;
                 if (strncmp(i_block->name, name, i_block->name_size) == 0) {
                     block = i_block;
-                    break;
+                    return false;
                 }
-            }
+                return true;
+            });
             delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
             current_block = block;
             if (current_block == nullptr)
@@ -599,17 +591,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     char* name = new char[token->data_size + 1];
                     strncpy(name, static_cast<const char*>(token->data), token->data_size);
                     name[token->data_size] = 0;
-                    for (uint64_t j = 0; j < m_labels.getCount(); j++) {
-                        Label* i_label = m_labels.get(j);
-                        if (i_label == nullptr)
-                            assert(nullptr == "Invalid label name in list"); // quick way to escape
+                    m_labels.Enumerate([&](Label* i_label) -> bool {
                         if (i_label->name_size < token->data_size) // strncmp can only properly handle strings of equal or greater length.
-                            continue;
+                            return true;
                         if (strncmp(i_label->name, name, i_label->name_size) == 0) {
                             label = i_label;
-                            break;
+                            return false;
                         }
-                    }
+                        return true;
+                    });
                     delete[] name;
                     if (label == nullptr)
                         error("Invalid label");
@@ -677,17 +667,15 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         delete[] name;
                         error("Invalid sublabel name");
                     }
-                    for (uint64_t j = 0; j < current_label->blocks.getCount(); j++) {
-                        Block* i_block = current_label->blocks.get(j);
-                        if (i_block == nullptr)
-                            assert(nullptr == "Invalid block name in list"); // quick way to escape
+                    current_label->blocks.Enumerate([&](Block* i_block) -> bool {
                         if (i_block->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length
-                            continue;
+                            return true;
                         if (strncmp(i_block->name, name, i_block->name_size) == 0) {
                             block = i_block;
-                            break;
+                            return false;
                         }
-                    }
+                        return true;
+                    });
                     delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
                     if (block == nullptr)
                         error("Invalid sublabel");
@@ -1246,133 +1234,96 @@ const LinkedList::RearInsertLinkedList<InsEncoding::Label>& Parser::GetLabels() 
     return m_labels;
 }
 
-InsEncoding::Opcode Parser::GetOpcode(const char* name, size_t name_size) const {
+InsEncoding::Opcode Parser::GetOpcode(const char* name, size_t name_size) {
     using namespace InsEncoding;
-    if (EQUALS(name, "push"))
-        return Opcode::PUSH;
-    if (EQUALS(name, "pop"))
-        return Opcode::POP;
-    if (EQUALS(name, "pusha"))
-        return Opcode::PUSHA;
-    if (EQUALS(name, "popa"))
-        return Opcode::POPA;
-    if (EQUALS(name, "add"))
-        return Opcode::ADD;
-    if (EQUALS(name, "mul"))
-        return Opcode::MUL;
-    if (EQUALS(name, "sub"))
-        return Opcode::SUB;
-    if (EQUALS(name, "div"))
-        return Opcode::DIV;
-    if (EQUALS(name, "or"))
-        return Opcode::OR;
-    if (EQUALS(name, "xor"))
-        return Opcode::XOR;
-    if (EQUALS(name, "nor"))
-        return Opcode::NOR;
-    if (EQUALS(name, "and"))
-        return Opcode::AND;
-    if (EQUALS(name, "nand"))
-        return Opcode::NAND;
-    if (EQUALS(name, "not"))
-        return Opcode::NOT;
-    if (EQUALS(name, "cmp"))
-        return Opcode::CMP;
-    if (EQUALS(name, "inc"))
-        return Opcode::INC;
-    if (EQUALS(name, "dec"))
-        return Opcode::DEC;
-    if (EQUALS(name, "shl"))
-        return Opcode::SHL;
-    if (EQUALS(name, "shr"))
-        return Opcode::SHR;
-    if (EQUALS(name, "ret"))
-        return Opcode::RET;
-    if (EQUALS(name, "call"))
-        return Opcode::CALL;
-    if (EQUALS(name, "jmp"))
-        return Opcode::JMP;
-    if (EQUALS(name, "jc"))
-        return Opcode::JC;
-    if (EQUALS(name, "jnc"))
-        return Opcode::JNC;
-    if (EQUALS(name, "jz"))
-        return Opcode::JZ;
-    if (EQUALS(name, "jnz"))
-        return Opcode::JNZ;
-    if (EQUALS(name, "jl"))
-        return Opcode::JL;
-    if (EQUALS(name, "jle"))
-        return Opcode::JLE;
-    if (EQUALS(name, "jnl"))
-        return Opcode::JNL;
-    if (EQUALS(name, "jnle"))
-        return Opcode::JNLE;
-    if (EQUALS(name, "jg"))
-        return Opcode::JNLE;
-    if (EQUALS(name, "jge"))
-        return Opcode::JNL;
-    if (EQUALS(name, "jng"))
-        return Opcode::JLE;
-    if (EQUALS(name, "jnge"))
-        return Opcode::JL;
-    if (EQUALS(name, "syscall"))
-        return Opcode::SYSCALL;
-    if (EQUALS(name, "sysret"))
-        return Opcode::SYSRET;
-    if (EQUALS(name, "enteruser"))
-        return Opcode::ENTERUSER;
-    if (EQUALS(name, "int"))
-        return Opcode::INT;
-    if (EQUALS(name, "lidt"))
-        return Opcode::LIDT;
-    if (EQUALS(name, "iret"))
-        return Opcode::IRET;
-    if (EQUALS(name, "mov"))
-        return Opcode::MOV;
-    if (EQUALS(name, "nop"))
-        return Opcode::NOP;
-    if (EQUALS(name, "hlt"))
-        return Opcode::HLT;
-    return Opcode::UNKNOWN;
+    if (!m_opcodeTableInitialised) {
+#define INSERT_OPCODE(str, opcode, length) m_opcodes.insert({std::string_view(#str, length), Opcode::opcode})
+        INSERT_OPCODE(add, ADD, 3);
+        INSERT_OPCODE(mul, MUL, 3);
+        INSERT_OPCODE(sub, SUB, 3);
+        INSERT_OPCODE(div, DIV, 3);
+        INSERT_OPCODE(or, OR, 2);
+        INSERT_OPCODE(xor, XOR, 3);
+        INSERT_OPCODE(nor, NOR, 3);
+        INSERT_OPCODE(and, AND, 3);
+        INSERT_OPCODE(nand, NAND, 4);
+        INSERT_OPCODE(not, NOT, 3);
+        INSERT_OPCODE(cmp, CMP, 3);
+        INSERT_OPCODE(inc, INC, 3);
+        INSERT_OPCODE(dec, DEC, 3);
+        INSERT_OPCODE(shl, SHL, 3);
+        INSERT_OPCODE(shr, SHR, 3);
+        INSERT_OPCODE(ret, RET, 3);
+        INSERT_OPCODE(call, CALL, 4);
+        INSERT_OPCODE(jmp, JMP, 3);
+        INSERT_OPCODE(jc, JC, 2);
+        INSERT_OPCODE(jnc, JNC, 3);
+        INSERT_OPCODE(jz, JZ, 2);
+        INSERT_OPCODE(jnz, JNZ, 3);
+        INSERT_OPCODE(jl, JL, 2);
+        INSERT_OPCODE(jnge, JL, 4);
+        INSERT_OPCODE(jle, JLE, 3);
+        INSERT_OPCODE(jng, JLE, 3);
+        INSERT_OPCODE(jnl, JNL, 3);
+        INSERT_OPCODE(jge, JNL, 3);
+        INSERT_OPCODE(jnle, JNLE, 4);
+        INSERT_OPCODE(jg, JNLE, 2);
+        INSERT_OPCODE(mov, MOV, 3);
+        INSERT_OPCODE(nop, NOP, 3);
+        INSERT_OPCODE(hlt, HLT, 3);
+        INSERT_OPCODE(push, PUSH, 4);
+        INSERT_OPCODE(pop, POP, 3);
+        INSERT_OPCODE(pusha, PUSHA, 5);
+        INSERT_OPCODE(popa, POPA, 4);
+        INSERT_OPCODE(int, INT, 3);
+        INSERT_OPCODE(lidt, LIDT, 4);
+        INSERT_OPCODE(iret, IRET, 4);
+        INSERT_OPCODE(syscall, SYSCALL, 7);
+        INSERT_OPCODE(sysret, SYSRET, 6);
+        INSERT_OPCODE(enteruser, ENTERUSER, 9);
+#undef INSERT_OPCODE
+        m_opcodeTableInitialised = true;
+    }
+    return m_opcodes[std::string_view(name, name_size)];
 }
 
-InsEncoding::Register Parser::GetRegister(const char* name, size_t name_size) const {
+InsEncoding::Register Parser::GetRegister(const char* name, size_t name_size) {
     using namespace InsEncoding;
-#define REG_EQUAL(rname)      \
-    if (EQUALS(name, #rname)) \
-    return Register::rname
-    REG_EQUAL(r0);
-    REG_EQUAL(r1);
-    REG_EQUAL(r2);
-    REG_EQUAL(r3);
-    REG_EQUAL(r4);
-    REG_EQUAL(r5);
-    REG_EQUAL(r6);
-    REG_EQUAL(r7);
-    REG_EQUAL(r8);
-    REG_EQUAL(r9);
-    REG_EQUAL(r10);
-    REG_EQUAL(r11);
-    REG_EQUAL(r12);
-    REG_EQUAL(r13);
-    REG_EQUAL(r14);
-    REG_EQUAL(r15);
-    REG_EQUAL(scp);
-    REG_EQUAL(sbp);
-    REG_EQUAL(stp);
-    REG_EQUAL(cr0);
-    REG_EQUAL(cr1);
-    REG_EQUAL(cr2);
-    REG_EQUAL(cr3);
-    REG_EQUAL(cr4);
-    REG_EQUAL(cr5);
-    REG_EQUAL(cr6);
-    REG_EQUAL(cr7);
-    REG_EQUAL(sts);
-    REG_EQUAL(ip);
-#undef REG_EQUAL
-    return Register::unknown;
+    if (!m_registerTableInitialised) {
+#define INSERT_REGISTER(name, length) m_registers.insert({std::string_view(#name, length), Register::name})
+        INSERT_REGISTER(r0, 2);
+        INSERT_REGISTER(r1, 2);
+        INSERT_REGISTER(r2, 2);
+        INSERT_REGISTER(r3, 2);
+        INSERT_REGISTER(r4, 2);
+        INSERT_REGISTER(r5, 2);
+        INSERT_REGISTER(r6, 2);
+        INSERT_REGISTER(r7, 2);
+        INSERT_REGISTER(r8, 2);
+        INSERT_REGISTER(r9, 2);
+        INSERT_REGISTER(r10, 3);
+        INSERT_REGISTER(r11, 3);
+        INSERT_REGISTER(r12, 3);
+        INSERT_REGISTER(r13, 3);
+        INSERT_REGISTER(r14, 3);
+        INSERT_REGISTER(r15, 3);
+        INSERT_REGISTER(scp, 3);
+        INSERT_REGISTER(sbp, 3);
+        INSERT_REGISTER(stp, 3);
+        INSERT_REGISTER(cr0, 3);
+        INSERT_REGISTER(cr1, 3);
+        INSERT_REGISTER(cr2, 3);
+        INSERT_REGISTER(cr3, 3);
+        INSERT_REGISTER(cr4, 3);
+        INSERT_REGISTER(cr5, 3);
+        INSERT_REGISTER(cr6, 3);
+        INSERT_REGISTER(cr7, 3);
+        INSERT_REGISTER(sts, 3);
+        INSERT_REGISTER(ip, 2);
+#undef INSERT_REGISTER
+        m_registerTableInitialised = true;
+    }
+    return m_registers[std::string_view(name, name_size)];
 }
 
 #undef EQUALS

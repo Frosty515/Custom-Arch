@@ -37,6 +37,8 @@ public:
 private:
     char* GetLine(char* source, size_t source_size, size_t& line_size);
 
+    void HandleIncludes(const char* source, size_t source_size, const std::string_view& file_name);
+
     [[noreturn]] void error(const char* message);
 
 private:

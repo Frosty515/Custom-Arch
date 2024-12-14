@@ -23,6 +23,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 
+constexpr const char* instructions_str = "add mul sub div or xor nor and nand not cmp inc dec shl shr ret call jmp jc jnc jz jnz jl jle jnl jnle jg jge jng jnge mov nop hlt push pop pusha popa int lidt iret syscall sysret enteruser";
+constexpr size_t instructions_str_len = sizeof(instructions_str) - 1;
+
+bool IsInstruction(const std::string& str) {
+    const char* raw_token = str.c_str();
+    if (const char* ins = strstr(instructions_str, raw_token); ins != nullptr) {
+        if (ins != instructions_str && ins[-1] != ' ')
+            return false;
+        if (size_t str_size = str.size(); instructions_str + instructions_str_len <= ins + str_size && ins[str_size] != ' ')
+            return false;
+        return true;
+    }
+    return false;
+}
+
 Lexer::Lexer() {
 }
 
@@ -187,15 +202,6 @@ void Lexer::tokenize(const char* source, size_t source_size) {
             }
         }
     }
-    for (uint64_t i = 0; i < current_offset_in_token; i++) {
-        if (token[i] == ' ' || token[i] == '\n' || token[i] == '\t')
-            continue;
-        else {
-            AddToken(token);
-            token = "";
-            break;
-        }
-    }
 }
 
 const LinkedList::RearInsertLinkedList<Token>& Lexer::GetTokens() const {
@@ -263,10 +269,9 @@ void Lexer::AddToken(const std::string& str_token) {
 
     /* now we identify the token type */
 #define IS_REGISTER(token) (token == "r0" || token == "r1" || token == "r2" || token == "r3" || token == "r4" || token == "r5" || token == "r6" || token == "r7" || token == "r8" || token == "r9" || token == "r10" || token == "r11" || token == "r12" || token == "r13" || token == "r14" || token == "r15" || token == "scp" || token == "sbp" || token == "stp" || token == "cr0" || token == "cr1" || token == "cr2" || token == "cr3" || token == "cr4" || token == "cr5" || token == "cr6" || token == "cr7" || token == "sts" || token == "ip")
-#define IS_INSTRUCTION(token) (token == "push" || token == "pop" || token == "pusha" || token == "popa" || token == "add" || token == "mul" || token == "sub" || token == "div" || token == "or" || token == "xor" || token == "nor" || token == "and" || token == "nand" || token == "not" || token == "cmp" || token == "inc" || token == "dec" || token == "shl" || token == "shr" || token == "ret" || token == "call" || token == "jmp" || token == "jc" || token == "jnc" || token == "jz" || token == "jnz" || token == "jl" || token == "jle" || token == "jnl" || token == "jnle" || token == "jg" || token == "jge" || token == "jng" || token == "jnge" || token == "int" || token == "lidt" || token == "iret" || token == "mov" || token == "nop" || token == "hlt" || token == "syscall" || token == "sysret" || token == "enteruser")
     if IS_REGISTER (lower_token)
         new_token->type = TokenType::REGISTER;
-    else if IS_INSTRUCTION (lower_token)
+    else if (IsInstruction(lower_token))
         new_token->type = TokenType::INSTRUCTION;
     else if (lower_token == "[")
         new_token->type = TokenType::LBRACKET;

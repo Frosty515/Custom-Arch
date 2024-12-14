@@ -42,8 +42,8 @@ public:
     uint64_t GetBaseAddress() const { return m_base_address; }
 
 private:
-    InsEncoding::Opcode GetOpcode(const char* name, size_t name_size) const;
-    InsEncoding::Register GetRegister(const char* name, size_t name_size) const;
+    InsEncoding::Opcode GetOpcode(const char* name, size_t name_size);
+    InsEncoding::Register GetRegister(const char* name, size_t name_size);
     void error(const char* message);
 
     const char* GetInstructionName(InsEncoding::Opcode opcode) const;
@@ -52,6 +52,10 @@ private:
 private:
     LinkedList::RearInsertLinkedList<InsEncoding::Label> m_labels;
     uint64_t m_base_address;
+    std::unordered_map<std::string_view, InsEncoding::Opcode> m_opcodes;
+    bool m_opcodeTableInitialised;
+    std::unordered_map<std::string_view, InsEncoding::Register> m_registers;
+    bool m_registerTableInitialised;
 };
 
 #endif /* _PARSER_HPP */

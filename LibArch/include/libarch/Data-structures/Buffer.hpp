@@ -18,12 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LIBARCH_BUFFER_HPP
 #define _LIBARCH_BUFFER_HPP
 
-#include <stddef.h>
 #include <stdint.h>
 
 #include "LinkedList.hpp"
 
-#define DEFAULT_BUFFER_BLOCK_SIZE 64
+#define DEFAULT_BUFFER_BLOCK_SIZE 256
 
 namespace InsEncoding {
 
@@ -31,8 +30,8 @@ namespace InsEncoding {
     class Buffer {
        public:
         Buffer();
-        Buffer(size_t size, size_t blockSize = DEFAULT_BUFFER_BLOCK_SIZE);
-        ~Buffer();
+        explicit Buffer(size_t size, size_t blockSize = DEFAULT_BUFFER_BLOCK_SIZE);
+        virtual ~Buffer();
 
         // Write size bytes from data to the buffer at offset
         virtual void Write(uint64_t offset, const uint8_t* data, size_t size);
