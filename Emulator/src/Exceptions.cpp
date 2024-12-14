@@ -40,7 +40,6 @@ ExceptionHandler::~ExceptionHandler() {
     if (exception == Exception::TWICE_UNHANDLED_INTERRUPT || m_INTHandler == nullptr) {
         Emulator::Crash("ExceptionHandler::RaiseException(): unhandled exception");
     }
-    CleanupCurrentInstruction();
     if (exception == Exception::PHYS_MEM_VIOLATION || exception == Exception::UNHANDLED_INTERRUPT || exception == Exception::STACK_VIOLATION || exception == Exception::PAGING_VIOLATION) {
         // check that the stack can be accessed
         if (g_stack->WillOverflowOnPush() || (g_stack->getStackPointer() % 8) > 0 || !m_INTHandler->GetMMU()->ValidateRead(g_stack->getStackPointer() + 8, 8)) {

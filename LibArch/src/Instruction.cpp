@@ -18,11 +18,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "Instruction.hpp"
 
 #include <cstdlib>
+#include <cstring>
 
 #include "Data-structures/Buffer.hpp"
 #include "Operand.hpp"
 
 namespace InsEncoding {
+
+    SimpleInstruction g_currentInstruction;
+    ComplexData g_complexData[2];
+    Register g_currentRegisters[6]; // maximum of 6 registers in an instruction
+    uint64_t g_rawData[48]; // maximum of 6 in an operand, maximum of 8 bytes each, totalling 48 bytes
+
+    Instruction::Instruction()
+        : m_opcode(Opcode::UNKNOWN) {
+    }
 
     Instruction::Instruction(Opcode opcode)
         : m_opcode(opcode) {
@@ -31,7 +41,30 @@ namespace InsEncoding {
     Instruction::~Instruction() {
     }
 
+    void Instruction::SetOpcode(Opcode opcode) {
+        m_opcode = opcode;
+    }
+
     Opcode Instruction::GetOpcode() const {
+        return m_opcode;
+    }
+
+    SimpleInstruction::SimpleInstruction()
+        : operand_count(0), m_opcode(Opcode::UNKNOWN) {
+    }
+
+    SimpleInstruction::SimpleInstruction(Opcode opcode)
+        : operand_count(0), m_opcode(opcode) {
+    }
+
+    SimpleInstruction::~SimpleInstruction() {
+    }
+
+    void SimpleInstruction::SetOpcode(Opcode opcode) {
+        m_opcode = opcode;
+    }
+
+    Opcode SimpleInstruction::GetOpcode() const {
         return m_opcode;
     }
 
@@ -193,23 +226,29 @@ namespace InsEncoding {
         }
     }
 
-    Instruction* DecodeInstruction(const uint8_t* data, size_t data_size) {
+    bool DecodeInstruction(const uint8_t* data, size_t data_size, SimpleInstruction* out) {
         Buffer buffer(data_size);
         buffer.Write(0, data, data_size);
         uint64_t current_offset = 0;
-        return DecodeInstruction(buffer, current_offset);
+        return DecodeInstruction(buffer, current_offset, out);
     }
 
-    Instruction* DecodeInstruction(Buffer& buffer, uint64_t& current_offset) {
+    bool DecodeInstruction(Buffer& buffer, uint64_t& current_offset, SimpleInstruction* out) {
+        if (out == nullptr)
+            return false;
+
         uint8_t raw_opcode;
         buffer.Read(current_offset, &raw_opcode, 1);
         current_offset++;
 
-        Instruction* instruction = new Instruction(static_cast<Opcode>(raw_opcode));
+        g_currentInstruction.SetOpcode(static_cast<Opcode>(raw_opcode));
+        g_currentInstruction.operand_count = 0;
 
-        uint8_t arg_count = GetArgCountForOpcode(instruction->GetOpcode());
-        if (arg_count == 0)
-            return instruction;
+        uint8_t arg_count = GetArgCountForOpcode(g_currentInstruction.GetOpcode());
+        if (arg_count == 0) {
+            *out = g_currentInstruction;
+            return true;
+        }
 
         OperandType operand_types[2];
         OperandSize operand_sizes[2];
@@ -278,25 +317,26 @@ namespace InsEncoding {
             OperandType operand_type = operand_types[i];
             OperandSize operand_size = operand_sizes[i];
 
-            Operand* operand = new Operand(operand_type, operand_size, nullptr);
+            Operand operand(operand_type, operand_size, nullptr);
 
             switch (operand_type) {
             case OperandType::COMPLEX: {
                 ComplexOperandInfo complex_info = complex_infos[i];
-                ComplexData* complex = new ComplexData;
+                ComplexData* complex = &g_complexData[i];
                 complex->base.present = complex_info.base_present;
                 if (complex->base.present) {
                     complex->base.type = complex_info.base_type == 0 ? ComplexItem::Type::REGISTER : ComplexItem::Type::IMMEDIATE;
                     if (complex->base.type == ComplexItem::Type::IMMEDIATE) {
                         complex->base.data.imm.size = static_cast<OperandSize>(complex_info.base_size);
-                        complex->base.data.imm.data = new uint8_t[1 << complex_info.base_size];
+                        complex->base.data.imm.data = &g_rawData[i * 3];
                         buffer.Read(current_offset, static_cast<uint8_t*>(complex->base.data.imm.data), 1 << complex_info.base_size);
                         current_offset += 1 << complex_info.base_size;
                     } else if (complex->base.type == ComplexItem::Type::REGISTER) {
                         RegisterID reg_id;
                         buffer.Read(current_offset, reinterpret_cast<uint8_t*>(&reg_id), sizeof(RegisterID));
                         current_offset += sizeof(RegisterID);
-                        complex->base.data.reg = new Register(GetRegisterFromID(reg_id));
+                        complex->base.data.reg = &g_currentRegisters[i * 3];
+                        *complex->base.data.reg = GetRegisterFromID(reg_id);
                     }
                 }
                 complex->index.present = complex_info.index_present;
@@ -304,14 +344,15 @@ namespace InsEncoding {
                     complex->index.type = complex_info.index_type == 0 ? ComplexItem::Type::REGISTER : ComplexItem::Type::IMMEDIATE;
                     if (complex->index.type == ComplexItem::Type::IMMEDIATE) {
                         complex->index.data.imm.size = static_cast<OperandSize>(complex_info.index_size);
-                        complex->index.data.imm.data = new uint8_t[1 << complex_info.index_size];
+                        complex->index.data.imm.data = &g_rawData[i * 3 + 1];
                         buffer.Read(current_offset, static_cast<uint8_t*>(complex->index.data.imm.data), 1 << complex_info.index_size);
                         current_offset += 1 << complex_info.index_size;
                     } else if (complex->index.type == ComplexItem::Type::REGISTER) {
                         RegisterID reg_id;
                         buffer.Read(current_offset, reinterpret_cast<uint8_t*>(&reg_id), sizeof(RegisterID));
                         current_offset += sizeof(RegisterID);
-                        complex->index.data.reg = new Register(GetRegisterFromID(reg_id));
+                        complex->index.data.reg = &g_currentRegisters[i * 3 + 1];
+                        *complex->index.data.reg = GetRegisterFromID(reg_id);
                     }
                 }
                 complex->offset.present = complex_info.offset_present;
@@ -319,49 +360,54 @@ namespace InsEncoding {
                     complex->offset.type = complex_info.offset_type == 0 ? ComplexItem::Type::REGISTER : ComplexItem::Type::IMMEDIATE;
                     if (complex->offset.type == ComplexItem::Type::IMMEDIATE) {
                         complex->offset.data.imm.size = static_cast<OperandSize>(complex_info.offset_size);
-                        complex->offset.data.imm.data = new uint8_t[1 << complex_info.offset_size];
+                        complex->offset.data.imm.data = &g_rawData[i * 3 + 2];
                         buffer.Read(current_offset, static_cast<uint8_t*>(complex->offset.data.imm.data), 1 << complex_info.offset_size);
                         current_offset += 1 << complex_info.offset_size;
                     } else if (complex->offset.type == ComplexItem::Type::REGISTER) {
                         RegisterID reg_id;
                         buffer.Read(current_offset, reinterpret_cast<uint8_t*>(&reg_id), sizeof(RegisterID));
                         current_offset += sizeof(RegisterID);
-                        complex->offset.data.reg = new Register(GetRegisterFromID(reg_id));
+                        complex->offset.data.reg = &g_currentRegisters[i * 3 + 2];
+                        *complex->offset.data.reg = GetRegisterFromID(reg_id);
                         complex->offset.sign = complex_info.offset_size;
                     }
                 }
-                operand->data = complex;
+                operand.data = complex;
                 break;
             }
             case OperandType::REGISTER: {
                 RegisterID reg_id;
                 buffer.Read(current_offset, reinterpret_cast<uint8_t*>(&reg_id), sizeof(RegisterID));
                 current_offset += sizeof(RegisterID);
-                operand->data = new Register(GetRegisterFromID(reg_id));
+                Register* reg = &g_currentRegisters[i * 3];
+                *reg = GetRegisterFromID(reg_id);
+                operand.data = reg;
                 break;
             }
             case OperandType::MEMORY: {
-                uint8_t* mem_data = new uint8_t[8];
+                uint8_t* mem_data = reinterpret_cast<uint8_t*>(&g_rawData[i * 3]);
                 buffer.Read(current_offset, mem_data, 8);
                 current_offset += 8;
-                operand->data = mem_data;
+                operand.data = mem_data;
                 break;
             }
             case OperandType::IMMEDIATE: {
-                uint8_t* imm_data = new uint8_t[1 << static_cast<uint8_t>(operand_size)];
+                uint8_t* imm_data = reinterpret_cast<uint8_t*>(&g_rawData[i * 3]);
                 buffer.Read(current_offset, imm_data, 1 << static_cast<uint8_t>(operand_size));
                 current_offset += 1 << static_cast<uint8_t>(operand_size);
-                operand->data = imm_data;
+                operand.data = imm_data;
                 break;
             }
             default:
                 error("Invalid operand type");
             }
 
-            instruction->operands.insert(operand);
+            g_currentInstruction.operands[g_currentInstruction.operand_count] = operand;
+            g_currentInstruction.operand_count++;
         }
 
-        return instruction;
+        *out = g_currentInstruction;
+        return true;
     }
 
     size_t EncodeInstruction(Instruction* instruction, uint8_t* data, size_t data_size, uint64_t global_offset) {

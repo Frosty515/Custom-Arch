@@ -43,7 +43,9 @@ class MemoryRegion {
     virtual uint64_t getEnd();
     virtual size_t getSize();
 
-    virtual bool isInside(uint64_t address, size_t size);
+    virtual bool isInside(uint64_t address, size_t size) {
+      return address >= m_start && (address + size) <= m_end;
+    }
 
     virtual void dump();
 

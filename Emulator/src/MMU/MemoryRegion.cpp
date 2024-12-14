@@ -71,10 +71,6 @@ size_t MemoryRegion::getSize() {
     return m_size;
 }
 
-bool MemoryRegion::isInside(uint64_t address, size_t size) {
-    return address >= m_start && (address + size) <= m_end;
-}
-
 void MemoryRegion::dump() {
     printf("MemoryRegion: %lx - %lx", m_start, m_end);
     uint8_t buffer[16];

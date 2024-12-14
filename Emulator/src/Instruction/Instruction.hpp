@@ -71,7 +71,6 @@ enum class InstructionState {
 
 bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, char const*& last_error);
 void ExecutionLoop(MMU* mmu, InstructionState& CurrentState, char const*& last_error);
-void CleanupCurrentInstruction();
 void StopExecution();
 void PauseExecution();
 void AllowExecution();

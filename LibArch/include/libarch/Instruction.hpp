@@ -216,8 +216,11 @@ namespace InsEncoding {
 
     class Instruction {
        public:
-        Instruction(Opcode opcode);
+        Instruction();
+        explicit Instruction(Opcode opcode);
         ~Instruction();
+
+        void SetOpcode(Opcode opcode);
 
         Opcode GetOpcode() const;
 
@@ -227,8 +230,26 @@ namespace InsEncoding {
         Opcode m_opcode;
     };
 
-    Instruction* DecodeInstruction(const uint8_t* data, size_t data_size);
-    Instruction* DecodeInstruction(Buffer& buffer, uint64_t& current_offset);
+    class SimpleInstruction { // alternative that doesn't use the heap
+       public:
+        SimpleInstruction();
+        explicit SimpleInstruction(Opcode opcode);
+        ~SimpleInstruction();
+
+        void SetOpcode(Opcode opcode);
+
+        Opcode GetOpcode() const;
+
+        Operand operands[2];
+        size_t operand_count;
+
+       private:
+        Opcode m_opcode;
+
+    };
+
+    bool DecodeInstruction(const uint8_t* data, size_t data_size, SimpleInstruction* out);
+    bool DecodeInstruction(Buffer& buffer, uint64_t& current_offset, SimpleInstruction* out);
     size_t EncodeInstruction(Instruction* instruction, uint8_t* data, size_t data_size, uint64_t global_offset);
 } // namespace InsEncoding
 

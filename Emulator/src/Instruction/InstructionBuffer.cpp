@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Exceptions.hpp>
 
-InstructionBuffer::InstructionBuffer(MMU* mmu, uint64_t base_address) : Buffer(0), m_mmu(mmu), m_base_address(base_address) {
+InstructionBuffer::InstructionBuffer(MMU* mmu, uint64_t base_address) : m_mmu(mmu), m_base_address(base_address) {
 
 }
 

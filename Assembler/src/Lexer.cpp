@@ -202,6 +202,12 @@ void Lexer::tokenize(const char* source, size_t source_size) {
             }
         }
     }
+    for (uint64_t i = 0; i < current_offset_in_token; i++) {
+        if (!(token[i] == ' ' || token[i] == '\n' || token[i] == '\t')) {
+            AddToken(token);
+            break;
+        }
+    }
 }
 
 const LinkedList::RearInsertLinkedList<Token>& Lexer::GetTokens() const {

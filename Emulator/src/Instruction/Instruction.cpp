@@ -33,43 +33,10 @@ std::atomic_uchar g_ExecutionAllowed = 1;
 std::atomic_uchar g_ExecutionRunning = 1;
 std::atomic_uchar g_TerminateExecution = 0;
 
-bool deleted[2] = {true, true};
+InsEncoding::SimpleInstruction g_current_instruction;
 
-InsEncoding::Instruction* g_current_instruction = nullptr;
-
-Operand* g_currentOperands[2] = {nullptr, nullptr};
-
-void CleanupCurrentInstruction() {
-    if (g_current_instruction == nullptr)
-        return;
-    const uint64_t count = g_current_instruction->operands.getCount();
-    for (uint8_t i = 0; i < count; i++) {
-        if (g_currentOperands[i]->GetType() == OperandType::Complex) {
-            ComplexData* complex = g_currentOperands[i]->GetComplexData();
-            ComplexItem* items[3] = {&complex->base, &complex->index, &complex->offset};
-            for (uint8_t j = 0; j < 3; j++) {
-                if (items[j]->present && items[j]->type == ComplexItem::Type::IMMEDIATE) {
-                    if (items[j]->data.imm.size == OperandSize::BYTE)
-                        delete[] static_cast<uint8_t*>(items[j]->data.imm.data);
-                    else if (items[j]->data.imm.size == OperandSize::WORD)
-                        delete[] static_cast<uint8_t*>(items[j]->data.imm.data);
-                    else if (items[j]->data.imm.size == OperandSize::DWORD)
-                        delete[] static_cast<uint8_t*>(items[j]->data.imm.data);
-                    else if (items[j]->data.imm.size == OperandSize::QWORD)
-                        delete[] static_cast<uint8_t*>(items[j]->data.imm.data);
-                }
-            }
-            delete complex;
-        }
-        delete g_currentOperands[i];
-        deleted[i] = true;
-        InsEncoding::Operand* op = g_current_instruction->operands.get(0);
-        g_current_instruction->operands.remove(op);
-        delete op;
-    }
-    delete g_current_instruction;
-    g_current_instruction = nullptr;
-}
+Operand g_currentOperands[2];
+ComplexData g_complex[2];
 
 void StopExecution() {
     g_TerminateExecution.store(1);
@@ -99,25 +66,19 @@ bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, c
     }
     else if (g_ExecutionRunning.load() == 0)
         g_ExecutionRunning.store(1);
-    assert(deleted[0] && deleted[1]);
     (void)CurrentState;
     (void)last_error;
     InstructionBuffer buffer(mmu, IP);
     uint64_t current_offset = 0;
-    InsEncoding::Instruction* instruction = InsEncoding::DecodeInstruction(buffer, current_offset);
-    if (instruction == nullptr)
+    if (!DecodeInstruction(buffer, current_offset, &g_current_instruction))
         g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
-    g_current_instruction = instruction;
-    uint8_t Opcode = static_cast<uint8_t>(instruction->GetOpcode());
-    Operand* operands[2];
-    for (uint8_t i = 0; i < instruction->operands.getCount(); i++) {
-        switch (InsEncoding::Operand* op = instruction->operands.get(i); op->type) {
+    uint8_t Opcode = static_cast<uint8_t>(g_current_instruction.GetOpcode());
+    for (uint8_t i = 0; i < g_current_instruction.operand_count; i++) {
+        switch (InsEncoding::Operand* op = &g_current_instruction.operands[i]; op->type) {
         case InsEncoding::OperandType::REGISTER: {
             InsEncoding::Register* temp_reg = static_cast<InsEncoding::Register*>(op->data);
             Register* reg = Emulator::GetRegisterPointer(static_cast<uint8_t>(*temp_reg));
-            delete temp_reg;
-            operands[i] = new Operand(static_cast<OperandSize>(op->size), OperandType::Register, reg);
-            deleted[i] = false;
+            g_currentOperands[i] = Operand(static_cast<OperandSize>(op->size), OperandType::Register, reg);
             break;
         }
         case InsEncoding::OperandType::IMMEDIATE: {
@@ -125,87 +86,74 @@ bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, c
             switch (op->size) {
             case InsEncoding::OperandSize::BYTE:
                 data = *static_cast<uint8_t*>(op->data);
-                delete[] static_cast<uint8_t*>(op->data);
                 break;
             case InsEncoding::OperandSize::WORD:
                 data = *static_cast<uint16_t*>(op->data);
-                delete[] static_cast<uint8_t*>(op->data);
                 break;
             case InsEncoding::OperandSize::DWORD:
                 data = *static_cast<uint32_t*>(op->data);
-                delete[] static_cast<uint8_t*>(op->data);
                 break;
             case InsEncoding::OperandSize::QWORD:
                 data = *static_cast<uint64_t*>(op->data);
-                delete[] static_cast<uint8_t*>(op->data);
                 break;
             default:
                 g_ExceptionHandler->RaiseException(Exception::INVALID_INSTRUCTION);
                 break;
             }
-            operands[i] = new Operand(static_cast<OperandSize>(op->size), OperandType::Immediate, data);
-            deleted[i] = false;
+            g_currentOperands[i] = Operand(static_cast<OperandSize>(op->size), OperandType::Immediate, data);
             break;
         }
         case InsEncoding::OperandType::MEMORY: {
             uint64_t* temp = static_cast<uint64_t*>(op->data);
-            operands[i] = new Operand(static_cast<OperandSize>(op->size), OperandType::Memory, *temp, Emulator::HandleMemoryOperation);
-            delete[] reinterpret_cast<uint8_t*>(temp);
-            deleted[i] = false;
+            g_currentOperands[i] = Operand(static_cast<OperandSize>(op->size), OperandType::Memory, *temp, Emulator::HandleMemoryOperation);
             break;
         }
         case InsEncoding::OperandType::COMPLEX: {
-            ComplexData* complex = new ComplexData();
             InsEncoding::ComplexData* temp = static_cast<InsEncoding::ComplexData*>(op->data);
-            complex->base.present = temp->base.present;
-            complex->index.present = temp->index.present;
-            complex->offset.present = temp->offset.present;
-            if (complex->base.present) {
+            g_complex[i].base.present = temp->base.present;
+            g_complex[i].index.present = temp->index.present;
+            g_complex[i].offset.present = temp->offset.present;
+            if (g_complex[i].base.present) {
                 if (temp->base.type == InsEncoding::ComplexItem::Type::REGISTER) {
                     InsEncoding::Register* temp_reg = temp->base.data.reg;
                     Register* reg = Emulator::GetRegisterPointer(static_cast<uint8_t>(*temp_reg));
-                    delete temp_reg;
-                    complex->base.data.reg = reg;
-                    complex->base.type = ComplexItem::Type::REGISTER;
+                    g_complex[i].base.data.reg = reg;
+                    g_complex[i].base.type = ComplexItem::Type::REGISTER;
                 } else {
-                    complex->base.data.imm.size = static_cast<OperandSize>(temp->base.data.imm.size);
-                    complex->base.data.imm.data = temp->base.data.imm.data;
-                    complex->base.type = ComplexItem::Type::IMMEDIATE;
+                    g_complex[i].base.data.imm.size = static_cast<OperandSize>(temp->base.data.imm.size);
+                    g_complex[i].base.data.imm.data = temp->base.data.imm.data;
+                    g_complex[i].base.type = ComplexItem::Type::IMMEDIATE;
                 }
             } else
-                complex->base.present = false;
-            if (complex->index.present) {
+                g_complex[i].base.present = false;
+            if (g_complex[i].index.present) {
                 if (temp->index.type == InsEncoding::ComplexItem::Type::REGISTER) {
                     InsEncoding::Register* temp_reg = temp->index.data.reg;
                     Register* reg = Emulator::GetRegisterPointer(static_cast<uint8_t>(*temp_reg));
-                    delete temp_reg;
-                    complex->index.data.reg = reg;
-                    complex->index.type = ComplexItem::Type::REGISTER;
+                    g_complex[i].index.data.reg = reg;
+                    g_complex[i].index.type = ComplexItem::Type::REGISTER;
                 } else {
-                    complex->index.data.imm.size = static_cast<OperandSize>(temp->index.data.imm.size);
-                    complex->index.data.imm.data = temp->index.data.imm.data;
-                    complex->index.type = ComplexItem::Type::IMMEDIATE;
+                    g_complex[i].index.data.imm.size = static_cast<OperandSize>(temp->index.data.imm.size);
+                    g_complex[i].index.data.imm.data = temp->index.data.imm.data;
+                    g_complex[i].index.type = ComplexItem::Type::IMMEDIATE;
                 }
             } else
-                complex->index.present = false;
-            if (complex->offset.present) {
+                g_complex[i].index.present = false;
+            if (g_complex[i].offset.present) {
                 if (temp->offset.type == InsEncoding::ComplexItem::Type::REGISTER) {
                     InsEncoding::Register* temp_reg = temp->offset.data.reg;
                     Register* reg = Emulator::GetRegisterPointer(static_cast<uint8_t>(*temp_reg));
-                    delete temp_reg;
-                    complex->offset.data.reg = reg;
-                    complex->offset.type = ComplexItem::Type::REGISTER;
-                    complex->offset.sign = temp->offset.sign;
+                    g_complex[i].offset.data.reg = reg;
+                    g_complex[i].offset.type = ComplexItem::Type::REGISTER;
+                    g_complex[i].offset.sign = temp->offset.sign;
                 } else {
-                    complex->offset.data.imm.size = static_cast<OperandSize>(temp->offset.data.imm.size);
-                    complex->offset.data.imm.data = temp->offset.data.imm.data;
-                    complex->offset.type = ComplexItem::Type::IMMEDIATE;
+                    g_complex[i].offset.data.imm.size = static_cast<OperandSize>(temp->offset.data.imm.size);
+                    g_complex[i].offset.data.imm.data = temp->offset.data.imm.data;
+                    g_complex[i].offset.type = ComplexItem::Type::IMMEDIATE;
                 }
             } else
-                complex->offset.present = false;
-            delete temp;
-            operands[i] = new Operand(static_cast<OperandSize>(op->size), OperandType::Complex, complex, Emulator::HandleMemoryOperation);
-            deleted[i] = false;
+                g_complex[i].offset.present = false;
+            g_currentOperands[i] = Operand(static_cast<OperandSize>(op->size), OperandType::Complex, &g_complex[i], Emulator::HandleMemoryOperation);
             break;
         }
         default:
@@ -213,9 +161,6 @@ bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, c
             break;
         }
     }
-
-    g_currentOperands[0] = operands[0];
-    g_currentOperands[1] = operands[1];
 
     // Get the instruction
     uint8_t argument_count = 0;
@@ -230,12 +175,9 @@ bool ExecuteInstruction(uint64_t IP, MMU* mmu, InstructionState& CurrentState, c
     if (argument_count == 0)
         reinterpret_cast<void (*)()>(ins)();
     else if (argument_count == 1)
-        reinterpret_cast<void (*)(Operand*)>(ins)(operands[0]);
+        reinterpret_cast<void (*)(Operand*)>(ins)(&g_currentOperands[0]);
     else if (argument_count == 2)
-        reinterpret_cast<void (*)(Operand*, Operand*)>(ins)(operands[0], operands[1]);
-
-    // perform cleanup
-    CleanupCurrentInstruction();
+        reinterpret_cast<void (*)(Operand*, Operand*)>(ins)(&g_currentOperands[0], &g_currentOperands[1]);
 
     Emulator::SyncRegisters();
 
@@ -790,7 +732,6 @@ void ins_int(Operand* number) {
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
     uint64_t interrupt = number->GetValue();
-    CleanupCurrentInstruction();
     g_InterruptHandler->RaiseInterrupt(interrupt, Emulator::GetNextIP());
 }
 
@@ -805,7 +746,6 @@ void ins_iret() {
     PRINT_INS_INFO0();
     if (Emulator::isInProtectedMode() && Emulator::isInUserMode())
         g_ExceptionHandler->RaiseException(Exception::USER_MODE_VIOLATION);
-    CleanupCurrentInstruction();
     g_InterruptHandler->ReturnFromInterrupt();
 }
 
