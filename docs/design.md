@@ -125,7 +125,6 @@
 | 5              | RSVD_WRITE | Was a reserved bit in the data structures set        |
 | 6-63           | RESERVED   | Reserved                                             |
 
-
 ## Calling convention info
 
 ### On call
@@ -276,6 +275,7 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 - `src` can be a register, memory address (simple or complex), or an immediate.
 
 #### sub
+
 - `sub SIZE dst, src` subtracts the value of `src` from the value of `dst` and stores the result in `dst`.
 - `dst` can be a register or memory address (simple or complex).
 - `src` can be a register, memory address (simple or complex), or an immediate.
@@ -583,7 +583,8 @@ foo:
 - `asciiz` to define a null-terminated string
 - `align` to align the current position in the program to a multiple of a number. The number must be a power of 2. It fills the space with `nop` instructions.
 - Example usage:
-```
+
+```x86asm
 org 0xF0000000
 db 0x00
 align 8
@@ -620,10 +621,6 @@ asciiz "Hello, world!"
 - form 1: `[literal]` where literal is a 64-bit integer (also known as `MEMORY`).
 - form 2: `[base*index+offset]`, where any of the 3 can be a register or an immediate of any size (also known as `COMPLEX`).
 - In form 2, index or offset can be excluded. If the offset is a register, it can be positive or negative.
-
-### Labels
-
-- Labels in an operand are equivalent to an immediate value of the address of the label.
 
 ## Devices
 
@@ -704,7 +701,6 @@ asciiz "Hello, world!"
 | 0      | 8     | ID   | Device ID                 |
 | 8      | 8     | INT  | Interrupt index           |
 | 16     | 1     | SINT | Software interrupt number |
-
 
 ### Console device
 
@@ -829,7 +825,7 @@ asciiz "Hello, world!"
 | 1    | INTE     | Enable interrupts  |
 | 2-63 | RESERVED | Reserved           |
 
-##### Get device info
+##### Get device info (storage)
 
 - 1 argument - address to store the device info.
 - The following data is stored at the given address:
