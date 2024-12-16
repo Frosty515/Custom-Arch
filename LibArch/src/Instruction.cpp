@@ -31,11 +31,11 @@ namespace InsEncoding {
     uint64_t g_rawData[48]; // maximum of 6 in an operand, maximum of 8 bytes each, totalling 48 bytes
 
     Instruction::Instruction()
-        : m_opcode(Opcode::UNKNOWN) {
+        : m_opcode(Opcode::UNKNOWN), m_file_name(""), m_line(0) {
     }
 
-    Instruction::Instruction(Opcode opcode)
-        : m_opcode(opcode) {
+    Instruction::Instruction(Opcode opcode, const std::string& file_name, size_t line)
+        : m_opcode(opcode), m_file_name(file_name), m_line(line) {
     }
 
     Instruction::~Instruction() {
@@ -47,6 +47,14 @@ namespace InsEncoding {
 
     Opcode Instruction::GetOpcode() const {
         return m_opcode;
+    }
+
+    const std::string& Instruction::GetFileName() const {
+        return m_file_name;
+    }
+
+    size_t Instruction::GetLine() const {
+        return m_line;
     }
 
     SimpleInstruction::SimpleInstruction()
@@ -73,7 +81,12 @@ namespace InsEncoding {
         exit(1); // TODO: replace with exception
     }
 
-    RegisterID GetRegisterID(Register reg) {
+    [[noreturn]] void EncodingError(const char* message, Instruction* ins) {
+        printf("Encoding Error at %s:%zu: %s\n", ins->GetFileName().c_str(), ins->GetLine(), message);
+        exit(1);
+    }
+
+    RegisterID GetRegisterID(Register reg, Instruction* ins) {
         RegisterID reg_id;
 #define REG_CASE(name, group, num) \
     case Register::name:           \
@@ -111,7 +124,7 @@ namespace InsEncoding {
             REG_CASE(sts, 2, 8)
             REG_CASE(ip, 2, 9)
         default:
-            error("Invalid register type");
+            EncodingError("Invalid register type", ins);
         }
 #undef REG_CASE
         return reg_id;
@@ -415,11 +428,11 @@ namespace InsEncoding {
         uint64_t current_offset = 0;
 
         if (instruction->operands.getCount() > 2)
-            error("Instruction has more than 2 operands");
+            EncodingError("Instruction has more than 2 operands", instruction);
 
         uint8_t arg_count = GetArgCountForOpcode(instruction->GetOpcode());
         if (instruction->operands.getCount() != arg_count)
-            error("Invalid number of arguments for instruction");
+            EncodingError("Invalid number of arguments for instruction", instruction);
 
         uint8_t opcode = static_cast<uint8_t>(instruction->GetOpcode());
 
@@ -544,19 +557,21 @@ namespace InsEncoding {
                 buffer.Write(current_offset, reinterpret_cast<uint8_t*>(&info), sizeof(StandardStandardOperandInfo));
                 current_offset += sizeof(StandardStandardOperandInfo);
             } else
-                error("Invalid operand combination");
+                EncodingError("Invalid operand combination", instruction);
         }
 
         for (uint64_t l = 0; l < instruction->operands.getCount(); l++) {
             if (Operand* operand = instruction->operands.get(l); operand->type == OperandType::REGISTER) {
                 Register* reg = static_cast<Register*>(operand->data);
-                RegisterID reg_id = GetRegisterID(*reg);
+                RegisterID reg_id = GetRegisterID(*reg, instruction);
                 buffer.Write(current_offset, reinterpret_cast<uint8_t*>(&reg_id), sizeof(RegisterID));
                 current_offset += sizeof(RegisterID);
             } else if (operand->type == OperandType::MEMORY) {
                 buffer.Write(current_offset, static_cast<uint8_t*>(operand->data), 8);
                 current_offset += 8;
             } else if (operand->type == OperandType::IMMEDIATE) {
+                if (l == 0)
+                    EncodingError("Invalid immediate location", instruction);
                 switch (operand->size) {
                 case OperandSize::BYTE:
                     buffer.Write(current_offset, static_cast<uint8_t*>(operand->data), 1);
@@ -575,7 +590,7 @@ namespace InsEncoding {
                     current_offset += 8;
                     break;
                 default:
-                    error("Invalid operand size");
+                    EncodingError("Invalid operand size", instruction);
                 }
             } else if (operand->type == OperandType::COMPLEX) {
                 ComplexData* complex = static_cast<ComplexData*>(operand->data);
@@ -585,7 +600,7 @@ namespace InsEncoding {
                         switch (item->type) {
                         case ComplexItem::Type::REGISTER: {
                             Register* reg = item->data.reg;
-                            RegisterID reg_id = GetRegisterID(*reg);
+                            RegisterID reg_id = GetRegisterID(*reg, instruction);
                             buffer.Write(current_offset, reinterpret_cast<uint8_t*>(&reg_id), sizeof(RegisterID));
                             current_offset += sizeof(RegisterID);
                             break;
@@ -609,12 +624,12 @@ namespace InsEncoding {
                                 current_offset += 8;
                                 break;
                             default:
-                                error("Invalid immediate size");
+                                EncodingError("Invalid immediate size", instruction);
                             }
                             break;
                         }
                         case ComplexItem::Type::LABEL: {
-                            Label* label = (Label*)item->data.label;
+                            Label* label = item->data.label;
                             uint64_t* offset = new uint64_t;
                             *offset = current_offset + global_offset;
                             label->blocks.get(0)->jumps_to_here.insert(offset);
@@ -624,7 +639,7 @@ namespace InsEncoding {
                             break;
                         }
                         case ComplexItem::Type::SUBLABEL: {
-                            Block* block = (Block*)item->data.sublabel;
+                            Block* block = item->data.sublabel;
                             uint64_t* offset = new uint64_t;
                             *offset = current_offset + global_offset;
                             block->jumps_to_here.insert(offset);
@@ -634,7 +649,7 @@ namespace InsEncoding {
                             break;
                         }
                         default:
-                            error("Invalid complex item type");
+                            EncodingError("Invalid complex item type", instruction);
                         }
                     }
                 }
@@ -656,13 +671,13 @@ namespace InsEncoding {
                 buffer.Write(current_offset, reinterpret_cast<uint8_t*>(&temp_offset), 8);
                 current_offset += 8;
             } else {
-                error("Invalid operand type");
+                EncodingError("Invalid operand type", instruction);
             }
         }
 
         buffer.Read(0, data, data_size);
         if (current_offset > data_size)
-            error("Data buffer overflow");
+            EncodingError("Data buffer overflow", instruction);
         return current_offset;
     }
 

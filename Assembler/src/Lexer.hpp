@@ -18,9 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LEXER_HPP
 #define _LEXER_HPP
 
-#include <stddef.h>
-
 #include <LinkedList.hpp>
+#include <PreProcessor.hpp>
 #include <string>
 
 enum class TokenType {
@@ -45,6 +44,8 @@ struct Token {
     TokenType type;
     void* data;
     size_t data_size;
+    std::string file_name;
+    size_t line;
 };
 
 class Lexer {
@@ -52,7 +53,7 @@ class Lexer {
     Lexer();
     ~Lexer();
 
-    void tokenize(const char* source, size_t source_size);
+    void tokenize(const char* source, size_t source_size, const LinkedList::RearInsertLinkedList<PreProcessor::ReferencePoint>& reference_points);
 
     const LinkedList::RearInsertLinkedList<Token>& GetTokens() const;
 
@@ -61,9 +62,13 @@ class Lexer {
     void Clear();
 
    private:
-    void AddToken(const std::string& str_token);
+    void AddToken(const std::string& str_token, const std::string& file_name, size_t line);
 
-    [[noreturn]] void error(const char* message);
+    size_t GetLineDifference(const char* src, size_t src_offset, size_t dst_offset) const;
+
+    [[noreturn]] void error(const char* message, Token* token);
+    [[noreturn]] void error(const char* message, const std::string& file, size_t line);
+    [[noreturn]] void internal_error(const char* message);
 
    private:
     LinkedList::RearInsertLinkedList<Token> m_tokens;

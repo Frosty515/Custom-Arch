@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef _LIBARCH_INSTRUCTION_HPP
 #define _LIBARCH_INSTRUCTION_HPP
 
+#include <string>
+
 #include "Data-structures/Buffer.hpp"
 #include "Data-structures/LinkedList.hpp"
 #include "Operand.hpp"
@@ -100,7 +102,8 @@ namespace InsEncoding {
     };
 
     struct Data {
-        Data() {}
+        Data()
+            : type(false), data(nullptr) {}
         ~Data() {}
         bool type; // true for instruction, false for raw data
         void* data;
@@ -212,22 +215,29 @@ namespace InsEncoding {
         void* data;
         size_t data_size;
         RawDataType type;
+        std::string file_name;
+        size_t line;
     };
 
     class Instruction {
        public:
         Instruction();
-        explicit Instruction(Opcode opcode);
+        Instruction(Opcode opcode, const std::string& file_name, size_t line);
         ~Instruction();
 
         void SetOpcode(Opcode opcode);
 
         Opcode GetOpcode() const;
 
+        const std::string& GetFileName() const;
+        size_t GetLine() const;
+
         LinkedList::RearInsertLinkedList<Operand> operands;
 
        private:
         Opcode m_opcode;
+        std::string m_file_name;
+        size_t m_line;
     };
 
     class SimpleInstruction { // alternative that doesn't use the heap

@@ -44,26 +44,30 @@ Lexer::Lexer() {
 Lexer::~Lexer() {
 }
 
-void Lexer::tokenize(const char* source, size_t source_size) {
+void Lexer::tokenize(const char* source, size_t source_size, const LinkedList::RearInsertLinkedList<PreProcessor::ReferencePoint>& reference_points) {
     if (source == nullptr || source_size == 0)
         return;
 
     bool start_of_token = true;
     std::string token = "";
     uint64_t current_offset_in_token = 0;
-
+    PreProcessor::ReferencePoint* current_reference_point = reference_points.get(0);
+    PreProcessor::ReferencePoint* next_reference_point = reference_points.get(1);
+    size_t current_reference_point_index = 0;
+#define APPEND_TOKEN(token) AddToken(token, current_reference_point->file_name, current_reference_point->line + GetLineDifference(source, current_reference_point->offset, i - current_offset_in_token))
+#define ERROR(msg) error(msg, current_reference_point->file_name, current_reference_point->line + GetLineDifference(source, current_reference_point->offset, i))
     for (uint64_t i = 0; i < source_size; i++) {
         if (start_of_token) {
             if (source[i] == ' ' || source[i] == '\n' || source[i] == '\t')
                 continue;
             else if (source[i] == '[' || source[i] == ']' || source[i] == ',') {
                 token += source[i];
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
             } else if ((source[i] == '+' || source[i] == '*') || (source[i] == '-' && ((i + 1) >= source_size || !(source[i + 1] >= '0' && source[i + 1] <= '9')))) {
                 token += source[i];
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
             } else if (source[i] == '\"') {
@@ -72,27 +76,27 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                 while (true) {
                     end = strchr(source + offset + 1, '\"');
                     if (end == nullptr)
-                        error("Unterminated string literal");
+                        ERROR("Unterminated string literal");
                     offset = end - source;
                     if (source[offset - 1] != '\\')
                         break;
                 }
                 token = std::string(&source[i], end + 1);
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
                 i = end - source;
             } else if (source[i] == '\'') {
                 if ((i + 2) >= source_size)
-                    error("Invalid character literal");
+                    ERROR("Invalid character literal");
                 i++;
                 if (source[i] == '\'')
-                    error("Character literal cannot be empty");
+                    ERROR("Character literal cannot be empty");
                 char c = 0;
                 if (source[i] == '\\') {
                     i++;
                     if ((i + 1) >= source_size)
-                        error("Invalid character literal");
+                        ERROR("Invalid character literal");
                     switch (source[i]) {
                     case 'n':
                         c = '\n';
@@ -118,7 +122,7 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                     case 'x': {
                         i++;
                         if ((i + 2) >= source_size)
-                            error("Invalid character literal");
+                            ERROR("Invalid character literal");
                         uint8_t hex = 0;
                         for (uint8_t j = 0; j < 2; j++) {
                             hex *= 16;
@@ -129,21 +133,20 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                             else if (current >= 'A' && current <= 'F')
                                 hex += current - 'A' + 10;
                             else
-                                error("Invalid escape sequence");
+                                ERROR("Invalid escape sequence");
                         }
                         i++; // due to incrementing earlier, we must increment 1 instead of 2
                         c = static_cast<char>(hex);
                         break;
                     }
                     default:
-                        error("Invalid escape sequence");
+                        ERROR("Invalid escape sequence");
                     }
-                }
-                else
+                } else
                     c = source[i];
                 i++;
                 if (source[i] != '\'')
-                    error("Invalid character literal: missing end");
+                    ERROR("Invalid character literal: missing end");
                 i++;
                 uint8_t raw = static_cast<uint8_t>(c);
                 token = "";
@@ -156,7 +159,7 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                     }
                     std::ranges::reverse(token);
                 }
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
             } else {
@@ -167,22 +170,22 @@ void Lexer::tokenize(const char* source, size_t source_size) {
         } else {
             if (source[i] == ' ' || source[i] == '\n' || source[i] == '\t') {
                 start_of_token = true;
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
             } else if (source[i] == '[' || source[i] == ']' || source[i] == ',') {
                 start_of_token = true;
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
                 token += source[i];
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
             } else if (source[i] == '+' || source[i] == '*' || source[i] == '-') {
                 if (source[i] == '-' && (i + 1) < source_size) {
                     if (source[i + 1] >= '0' && source[i + 1] <= '9') { // do not read outside of bounds
                         start_of_token = true;
-                        AddToken(token);
+                        APPEND_TOKEN(token);
                         token = "";
                         token += source[i];
                         current_offset_in_token = 1;
@@ -190,21 +193,28 @@ void Lexer::tokenize(const char* source, size_t source_size) {
                     }
                 }
                 start_of_token = true;
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
                 current_offset_in_token = 0;
                 token += source[i];
-                AddToken(token);
+                APPEND_TOKEN(token);
                 token = "";
             } else {
                 token += source[i];
                 current_offset_in_token++;
             }
         }
+        if (next_reference_point != nullptr && i + 1 >= next_reference_point->offset) {
+            current_reference_point_index++;
+            current_reference_point = next_reference_point;
+            next_reference_point = reference_points.get(current_reference_point_index + 1);
+        }
     }
+#undef APPEND_TOKEN
+#undef ERROR
     for (uint64_t i = 0; i < current_offset_in_token; i++) {
         if (!(token[i] == ' ' || token[i] == '\n' || token[i] == '\t')) {
-            AddToken(token);
+            AddToken(token, current_reference_point->file_name, current_reference_point->line + GetLineDifference(source, current_reference_point->offset, source_size - current_offset_in_token));
             break;
         }
     }
@@ -260,7 +270,7 @@ void Lexer::Clear() {
     m_tokens.clear();
 }
 
-void Lexer::AddToken(const std::string& str_token) {
+void Lexer::AddToken(const std::string& str_token, const std::string& file_name, size_t line) {
     std::string lower_token = "";
     for (char c : str_token) { // convert the token to lowercase
         if (c >= 'A' && c <= 'Z')
@@ -268,6 +278,8 @@ void Lexer::AddToken(const std::string& str_token) {
         lower_token += c;
     }
     Token* new_token = new Token;
+    new_token->file_name = file_name;
+    new_token->line = line;
     new_token->data = new char[lower_token.size() + 1];
     memcpy(new_token->data, lower_token.c_str(), lower_token.size());
     static_cast<char*>(new_token->data)[lower_token.size()] = 0;
@@ -391,12 +403,34 @@ void Lexer::AddToken(const std::string& str_token) {
     }
     m_tokens.insert(new_token);
 #ifdef ASSEMBLER_DEBUG
-    printf("Token: \"%s\", type = %s\n", lower_token.c_str(), TokenTypeToString(new_token->type));
+    printf("Token: \"%s\" at %s:%zu, type = %s\n", lower_token.c_str(), new_token->file_name.c_str(), new_token->line, TokenTypeToString(new_token->type));
 #endif
 }
 
-[[noreturn]] void Lexer::error(const char* message) {
-    printf("Lexer error: %s\n", message);
+size_t Lexer::GetLineDifference(const char* src, size_t src_offset, size_t dst_offset) const {
+    char const* line_start = src + src_offset;
+    size_t line = 0;
+    while (true) {
+        line_start = strchr(line_start, '\n');
+        if (line_start > src + dst_offset || line_start == nullptr)
+            break;
+        line_start++;
+        line++;
+    }
+    return line;
+}
+
+[[noreturn]] void Lexer::error(const char* message, Token* token) {
+    error(message, token->file_name, token->line);
+}
+
+[[noreturn]] void Lexer::error(const char* message, const std::string& file, size_t line) {
+    printf("Lexer error at %s:%zu: %s\n", file.c_str(), line, message);
     Clear();
     exit(1);
+}
+
+[[noreturn]] void Lexer::internal_error(const char* message) {
+    printf("Lexer internal error: %s\n", message);
+    exit(2);
 }

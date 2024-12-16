@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <map>
 #include <string>
-#include <unordered_map>
 
 PreProcessor::PreProcessor()
     : m_current_offset(0) {
@@ -43,7 +42,9 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
     }
     const char* original_source = source;
 
+    CreateReferencePoint(1, file_name.data(), 0);
     HandleIncludes(source, source_size, file_name);
+    CreateReferencePoint(source, source_size, file_name.data(), m_current_offset);
 
     delete[] original_source;
 
@@ -73,11 +74,17 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
             m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source2), comment_start - source2);
             m_current_offset += comment_start - source2;
             source2 = comment_start;
-            if (char const* comment_end = strchr(source2, '\n'); comment_end == nullptr) {
+            char const* comment_end = strchr(source2, '\n');
+            // need to update all the reference points
+            m_referencePoints.Enumerate([&](ReferencePoint* ref) {
+                if (ref->offset >= m_current_offset)
+                    ref->offset -= comment_end - comment_start;
+            });
+            if (comment_end == nullptr) {
                 comment_end = original_source2 + source2_size;
                 break;
-            } else
-                source2 = comment_end;
+            }
+            source2 = comment_end;
         }
     }
 
@@ -109,10 +116,34 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
             m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source3), comment_start - source3);
             m_current_offset += comment_start - source3;
             source3 = comment_start;
-            if (char const* comment_end = strstr(source3, "*/"); comment_end == nullptr)
-                error("Unterminated comment2");
-            else
-                source3 = comment_end + 2;
+            // need to add a reference point prior to the comment
+            uint64_t index = 0;
+            ReferencePoint* ref = nullptr;
+            m_referencePoints.EnumerateReverse([&](ReferencePoint* current_ref, uint64_t i) {
+                if (current_ref->offset < static_cast<size_t>(source3 - original_source3)) {
+                    ReferencePoint* new_ref = new ReferencePoint{GetLineCount(original_source3 + current_ref->offset, source3), current_ref->file_name, m_current_offset - 1};
+                    m_referencePoints.insertAt(i, new_ref);
+                    index = i;
+                    ref = new_ref;
+                    return false;
+                }
+                return true;
+            });
+            if (ref == nullptr)
+                internal_error("Unable to find previous reference point whilst resolving a multiline include.");
+            char const* comment_end = strstr(source3, "*/");
+            if (comment_end == nullptr)
+                error("Unterminated multiline comment", ref->file_name, ref->line);
+            source3 = comment_end + 2;
+            // insert a reference point after the comment
+            ReferencePoint* new_ref = new ReferencePoint{GetLineCount(original_source3, source3 - 2), ref->file_name, m_current_offset};
+            m_referencePoints.insertAt(index + 1, new_ref);
+            // now need to update all the reference points
+            m_referencePoints.Enumerate([&](ReferencePoint* current_ref, uint64_t i) {
+                if (current_ref->offset >= m_current_offset + (comment_end - comment_start) + 2)
+                    current_ref->offset -= (comment_end - comment_start) + 2;
+                return true;
+            });
         }
     }
 
@@ -151,11 +182,35 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
             break;
         define_start += 8;
         char* define_end = strchr(define_start, ' ');
-        if (define_end == nullptr)
-            error("Invalid define directive");
+        if (define_end == nullptr) {
+            // need to find the previous reference point
+            ReferencePoint* ref = nullptr;
+            m_referencePoints.EnumerateReverse([&](ReferencePoint* current_ref) {
+                if (current_ref->offset < static_cast<size_t>(define_start - source4)) {
+                    ref = current_ref;
+                    return false;
+                }
+                return true;
+            });
+            if (ref == nullptr)
+                internal_error("Unable to find previous reference point whilst handling a define directive error.");
+            error("Invalid define directive", ref->file_name, ref->line + GetLineCount(original_source4 + ref->offset, define_start));
+        }
         char* value_end = strchr(define_end + 1, '\n');
-        if (value_end == nullptr)
-            error("Unterminated define directive");
+        if (value_end == nullptr) {
+            // need to find the previous reference point
+            ReferencePoint* ref = nullptr;
+            m_referencePoints.EnumerateReverse([&](ReferencePoint* current_ref) {
+                if (current_ref->offset < static_cast<size_t>(define_start - source4)) {
+                    ref = current_ref;
+                    return false;
+                }
+                return true;
+            });
+            if (ref == nullptr)
+                internal_error("Unable to find previous reference point whilst handling a define directive error.");
+            error("Unterminated define directive", ref->file_name, ref->line + GetLineCount(original_source4 + ref->offset, define_start));
+        }
         defines.push_back({std::string(define_start, define_end), std::string(define_end + 1, value_end), define_start - 8});
         source4 = value_end + 1;
     }
@@ -167,6 +222,11 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
         m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source4), define.start - source4);
         m_current_offset += define.start - source4;
         source4 = define.start + define.name.size() + define.value.size() + 9;
+        // update all the reference points
+        m_referencePoints.Enumerate([&](ReferencePoint* ref) {
+            if (ref->offset >= m_current_offset)
+                ref->offset -= define.name.size() + define.value.size() + 9;
+        });
     }
     // write the rest of the source
     m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source4), source4_size - (source4 - original_source4));
@@ -213,19 +273,28 @@ void PreProcessor::process(const char* source, size_t source_size, const std::st
         if (offset < m_current_offset) { // possible overlap
             // need to ensure it does overlap and isn't before. if it is before, then an error has occurred
             if (offset + define.name.size() <= m_current_offset)
-                error("Invalid define reference");
+                internal_error("Illegal define reference.");
 
             // no need to copy before the offset
             m_buffer.Write(m_current_offset - (m_current_offset - offset), reinterpret_cast<const uint8_t*>(define.value.c_str()), define.value.size());
             m_current_offset += define.value.size() - (m_current_offset - offset);
             source5 += define.name.size() - (m_current_offset - offset);
-
+            // update all the reference points
+            m_referencePoints.Enumerate([&](ReferencePoint* ref) {
+                    if (ref->offset >= m_current_offset)
+                    ref->offset += define.value.size() - (m_current_offset - offset);
+            });
         } else {
             m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(source5), offset - (source5 - original_source5));
             m_current_offset += offset - (source5 - original_source5);
             m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(define.value.c_str()), define.value.size());
             m_current_offset += define.value.size();
             source5 += offset - (source5 - original_source5) + define.name.size();
+            // update all the reference points
+            m_referencePoints.Enumerate([&](ReferencePoint* ref) {
+                if (ref->offset >= m_current_offset)
+                    ref->offset += define.value.size() - define.name.size();
+            });
         }
     }
 
@@ -242,6 +311,10 @@ size_t PreProcessor::GetProcessedBufferSize() const {
 
 void PreProcessor::ExportProcessedBuffer(uint8_t* data) const {
     m_buffer.Read(0, data, m_current_offset);
+}
+
+const LinkedList::RearInsertLinkedList<PreProcessor::ReferencePoint>& PreProcessor::GetReferencePoints() const {
+    return m_referencePoints;
 }
 
 char* PreProcessor::GetLine(char* source, size_t source_size, size_t& line_size) {
@@ -262,6 +335,7 @@ void PreProcessor::HandleIncludes(const char* source, size_t source_size, const 
         if (include_start != nullptr) {
             m_buffer.Write(m_current_offset, reinterpret_cast<const uint8_t*>(i_source), include_start - i_source);
             m_current_offset += include_start - i_source;
+            ReferencePoint* start_ref = CreateReferencePoint(source, include_start - source, file_name.data(), m_current_offset);
             include_start += 10;
             include_end = strchr(include_start, '"');
             if (include_end != nullptr) {
@@ -270,11 +344,14 @@ void PreProcessor::HandleIncludes(const char* source, size_t source_size, const 
                     fseek(file, 0, SEEK_END);
                     size_t file_size = ftell(file);
                     fseek(file, 0, SEEK_SET);
-                    char* file_data = new char[file_size];
+                    char* file_data = new char[file_size + 1];
                     fread(file_data, 1, file_size, file);
                     fclose(file);
+                    file_data[file_size] = '\0';
                     PreProcessor preprocessor;
+                    preprocessor.CreateReferencePoint(1, include_string, 0);
                     preprocessor.HandleIncludes(file_data, file_size, include_string);
+                    preprocessor.CreateReferencePoint(file_data, file_size, include_string, preprocessor.m_current_offset);
                     size_t processed_size = preprocessor.GetProcessedBufferSize();
                     uint8_t* processed_data = new uint8_t[processed_size];
                     preprocessor.ExportProcessedBuffer(processed_data);
@@ -282,11 +359,29 @@ void PreProcessor::HandleIncludes(const char* source, size_t source_size, const 
                     m_current_offset += processed_size;
                     delete[] processed_data;
                     delete[] file_data;
+                    preprocessor.m_referencePoints.Enumerate([&](ReferencePoint* ref) {
+                        ref->offset += m_current_offset - processed_size;
+                        m_referencePoints.insert(ref);
+                    });
+                    preprocessor.m_referencePoints.clear();
                 } else
-                    error("Could not open include file");
+                    error(std::format("Could not open included file \"{}\": {}", std::string(include_start, include_end), strerror(errno)).c_str(), start_ref->file_name, start_ref->line);
                 i_source = include_end + 1;
-            } else
-                error("Unterminated include directive");
+                CreateReferencePoint(source, i_source - source, file_name.data(), m_current_offset);
+            } else {
+                // need to find the previous reference point
+                ReferencePoint* ref = nullptr;
+                m_referencePoints.EnumerateReverse([&](ReferencePoint* current_ref) {
+                    if (current_ref->offset < static_cast<size_t>(include_start - source)) {
+                        ref = current_ref;
+                        return false;
+                    }
+                    return true;
+                });
+                if (ref == nullptr)
+                    internal_error("Unable to find previous reference point whilst handling an include directive error.");
+                error("Unterminated include directive", start_ref->file_name, start_ref->line);
+            }
         }
     }
     // read the rest of the source
@@ -298,8 +393,45 @@ void PreProcessor::HandleIncludes(const char* source, size_t source_size, const 
     m_current_offset += source_size - (include_end - source);
 }
 
+size_t PreProcessor::GetLineCount(const char* src, const char* dst) const {
+    char const* line_start = src;
+    size_t line = 1;
+    while (line_start < dst) {
+        line_start = strchr(line_start, '\n');
+        if (line_start == nullptr)
+            break;
+        line_start += 1;
+        line += 1;
+    }
+    return line;
+}
 
-[[noreturn]] void PreProcessor::error(const char* message) {
-    fprintf(stderr, "PreProcessor error: %s\n", message);
+PreProcessor::ReferencePoint* PreProcessor::CreateReferencePoint(const char* source, size_t source_offset, const std::string& file_name, size_t offset) {
+    // need to get the line number using strchr
+    char const* line_start = source;
+    size_t line = 1;
+    while (line_start < source + source_offset) {
+        line_start = strchr(line_start, '\n');
+        if (line_start == nullptr)
+            break;
+        line_start += 1;
+        line += 1;
+    }
+    return CreateReferencePoint(line, file_name, offset);
+}
+
+PreProcessor::ReferencePoint* PreProcessor::CreateReferencePoint(size_t line, const std::string& file_name, size_t offset) {
+    ReferencePoint* ref = new ReferencePoint{line, file_name, offset};
+    m_referencePoints.insert(ref);
+    return ref;
+}
+
+[[noreturn]] void PreProcessor::error(const char* message, const std::string& file, size_t line) {
+    fprintf(stderr, "PreProcessor error at %s:%zu: %s\n", file.c_str(), line, message);
     exit(1);
+}
+
+[[noreturn]] void PreProcessor::internal_error(const char* message) {
+    fprintf(stderr, "PreProcessor internal error: %s\n", message);
+    exit(2);
 }

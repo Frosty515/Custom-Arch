@@ -55,7 +55,7 @@ public:
 
 private:
 
-    [[noreturn]] void error(const char* message) const;
+    [[noreturn]] void error(const char* message, const std::string& file_name, size_t line) const;
 
     uint64_t m_current_offset;
     Buffer m_buffer;

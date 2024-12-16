@@ -44,7 +44,9 @@ public:
 private:
     InsEncoding::Opcode GetOpcode(const char* name, size_t name_size);
     InsEncoding::Register GetRegister(const char* name, size_t name_size);
-    void error(const char* message);
+
+    // if the token is going to be printed, a colon followed by a space is insert after the message, then the token is printed inside double quotes
+    void error(const char* message, Token* token, bool print_token = false);
 
     const char* GetInstructionName(InsEncoding::Opcode opcode) const;
     const char* GetRegisterName(InsEncoding::Register reg) const;

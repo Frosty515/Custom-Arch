@@ -123,7 +123,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                                     hex *= 16;
                                     i++;
                                     if (i + 1 >= token->data_size)
-                                        error("Invalid escape sequence");
+                                        error("Invalid escape sequence", token);
                                     if (static_cast<const char*>(token->data)[i] >= '0' && static_cast<const char*>(token->data)[i] <= '9')
                                         hex += static_cast<const char*>(token->data)[i] - '0';
                                     else if (static_cast<const char*>(token->data)[i] >= 'a' && static_cast<const char*>(token->data)[i] <= 'f')
@@ -131,13 +131,13 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                                     else if (static_cast<const char*>(token->data)[i] >= 'A' && static_cast<const char*>(token->data)[i] <= 'F')
                                         hex += static_cast<const char*>(token->data)[i] - 'A' + 10;
                                     else
-                                        error("Invalid escape sequence");
+                                        error("Invalid escape sequence", token);
                                 }
                                 out_str += static_cast<char>(hex);
                                 break;
                             }
                             default:
-                                error("Invalid escape sequence");
+                                error("Invalid escape sequence", token);
                             }
                         } else
                             out_str += static_cast<const char*>(token->data)[i];
@@ -149,7 +149,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     if (raw_data->type == RawDataType::ASCIIZ)
                         static_cast<char*>(raw_data->data)[str_len] = 0;
                 } else
-                    error("Invalid token after directive");
+                    error("Invalid token after directive", token, true);
                 in_directive = false;
                 return true;
             }
@@ -181,7 +181,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     break;
                 }
                 default:
-                    error("Invalid data size for directive");
+                    error("Invalid data size for directive", token);
                     break;
                 }
                 if (static_cast<RawData*>(current_data->data)->type != RawDataType::ALIGNMENT)
@@ -189,7 +189,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 break;
             case TokenType::LABEL: {
                 if (current_operand != nullptr)
-                    error("Invalid label location");
+                    error("Invalid label location", token);
                 Label* label = nullptr;
                 // find the label
                 char* name = new char[token->data_size + 1];
@@ -206,14 +206,14 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 });
                 delete[] name;
                 if (label == nullptr)
-                    error("Invalid label");
+                    error("Invalid label", token, true);
                 static_cast<RawData*>(current_data->data)->type = RawDataType::LABEL;
                 static_cast<RawData*>(current_data->data)->data = label;
                 break;
             }
             case TokenType::SUBLABEL: {
                 if (current_operand != nullptr)
-                    error("Invalid sublabel location");
+                    error("Invalid sublabel location", token);
                 Block* block = nullptr;
                 // find the block
                 char* name = new char[token->data_size + 1];
@@ -223,7 +223,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     name = &(name[1]);
                 else {
                     delete[] name;
-                    error("Invalid sublabel name");
+                    error("Invalid sublabel name", token, true);
                 }
                 current_label->blocks.Enumerate([&](Block* i_block) -> bool {
                     if (i_block->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length
@@ -236,26 +236,26 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 });
                 delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
                 if (block == nullptr)
-                    error("Invalid sublabel");
+                    error("Invalid sublabel", token, true);
                 static_cast<RawData*>(current_data->data)->type = RawDataType::SUBLABEL;
                 static_cast<RawData*>(current_data->data)->data = block;
                 break;
             }
             default:
-                error("Invalid token after directive");
+                error("Invalid token after directive", token);
                 break;
             }
             in_directive = false;
         } else if (token->type == TokenType::COMMA) {
             if (!in_instruction)
-                error("Comma (',') outside of instruction.");
+                error("Comma (',') outside of instruction.", token);
             in_operand = true;
         } else if (token->type == TokenType::DIRECTIVE) {
             if (in_operand)
-                error("Directive inside operand");
+                error("Directive inside operand", token);
             if (strncmp(static_cast<char*>(token->data), "org", token->data_size) == 0) {
                 if (base_address_set)
-                    error("Multiple base addresses");
+                    error("Multiple base addresses", token);
                 base_address_set = false;
                 base_address_parsed = true;
                 in_directive = true;
@@ -266,6 +266,8 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             RawData* raw_data = new RawData;
             data->data = raw_data;
             data->type = false;
+            raw_data->file_name = token->file_name;
+            raw_data->line = token->line;
             if (strncmp(static_cast<char*>(token->data), "db", token->data_size) == 0)
                 static_cast<RawData*>(data->data)->data_size = 1;
             else if (strncmp(static_cast<char*>(token->data), "dw", token->data_size) == 0)
@@ -283,7 +285,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             else if (strncmp(static_cast<char*>(token->data), "asciiz", token->data_size) == 0)
                 static_cast<RawData*>(data->data)->type = RawDataType::ASCIIZ;
             else
-                error("Invalid directive");
+                error("Invalid directive", token);
             static_cast<RawData*>(data->data)->data = nullptr;
             current_block->data_blocks.insert(data);
             current_data = data;
@@ -291,7 +293,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             in_instruction = false;
         } else if (token->type == TokenType::BLABEL) {
             if (in_instruction && in_operand)
-                error("Label inside operand");
+                error("Label inside operand", token);
             // find the label
             Label* label = nullptr;
             char* name = new char[token->data_size + 1];
@@ -308,14 +310,13 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             });
             delete[] name;
             current_label = label;
-            if (current_label == nullptr) {
-                error("Invalid label");
-            }
+            if (current_label == nullptr)
+                error("Invalid label", token, true);
             current_block = current_label->blocks.get(0);
             in_instruction = false;
         } else if (token->type == TokenType::BSUBLABEL) {
             if (in_instruction && in_operand)
-                error("Sublabel inside operand");
+                error("Sublabel inside operand", token);
             // find the block
             Block* block = nullptr;
             char* name = new char[token->data_size + 1];
@@ -325,7 +326,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                 name = &(name[1]);
             else {
                 delete[] name;
-                error("Invalid sublabel name");
+                error("Invalid sublabel name", token, true);
             }
             current_label->blocks.Enumerate([&](Block* i_block) -> bool {
                 if (i_block->name_size < (token->data_size - 2)) // strncmp can only properly handle strings of equal or greater length
@@ -339,13 +340,13 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
             current_block = block;
             if (current_block == nullptr)
-                error("Invalid sublabel");
+                error("Invalid sublabel", token, true);
             in_instruction = false;
         } else if (token->type == TokenType::INSTRUCTION) {
             if (in_operand)
-                error("Instruction inside operand");
+                error("Instruction inside operand", token);
             Data* data = new Data;
-            Instruction* instruction = new Instruction(GetOpcode(static_cast<const char*>(token->data), token->data_size));
+            Instruction* instruction = new Instruction(GetOpcode(static_cast<const char*>(token->data), token->data_size), token->file_name, token->line);
             data->type = true;
             data->data = instruction;
             current_block->data_blocks.insert(data);
@@ -361,7 +362,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
             if (in_operand) {
                 if (token->type == TokenType::SIZE) {
                     if (current_operand != nullptr)
-                        error("Invalid size location");
+                        error("Invalid size location", token);
                     Operand* operand = new Operand;
                     operand->complete = false;
                     operand->type = OperandType::UNKNOWN;
@@ -376,7 +377,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     else if (EQUALS(static_cast<const char*>(token->data), "qword"))
                         current_operand->size = OperandSize::QWORD;
                     else
-                        error("Invalid size");
+                        error("Invalid size", token);
                 } else if (token->type == TokenType::LBRACKET) {
                     if (current_operand == nullptr) {
                         Operand* operand = new Operand;
@@ -388,9 +389,9 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     current_operand->type = OperandType::POTENTIAL_MEMORY;
                 } else if (token->type == TokenType::RBRACKET) {
                     if (current_operand == nullptr || !(current_operand->type == OperandType::COMPLEX || current_operand->type == OperandType::MEMORY))
-                        error("Invalid operand");
+                        error("Invalid operand", token);
                     if (!(current_operand->complete) && current_operand->type != OperandType::COMPLEX)
-                        error("Invalid operand");
+                        error("Invalid operand", token);
                     current_operand = nullptr;
                     in_operand = false;
                 } else if (token->type == TokenType::NUMBER) {
@@ -474,7 +475,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         case ComplexData::Stage::BASE: {
                             if (data->base.present) {
                                 if (!negative || data->index.present || data->offset.present)
-                                    error("Invalid immediate location");
+                                    error("Invalid immediate location", token);
                                 data->offset.present = true;
                                 data->offset.data.imm.size = data_size;
                                 data->offset.data.imm.data = i_data;
@@ -491,7 +492,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         case ComplexData::Stage::INDEX: {
                             if (data->index.present) {
                                 if (!negative || data->offset.present)
-                                    error("Invalid immediate location");
+                                    error("Invalid immediate location", token);
                                 data->offset.present = true;
                                 data->offset.data.imm.size = data_size;
                                 data->offset.data.imm.data = i_data;
@@ -507,7 +508,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         case ComplexData::Stage::OFFSET: {
                             if (data->offset.present)
-                                error("Invalid immediate location");
+                                error("Invalid immediate location", token);
                             data->offset.present = true;
                             data->offset.data.imm.size = data_size;
                             data->offset.data.imm.data = i_data;
@@ -516,10 +517,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             break;
                         }
                         default:
-                            error("Invalid immediate location");
+                            error("Invalid immediate location", token);
                         }
                     } else
-                        error("Invalid immediate location");
+                        error("Invalid immediate location", token);
                 } else if (token->type == TokenType::REGISTER) {
                     if (current_operand == nullptr || current_operand->type == OperandType::UNKNOWN) { // must be just a register
                         if (current_operand == nullptr) {
@@ -554,7 +555,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         switch (ComplexData* data = static_cast<ComplexData*>(current_operand->data); data->stage) {
                         case ComplexData::Stage::BASE: {
                             if (data->base.present)
-                                error("Invalid Register location");
+                                error("Invalid Register location", token);
                             data->base.present = true;
                             Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                             data->base.data.reg = reg;
@@ -563,7 +564,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         case ComplexData::Stage::INDEX: {
                             if (data->index.present)
-                                error("Invalid Register location");
+                                error("Invalid Register location", token);
                             data->index.present = true;
                             Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                             data->index.data.reg = reg;
@@ -572,7 +573,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         case ComplexData::Stage::OFFSET: {
                             if (data->offset.present)
-                                error("Invalid Register location");
+                                error("Invalid Register location", token);
                             data->offset.present = true;
                             Register* reg = new Register(GetRegister(static_cast<const char*>(token->data), token->data_size));
                             data->offset.data.reg = reg;
@@ -582,10 +583,10 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         }
                     } else
-                        error("Invalid Register location");
+                        error("Invalid Register location", token);
                 } else if (token->type == TokenType::LABEL) {
                     if (current_operand != nullptr && !(current_operand->type == OperandType::POTENTIAL_MEMORY || current_operand->type == OperandType::COMPLEX))
-                        error("Invalid label location");
+                        error("Invalid label location", token);
                     Label* label = nullptr;
                     // find the label
                     char* name = new char[token->data_size + 1];
@@ -602,7 +603,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     });
                     delete[] name;
                     if (label == nullptr)
-                        error("Invalid label");
+                        error("Invalid label", token, true);
                     if (current_operand == nullptr) {
                         Operand* operand = new Operand;
                         operand->complete = true;
@@ -627,7 +628,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             switch (ComplexData* data = static_cast<ComplexData*>(current_operand->data); data->stage) {
                             case ComplexData::Stage::BASE: {
                                 if (data->base.present)
-                                    error("Invalid label location");
+                                    error("Invalid label location", token);
                                 data->base.present = true;
                                 data->base.data.label = label;
                                 data->base.type = ComplexItem::Type::LABEL;
@@ -635,7 +636,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             }
                             case ComplexData::Stage::INDEX: {
                                 if (data->index.present)
-                                    error("Invalid label location");
+                                    error("Invalid label location", token);
                                 data->index.present = true;
                                 data->index.data.label = label;
                                 data->index.type = ComplexItem::Type::LABEL;
@@ -643,7 +644,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                             }
                             case ComplexData::Stage::OFFSET: {
                                 if (data->offset.present)
-                                    error("Invalid label location");
+                                    error("Invalid label location", token);
                                 data->offset.present = true;
                                 data->offset.data.label = label;
                                 data->offset.type = ComplexItem::Type::LABEL;
@@ -655,7 +656,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     }
                 } else if (token->type == TokenType::SUBLABEL) {
                     if (current_operand != nullptr && !(current_operand->type == OperandType::POTENTIAL_MEMORY || current_operand->type == OperandType::COMPLEX))
-                        error("Invalid sublabel location");
+                        error("Invalid sublabel location", token);
                     Block* block = nullptr;
                     // find the block
                     char* name = new char[token->data_size + 1];
@@ -665,7 +666,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         name = &(name[1]);
                     else {
                         delete[] name;
-                        error("Invalid sublabel name");
+                        error("Invalid sublabel name", token, true);
                     }
                     current_label->blocks.Enumerate([&](Block* i_block) -> bool {
                         if (i_block->name_size < (token->data_size - 1)) // strncmp can only properly handle strings of equal or greater length
@@ -678,7 +679,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     });
                     delete[] reinterpret_cast<char*>(reinterpret_cast<uint64_t>(name) - sizeof(char));
                     if (block == nullptr)
-                        error("Invalid sublabel");
+                        error("Invalid sublabel", token, true);
                     if (current_operand == nullptr) {
                         Operand* operand = new Operand;
                         operand->complete = true;
@@ -702,7 +703,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         switch (ComplexData* data = static_cast<ComplexData*>(current_operand->data); data->stage) {
                         case ComplexData::Stage::BASE: {
                             if (data->base.present)
-                                error("Invalid sublabel location");
+                                error("Invalid sublabel location", token);
                             data->base.present = true;
                             data->base.data.sublabel = block;
                             data->base.type = ComplexItem::Type::SUBLABEL;
@@ -710,7 +711,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         case ComplexData::Stage::INDEX: {
                             if (data->index.present)
-                                error("Invalid sublabel location");
+                                error("Invalid sublabel location", token);
                             data->index.present = true;
                             data->index.data.sublabel = block;
                             data->index.type = ComplexItem::Type::SUBLABEL;
@@ -718,7 +719,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         }
                         case ComplexData::Stage::OFFSET: {
                             if (data->offset.present)
-                                error("Invalid sublabel location");
+                                error("Invalid sublabel location", token);
                             data->offset.present = true;
                             data->offset.data.sublabel = block;
                             data->offset.type = ComplexItem::Type::SUBLABEL;
@@ -729,7 +730,7 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                     }
                 } else if (token->type == TokenType::OPERATOR) {
                     if (current_operand == nullptr || (current_operand->type != OperandType::COMPLEX && current_operand->type != OperandType::MEMORY))
-                        error("Invalid operator location");
+                        error("Invalid operator location", token);
                     if (current_operand->type == OperandType::MEMORY) {
                         current_operand->type = OperandType::COMPLEX;
                         int64_t* addr = static_cast<int64_t*>(current_operand->data);
@@ -769,29 +770,28 @@ void Parser::parse(const LinkedList::RearInsertLinkedList<Token>& tokens) {
                         if (data->stage == ComplexData::Stage::BASE)
                             data->index.present = false;
                         else if (data->stage != ComplexData::Stage::INDEX)
-                            error("Invalid operator location");
+                            error("Invalid operator location", token);
                         data->stage = ComplexData::Stage::OFFSET;
                         data->offset.sign = true;
                     } else if (EQUALS(static_cast<const char*>(token->data), "-")) {
                         if (data->stage == ComplexData::Stage::BASE)
                             data->index.present = false;
                         else if (data->stage != ComplexData::Stage::INDEX)
-                            error("Invalid operator location");
+                            error("Invalid operator location", token);
                         data->stage = ComplexData::Stage::OFFSET;
                         data->offset.sign = false;
                     } else if (EQUALS(static_cast<const char*>(token->data), "*")) {
                         if (data->stage != ComplexData::Stage::BASE) {
-                            error("Invalid operator location");
+                            error("Invalid operator location", token);
                         }
                         data->stage = ComplexData::Stage::INDEX;
                     } else
-                        error("Invalid operator");
+                        error("Invalid operator", token, true);
                 } else
-                    error("Invalid Token0");
+                    error("Invalid Token", token, true);
             }
-        } else {
-            error("Invalid Token1");
-        }
+        } else
+            error("Invalid Token", token, true);
         return true;
     });
 }
@@ -1328,8 +1328,11 @@ InsEncoding::Register Parser::GetRegister(const char* name, size_t name_size) {
 
 #undef EQUALS
 
-void Parser::error(const char* message) {
-    printf("Parser error: %s\n", message);
+void Parser::error(const char* message, Token* token, bool print_token) {
+    printf("Parser error at %s:%zu: %s", token->file_name.c_str(), token->line, message);
+    if (print_token)
+        printf(": \"%.*s\"", static_cast<int>(token->data_size), static_cast<const char*>(token->data));
+    putchar('\n');
     exit(1);
 }
 

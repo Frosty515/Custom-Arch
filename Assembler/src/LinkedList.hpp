@@ -170,7 +170,7 @@ namespace LinkedList {
                         // if (findNode(m_start, (uint64_t)&obj) != nullptr) {
                         // 	return; // object already exists
                         // }
-            Node* node = newNode((uint64_t)obj);
+            Node* node = newNode(reinterpret_cast<uint64_t>(obj));
             if (m_start == nullptr) {
                 m_start = node;
                 m_end = node;
@@ -179,6 +179,38 @@ namespace LinkedList {
                 node->previous = m_end;
                 m_end = node;
             }
+            m_count++;
+        }
+
+        void insertAt(uint64_t index, const T* obj) {
+            if (index >= m_count)
+                return;
+            Node* previous = nullptr;
+            Node* temp = m_start;
+            for (uint64_t i = 0; i < index; i++) {
+                if (temp == nullptr) {
+                    temp = previous;
+                    break;
+                }
+                previous = temp;
+                temp = temp->next;
+            }
+            Node* node = newNode(reinterpret_cast<uint64_t>(obj));
+            // node needs to slot in between temp and temp->next
+            if (temp == nullptr) {
+                // empty list
+                m_start = node;
+                m_end = node;
+                m_count++;
+                return;
+            }
+            if (temp->next != nullptr) {
+                temp->next->previous = node;
+                node->next = temp->next;
+            } else
+                m_end = node;
+            temp->next = node;
+            node->previous = temp;
             m_count++;
         }
 
@@ -230,27 +262,29 @@ namespace LinkedList {
 
         void Enumerate(std::function<bool(T*, uint64_t index)> func, uint64_t starting_index = 0) const {
             Node* temp = m_start;
-            for (uint64_t i = 0; i < starting_index; i++) {
-                                // if (temp == nullptr)
-                                // 	return;
+            for (uint64_t i = 0; i < starting_index; i++)
                 temp = temp->next;
-            }
             for (uint64_t i = starting_index; i < m_count; i++) {
-                                // if (temp == nullptr)
-                                // 	return;
                 if (!func((T*)(temp->data), i))
                     return;
                 temp = temp->next;
             }
         }
 
-                // Enumerate in reserve order
+        // Enumerate in reserve order
         void EnumerateReverse(std::function<bool(T*)> func) const {
             Node* temp = m_end;
             for (uint64_t i = 0; i < m_count; i++) {
-                                // if (temp == nullptr)
-                                // 	return;
                 if (!func((T*)(temp->data)))
+                    return;
+                temp = temp->previous;
+            }
+        }
+
+        void EnumerateReverse(std::function<bool(T*, uint64_t index)> func) const {
+            Node* temp = m_end;
+            for (uint64_t i = 0; i < m_count; i++) {
+                if (!func((T*)(temp->data), m_count - i - 1))
                     return;
                 temp = temp->previous;
             }

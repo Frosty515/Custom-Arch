@@ -23,7 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <util.h>
 
 #include <libarch/Instruction.hpp>
-#include <libarch/Operand.hpp>
 
 Section::Section(char* name, uint64_t name_size, uint64_t offset)
     : m_name(name), m_name_size(name_size), m_offset(offset) {
@@ -105,7 +104,7 @@ void Assembler::assemble(const LinkedList::RearInsertLinkedList<InsEncoding::Lab
                     case RawDataType::ALIGNMENT: {
                         uint64_t align = *static_cast<uint64_t*>(raw_data->data);
                         if (!IS_POWER_OF_TWO(align))
-                            error("Alignment must be a power of 2");
+                            error("Alignment must be a power of 2", raw_data->file_name, raw_data->line);
                         uint64_t bytes_to_add = ALIGN_UP_BASE2(m_current_offset, align) - m_current_offset;
                         // fill the space with `nop`s
                         uint8_t* i_data = new uint8_t[bytes_to_add];
@@ -149,7 +148,7 @@ void Assembler::Clear() {
     m_current_offset = 0;
 }
 
-[[noreturn]] void Assembler::error(const char* message) const {
-    fprintf(stderr, "Assembler error: %s\n", message);
-    exit(EXIT_FAILURE);
+[[noreturn]] void Assembler::error(const char* message, const std::string& file_name, size_t line) const {
+    fprintf(stderr, "Assembler error at %s:%zu: %s\n", file_name.c_str(), line, message);
+    exit(1);
 }
