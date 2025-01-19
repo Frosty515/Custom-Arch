@@ -570,8 +570,6 @@ namespace InsEncoding {
                 buffer.Write(current_offset, static_cast<uint8_t*>(operand->data), 8);
                 current_offset += 8;
             } else if (operand->type == OperandType::IMMEDIATE) {
-                if (l == 0)
-                    EncodingError("Invalid immediate location", instruction);
                 switch (operand->size) {
                 case OperandSize::BYTE:
                     buffer.Write(current_offset, static_cast<uint8_t*>(operand->data), 1);
