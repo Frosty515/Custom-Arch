@@ -282,10 +282,10 @@ On user mode entry (different from supervisor mode exit), `STS` is cleared. `IP`
 
 #### div
 
-- `div SIZE dst, src` divides the value of `dst` by the value of `src` and stores the result in `dst`.
-- `dst` can be a register or memory address (simple or complex).
-- `src` can be a register, memory address (simple or complex), or an immediate.
-- If the value of `src` is 0, a divide by zero exception is thrown.
+- `div SIZE src1, src2` divides the value of `src1` by the value of `src2`.
+- `src1` and `src2` can be a register or memory address (simple or complex), or an immediate.
+- The quotient is stored in `r0`, and the remainder is stored in `r1`.
+- If the value of `src2` is 0, a divide by zero exception is thrown.
 
 #### or
 

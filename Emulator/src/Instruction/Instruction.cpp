@@ -442,13 +442,15 @@ ALU_INSTRUCTION2(add)
 ALU_INSTRUCTION2(mul)
 ALU_INSTRUCTION2(sub)
 
-void ins_div(Operand* dst, Operand* src) {
-    PRINT_INS_INFO2(dst, src);
-    uint64_t src_val = src->GetValue();
+void ins_div(Operand* src1, Operand* src2) {
+    PRINT_INS_INFO2(src1, src2);
+    uint64_t src_val = src2->GetValue();
     if (src_val == 0)
         g_ExceptionHandler->RaiseException(Exception::DIV_BY_ZERO);
     uint64_t flags = 0;
-    dst->SetValue(x86_64_div(dst->GetValue(), src_val, &flags));
+    x86_64_DivResult result = x86_64_div(src1->GetValue(), src_val, &flags);
+    Emulator::GetRegisterPointer(RegisterID_R0)->SetValue(result.quotient);
+    Emulator::GetRegisterPointer(RegisterID_R1)->SetValue(result.remainder);
     Emulator::ClearCPUStatus(0xF);
     Emulator::SetCPUStatus(flags & 0xF);
 }

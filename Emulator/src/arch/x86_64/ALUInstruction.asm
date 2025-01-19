@@ -50,9 +50,9 @@ _x86_64_add:
     push rbp
     mov rbp, rsp
 
-    add rsi, rdi
+    add rdi, rsi
     
-    push rsi
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags
@@ -68,9 +68,9 @@ _x86_64_mul:
     push rbp
     mov rbp, rsp
 
-    imul rsi, rdi
+    imul rdi, rsi
 
-    push rsi
+    push rdi
     pushf
     pop rdi
     and rdi, ~1
@@ -87,9 +87,9 @@ _x86_64_sub:
     push rbp
     mov rbp, rsp
 
-    sub rsi, rdi
+    sub rdi, rsi
     
-    push rsi
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags
@@ -119,9 +119,9 @@ _x86_64_or:
     push rbp
     mov rbp, rsp
 
-    or rsi, rdi
+    or rdi, rsi
     
-    push rsi
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags
@@ -137,9 +137,9 @@ _x86_64_xor:
     push rbp
     mov rbp, rsp
 
-    xor rsi, rdi
+    xor rdi, rsi
     
-    push rsi
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags
@@ -169,9 +169,9 @@ _x86_64_and:
     push rbp
     mov rbp, rsp
 
-    and rsi, rdi
+    and rdi, rsi
     
-    push rsi
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags
@@ -229,8 +229,8 @@ _x86_64_inc:
     mov rbp, rsp
 
     inc rdi
-    push rdi
 
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags
@@ -247,8 +247,8 @@ _x86_64_dec:
     mov rbp, rsp
 
     dec rdi
-    push rdi
 
+    push rdi
     pushf
     pop rdi
     call x86_64_convert_flags

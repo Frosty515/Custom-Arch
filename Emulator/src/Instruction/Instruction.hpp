@@ -81,7 +81,7 @@ void* DecodeOpcode(uint8_t opcode, uint8_t* argument_count);
 void ins_add(Operand* dst, Operand* src);
 void ins_mul(Operand* dst, Operand* src);
 void ins_sub(Operand* dst, Operand* src);
-void ins_div(Operand* dst, Operand* src);
+void ins_div(Operand* src1, Operand* src2);
 void ins_or(Operand* dst, Operand* src);
 void ins_xor(Operand* dst, Operand* src);
 void ins_nor(Operand* dst, Operand* src);

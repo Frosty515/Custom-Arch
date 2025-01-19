@@ -34,12 +34,17 @@ enum FLAGS_OFFSETS {
 
 #include <stdint.h>
 
+struct x86_64_DivResult {
+    uint64_t quotient;
+    uint64_t remainder;
+};
+
 #ifdef __APPLE__
 
 uint64_t x86_64_add(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_mul(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_sub(uint64_t a, uint64_t b, uint64_t* flags);
-uint64_t x86_64_div(uint64_t a, uint64_t b, uint64_t* flags);
+x86_64_DivResult x86_64_div(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_or(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_xor(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t x86_64_nor(uint64_t a, uint64_t b, uint64_t* flags);
@@ -73,7 +78,7 @@ uint64_t x86_64_shr(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t _x86_64_add(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t _x86_64_mul(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t _x86_64_sub(uint64_t a, uint64_t b, uint64_t* flags);
-uint64_t _x86_64_div(uint64_t a, uint64_t b, uint64_t* flags);
+x86_64_DivResult _x86_64_div(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t _x86_64_or(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t _x86_64_xor(uint64_t a, uint64_t b, uint64_t* flags);
 uint64_t _x86_64_nor(uint64_t a, uint64_t b, uint64_t* flags);
